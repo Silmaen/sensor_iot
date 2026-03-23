@@ -1,33 +1,117 @@
 # Thermo - Projet IoT Thermostat
 
 ## Aperçu
-Projet PlatformIO multi-cibles pour un thermostat IoT.
 
-## Cibles
-- **esp8266** : Wemos D1 Mini v3.0.0 (ESP8266)
-- **native** : Compilation locale pour debug et tests unitaires
+Projet PlatformIO modulaire pour des capteurs IoT. Architecture basée sur des feature flags (`HAS_xxx`) permettant de
+composer des variantes hardware à partir d'un noyau MQTT commun.
 
-## Structure
-```
-src/         - Code source principal
-include/     - Headers partagés
-lib/         - Bibliothèques privées du projet
-test/        - Tests (test_native/ pour les tests locaux)
-```
+## Architecture modulaire
 
-## Commandes essentielles
+Le projet s'articule autour de :
+
+- **Noyau MQTT** (`src/main.cpp`) : connexion, publication, commandes, capabilities — toujours présent
+- **Modules optionnels** activés par feature flags dans `platformio.ini` :
+
+| Flag             | Module                        | Metrics ajoutées                      | Commandes ajoutées |
+|------------------|-------------------------------|---------------------------------------|--------------------|
+| `HAS_BME280`     | Capteur BME/BMP280            | `temperature`, `humidity`, `pressure` | —                  |
+| `HAS_BATTERY`    | Monitoring batterie           | `battery_pct`, `battery_v`            | —                  |
+| `HAS_DISPLAY`    | Afficheur 7-segments + bouton | —                                     | —                  |
+| `HAS_DEEP_SLEEP` | Deep sleep entre lectures     | —                                     | —                  |
+
+- **Identité device** définie par `-DDEVICE_ID` et `-DMQTT_DEVICE_TYPE` dans `platformio.ini`
+
+## Environnements PlatformIO
+
 ```bash
-pio run -e esp8266             # Build ESP8266
-pio run -e native              # Build natif (local)
-pio test -e native             # Exécuter les tests unitaires
-pio run -e esp8266 -t upload   # Upload sur la carte
+pio run -e thermo1_display     # Build : BME280 + afficheur + USB
+pio run -e thermo1_battery     # Build : BME280 + batterie + deep sleep
+pio run -e native              # Build natif (tests)
+pio test -e native             # Exécuter les tests unitaires (54 tests)
+pio run -e thermo1_display -t upload   # Upload
 pio device monitor             # Moniteur série (115200 baud)
 ```
 
+## Structure
+
+```
+src/
+  main.cpp              - Orchestrateur modulaire (#ifdef HAS_xxx)
+  hw/                   - Drivers hardware ESP8266
+include/
+  config.h              - Pins, timing, topics MQTT (DEVICE_ID/TYPE via -D flags)
+  credentials.h         - WiFi & MQTT credentials (gitignored)
+  interfaces/           - Interfaces abstraites
+lib/thermo_core/        - Bibliothèque portable et testable
+  src/
+    module_registry.h/cpp    - Registre de modules (metrics, commands, handlers)
+    payload_builder.h/cpp    - Construction JSON incrémentale
+    mqtt_payload.h/cpp       - Formatage payloads & parsing commandes
+    modules/
+      bme280_module.h/cpp    - Module BME280 (register + contribute)
+      battery_module.h/cpp   - Module batterie (register + contribute)
+    sensor_data.h, battery.h/cpp, display_encoding.h/cpp
+test/test_native/       - Tests unitaires (Unity)
+docs/                   - Documentation (protocole MQTT)
+datasheets/             - Datasheets composants
+```
+
+## Ajouter un nouveau module
+
+1. Créer `lib/thermo_core/src/modules/<name>_module.h/cpp` avec :
+    - `<name>_module_register(ModuleRegistry&)` — ajoute metrics et/ou commandes
+    - `<name>_module_contribute(PayloadBuilder&, ...)` — ajoute des champs au payload JSON
+    - Optionnel : un `CommandHandler` pour les commandes spécifiques
+2. Dans `src/main.cpp`, ajouter les blocs `#ifdef HAS_<NAME>` pour :
+    - `#include` du module et du driver hw
+    - Appel de `register` dans `register_modules()`
+    - Appel de `contribute` dans `publish_sensor_data()`
+3. Ajouter le flag `-DHAS_<NAME>` dans les envs concernés de `platformio.ini`
+4. Ajouter les tests dans `test/test_native/`
+
 ## Conventions
-- Le code portable va dans `src/` et `include/`, gardé indépendant de la plateforme autant que possible
-- Utiliser `#ifdef NATIVE` / `#ifndef NATIVE` pour le code spécifique à la compilation locale
-- Les tests unitaires utilisent le framework Unity et se trouvent dans `test/test_native/`
-- Le code spécifique à la plateforme ESP8266 doit utiliser `#ifdef ESP8266`
+
+- Code portable dans `lib/thermo_core/`, code ESP8266 dans `src/hw/`
+- `#ifdef NATIVE` / `#ifndef NATIVE` pour le code spécifique à la compilation locale
+- `#ifdef HAS_xxx` pour le code conditionnel aux modules
+- Tests unitaires : framework Unity dans `test/test_native/`
 - Langue du code et commentaires : anglais
 - Build flags : `-Wall -Wextra` activés sur toutes les cibles
+
+## Protocole MQTT (sensor_server)
+
+Le serveur récepteur est dans `../sensor_server/`. La spécification complète du protocole se trouve dans
+`docs/mqtt-protocol.md` de ce projet.
+
+### Topics
+
+Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
+
+| Topic                      | Direction       | Exemple                                                  |
+|----------------------------|-----------------|----------------------------------------------------------|
+| `thermo/{id}/sensors`      | Device → Server | `{"temperature":22.5,"humidity":45.2,"pressure":1013.1}` |
+| `thermo/{id}/status`       | Device → Server | `{"level":"warning","message":"low_battery"}`            |
+| `thermo/{id}/command`      | Server → Device | `{"action":"set_interval","value":30}`                   |
+| `thermo/{id}/capabilities` | Device → Server | construit dynamiquement depuis le ModuleRegistry         |
+
+### Règles critiques
+
+1. **Pas de LWT online/offline** — Le serveur calcule le statut en ligne à partir de `last_seen` (offline si aucune
+   donnée pendant 3× `publish_interval`). Ne pas utiliser de Last Will and Testament.
+2. **Topic `command` (pas `config`)** — Le serveur envoie les commandes sur `{type}/{id}/command`.
+3. **Format commandes** — `{"action":"...","value":...}`. Exemple : `{"action":"set_interval","value":300}`.
+4. **Capabilities dynamiques** — Le message capabilities est construit automatiquement depuis le `ModuleRegistry`.
+   Chaque module enregistre ses metrics et commandes au démarrage. Le device répond à `request_capabilities` dans les 60
+   secondes.
+5. **Status = alertes JSON** — Format : `{"level":"...","message":"..."}`. Pas de online/offline.
+6. **Auto-découverte** — Le serveur crée le device au premier message `sensors`. Données ignorées tant qu'un admin n'
+   approuve pas.
+7. **Validation serveur** — Payload max 10 KB, noms de métriques `^[a-zA-Z0-9_\-]+$` (max 64 chars), valeurs numériques
+   uniquement.
+
+### Commandes supportées
+
+| Action                 | Payload                                       | Effet                                         |
+|------------------------|-----------------------------------------------|-----------------------------------------------|
+| `set_interval`         | `{"action":"set_interval","value":<seconds>}` | Change l'intervalle de publication (1-86400s) |
+| `request_capabilities` | `{"action":"request_capabilities"}`           | Le device doit répondre avec ses capabilities |
