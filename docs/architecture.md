@@ -4,10 +4,12 @@ This document describes the modular architecture of the thermo firmware.
 
 ## Design goals
 
+- **Multi-platform** — supports ESP8266 (D1 Mini) and SAMD21 (MKR WiFi 1010)
+  from a single codebase. Platform selection is automatic via compiler macros.
 - **Compose, don't copy** — hardware variants are assembled from reusable
   modules, not duplicated config files.
 - **No dynamic allocation** — all data structures use fixed-size arrays
-  allocated at compile time (ESP8266 has 80 KB RAM).
+  allocated at compile time (ESP8266: 80 KB RAM, SAMD21: 32 KB RAM).
 - **Testable core** — all logic in `lib/thermo_core/` compiles natively
   and runs in Unity tests without Arduino dependencies.
 - **Self-describing** — the capabilities message sent to the server is
@@ -30,10 +32,16 @@ This document describes the modular architecture of the thermo firmware.
 └──┬──────────────┬───────────────────────────────────────┘
    │              │
    │  ┌───────────▼──────────────┐
-   │  │  src/hw/                 │  ESP8266 hardware drivers
-   │  │  bme280_sensor, esp_     │  (#ifndef NATIVE)
-   │  │  network, shift_display, │
-   │  │  battery_adc, esp_sleep  │
+   │  │  src/hw/                 │  Platform-specific drivers
+   │  │                          │
+   │  │  ESP8266:                │  SAMD21 (MKR):
+   │  │  esp_network             │  nina_network
+   │  │  battery_adc             │  samd_battery_adc
+   │  │  esp_sleep               │
+   │  │  shift_display           │
+   │  │                          │
+   │  │  Shared:                 │
+   │  │  bme280_sensor           │
    │  └──────────────────────────┘
    │
    ▼
@@ -67,16 +75,36 @@ This document describes the modular architecture of the thermo firmware.
 Feature flags are defined as `-DHAS_xxx` in `platformio.ini` build flags.
 They control which code is compiled into the firmware via `#ifdef` guards.
 
-| Flag             | What it enables                                         |
-|------------------|---------------------------------------------------------|
-| `HAS_BME280`     | BME/BMP280 I2C sensor initialization, reading, metrics  |
-| `HAS_BATTERY`    | Battery ADC reading, SoC calculation, low-battery alert |
-| `HAS_DISPLAY`    | 7-segment display, push button, display mode cycling    |
-| `HAS_DEEP_SLEEP` | One-shot execution mode with ESP8266 deep sleep         |
+| Flag             | What it enables                                                |
+|------------------|----------------------------------------------------------------|
+| `HAS_BME280`     | BME/BMP280 I2C sensor initialization, reading, metrics         |
+| `HAS_BATTERY`    | Battery ADC reading, SoC calculation, low-battery alert        |
+| `HAS_DISPLAY`    | 7-segment display, push button, display mode cycling           |
+| `HAS_DEEP_SLEEP` | One-shot execution mode with ESP8266 deep sleep (ESP8266 only) |
 
 The `NATIVE` flag is set automatically for the native test build. Code
 inside `#ifndef NATIVE` is excluded from tests (hardware drivers, Arduino
 calls, etc.).
+
+### Platform selection macros
+
+Platform-specific code is selected at compile time using compiler-defined macros:
+
+| Macro                      | Set by                                | Used for                            |
+|----------------------------|---------------------------------------|-------------------------------------|
+| `ESP8266`                  | ESP8266 Arduino core                  | ESP-specific drivers, pins, chip ID |
+| `ARDUINO_SAMD_MKRWIFI1010` | SAMD Arduino core (board=mkrwifi1010) | MKR-specific drivers, pins, chip ID |
+| `NATIVE`                   | `-DNATIVE` build flag                 | Exclude all hardware code in tests  |
+
+In `main.cpp` and `config.h`, platform selection follows this pattern:
+
+```cpp
+#if defined(ARDUINO_SAMD_MKRWIFI1010)
+    // MKR WiFi 1010 specific
+#elif defined(ESP8266)
+    // ESP8266 specific
+#endif
+```
 
 ### Device identity flags
 
@@ -382,11 +410,13 @@ Add declarations and `RUN_TEST` calls to `test/test_native/test_main.cpp`.
 | `include/config.h`                               | Config | MQTT topics, pins, timing (identity via -D flags)   |
 | `include/credentials.h`                          | Config | WiFi & MQTT credentials (gitignored)                |
 | `src/main.cpp`                                   | Glue   | Core orchestrator with `#ifdef` composition         |
-| `src/hw/esp_network.cpp`                         | HW     | WiFi + MQTT via PubSubClient                        |
-| `src/hw/bme280_sensor.cpp`                       | HW     | BME/BMP280 I2C driver (Bosch datasheet formulas)    |
-| `src/hw/shift_display.cpp`                       | HW     | 7-segment via shift registers                       |
-| `src/hw/battery_adc.cpp`                         | HW     | ADC reading for battery voltage                     |
-| `src/hw/esp_sleep.cpp`                           | HW     | Deep sleep + RTC memory persistence                 |
+| `src/hw/esp_network.cpp`                         | HW     | ESP8266 WiFi + MQTT via PubSubClient                |
+| `src/hw/nina_network.cpp`                        | HW     | MKR WiFiNINA + MQTT via PubSubClient                |
+| `src/hw/bme280_sensor.cpp`                       | HW     | BME/BMP280 I2C driver (shared, Bosch formulas)      |
+| `src/hw/shift_display.cpp`                       | HW     | 7-segment via shift registers (ESP8266 only)        |
+| `src/hw/battery_adc.cpp`                         | HW     | ESP8266 ADC reading (10-bit, A0)                    |
+| `src/hw/samd_battery_adc.cpp`                    | HW     | MKR ADC reading (12-bit, ADC_BATTERY)               |
+| `src/hw/esp_sleep.cpp`                           | HW     | Deep sleep + RTC memory (ESP8266 only)              |
 | `lib/thermo_core/src/module_registry.cpp`        | Core   | Module registration and command dispatch            |
 | `lib/thermo_core/src/payload_builder.cpp`        | Core   | Incremental JSON builder                            |
 | `lib/thermo_core/src/mqtt_payload.cpp`           | Core   | Capabilities format, command parsing, status format |

@@ -4,15 +4,18 @@ Components listed here should be used in priority when designing circuits and fe
 
 ## MCU
 
-| Component              | Quantity | Notes              |
-|------------------------|----------|--------------------|
-| Wemos D1 Mini v3.0.0   | 1        | Main MCU (ESP8266) |
+| Component | Quantity | Notes |
+|---|---|---|
+| Wemos D1 Mini v3.0.0 | 1 | ESP8266, for display and battery/deep-sleep configs |
+| Arduino MKR WiFi 1010 | 1 | SAMD21 + WiFiNINA, built-in LiPo charger (JST connector) |
+| Arduino MKR ENV Shield | 1 | BME280 + UV + lux sensors, plugs on top of MKR board |
 
 ## Sensors
 
-| Component  | Quantity | Notes              |
-|------------|----------|--------------------|
-| bme/bmp280 | 1        | temperature sensor |
+| Component | Quantity | Notes |
+|---|---|---|
+| bme/bmp280 | 1 | I2C temperature/humidity/pressure (standalone, for ESP8266 configs) |
+| MKR ENV Shield BME280 | 1 | Same sensor, integrated on the shield (for MKR config) |
 
 ## Display
 
@@ -191,7 +194,7 @@ active LOW with 100nF debounce capacitor to GND.
 | H78M05BT      | 9        | 5V linear regulator 500mA                           |
 | L78M09CV      | 10       | 9V linear regulator 500mA                           |
 | L78m33ACV     | 6        | 3.3V linear regulator 500mA                         |
-| 18650 cells   | several  | Reclaimed from laptop packs, ~3000mAh, 3.7V nominal |
+| 18650 cells   | several  | Reclaimed from laptop packs, ~3000mAh, 3.7V nominal (see [battery guide](docs/battery-cells.md)) |
 
 ---
 
@@ -333,3 +336,70 @@ via WiFi on each wake cycle.
 |-----------------|-----------------------------|--------------|
 | 2S BMS module   | Cell balancing + protection | ~2€          |
 | 2× 18650 holder | Or spot-weld a 2S pack      | ~2€          |
+
+---
+
+### MKR Config (Arduino MKR WiFi 1010 + MKR ENV Shield)
+
+Compact sensor node with built-in WiFi and battery charging. The MKR ENV
+Shield provides a BME280 sensor. A single 18650 cell (or any 1S LiPo 3.7V)
+plugs into the MKR's JST PH 2-pin connector and charges automatically via USB.
+
+No deep sleep mode — the MKR runs in continuous loop mode.
+
+```
+  [18650 cell] ──► JST connector ──► MKR WiFi 1010
+   3.7V (1S)        (built-in             │
+                     charge circuit)       ├──► WiFiNINA module (on-board)
+                                           │
+                                           ├──► MKR ENV Shield (stacked)
+                                           │      └──► BME280 (I2C, default Wire)
+                                           │
+                                           └──► ADC_BATTERY (built-in voltage divider)
+                                                  reads battery voltage
+```
+
+#### MKR config — Power Budget
+
+| Subsystem | Rail | Active | Idle (WiFi connected) |
+|---|---|---|---|
+| SAMD21 | 3.3V | 15mA | 6mA |
+| WiFiNINA (NINA-W102) | 3.3V | 120mA | 80mA |
+| BME280 (MKR ENV Shield) | 3.3V | <1mA | <1µA |
+| **Total from battery** | **3.7V** | **~140mA** | **~86mA** |
+
+**Autonomy** (continuous mode, 3000mAh cell): 3000 / 86 ≈ **35 hours** idle.
+For longer autonomy, consider implementing SAMD21 low-power sleep via the
+`ArduinoLowPower` library (future improvement).
+
+#### MKR config — Battery Monitoring
+
+The MKR WiFi 1010 has a built-in voltage divider on the `ADC_BATTERY` pin. The
+firmware reads it with 12-bit resolution (0-4095). Battery constants in
+`battery.h` are configured for 1S LiPo (3.0-4.2V).
+
+| Battery voltage | Approx. SoC |
+|---|---|
+| 4.20V | 100% |
+| 3.90V | 75% |
+| 3.70V | 58% |
+| 3.50V | 42% |
+| 3.00V | 0% (cutoff) |
+
+The `BATTERY_DIVIDER_RATIO` in `battery.h` is set to an approximate value
+(2.0) and should be calibrated against a multimeter on the actual hardware.
+
+#### MKR config — PlatformIO Environment
+
+```ini
+[env:thermo_mkr]
+extends = common_samd
+board = mkrwifi1010
+build_flags =
+    ${common_samd.build_flags}
+    -DDEVICE_ID='"thermo_mkr"'
+    -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHAS_BME280
+    -DHAS_BATTERY
+    -DHAS_SERIAL_DEBUG
+```

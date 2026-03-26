@@ -21,6 +21,7 @@ Both `device_type` and `device_id` are defined via build flags in
 | `status`       | Device -> Server | `thermo/thermo_1/status`       |
 | `command`      | Server -> Device | `thermo/thermo_1/command`      |
 | `capabilities` | Device -> Server | `thermo/thermo_1/capabilities` |
+| `ack`          | Device -> Server | `thermo/thermo_1/ack`          |
 
 ## 1. Publishing sensor readings (`sensors`)
 
@@ -59,13 +60,13 @@ its fields (see [architecture.md](architecture.md)).
 
 ### Metric reference
 
-| Metric        | Module        | Type               | Unit    | Description                     |
-|---------------|---------------|--------------------|---------|---------------------------------|
-| `temperature` | `HAS_BME280`  | float (1 decimal)  | Celsius | Ambient temperature             |
-| `humidity`    | `HAS_BME280`  | float (1 decimal)  | % RH    | Relative humidity               |
-| `pressure`    | `HAS_BME280`  | float (1 decimal)  | hPa     | Atmospheric pressure            |
-| `battery_pct` | `HAS_BATTERY` | uint               | %       | Battery state of charge (0-100) |
-| `battery_v`   | `HAS_BATTERY` | float (2 decimals) | V       | Battery voltage (2S: 6.0-8.4V)  |
+| Metric        | Module        | Type               | Unit    | Description                                          |
+|---------------|---------------|--------------------|---------|------------------------------------------------------|
+| `temperature` | `HAS_BME280`  | float (1 decimal)  | Celsius | Ambient temperature                                  |
+| `humidity`    | `HAS_BME280`  | float (1 decimal)  | % RH    | Relative humidity                                    |
+| `pressure`    | `HAS_BME280`  | float (1 decimal)  | hPa     | Atmospheric pressure                                 |
+| `battery_pct` | `HAS_BATTERY` | uint               | %       | Battery state of charge (0-100)                      |
+| `battery_v`   | `HAS_BATTERY` | float (2 decimals) | V       | Battery voltage (ESP: 2S 6.0-8.4V, MKR: 1S 3.0-4.2V) |
 
 New modules can add additional metrics. The server auto-discovers metric
 names from the sensor readings and capabilities message.
@@ -150,7 +151,29 @@ by the dispatcher.
   with `retain=True`), process, then deep sleep.
 - Unknown actions are silently ignored (no matching handler).
 
-## 4. Responding with capabilities (`capabilities`)
+## 4. Acknowledging commands (`ack`)
+
+After processing a dispatched command, the device publishes an acknowledgement
+on the `ack` topic. This is **not** sent for `request_capabilities` (which has
+its own response via the `capabilities` topic).
+
+```json
+{
+  "action": "set_interval",
+  "status": "ok"
+}
+```
+
+| Field    | Type   | Required | Description                                     |
+|----------|--------|:--------:|-------------------------------------------------|
+| `action` | string |   Yes    | The command action being acknowledged           |
+| `status` | string |   Yes    | `"ok"` (command executed) or `"error"` (failed) |
+
+- Acks are sent immediately after command processing.
+- The `action` field must exactly match the `action` in the original command.
+- Unknown commands are acked with `"status": "error"`.
+
+## 5. Responding with capabilities (`capabilities`)
 
 When the device receives `{"action": "request_capabilities"}`, it must publish
 its capabilities within **60 seconds** on the `capabilities` topic.
@@ -169,9 +192,22 @@ it reflects exactly which modules are enabled in the current firmware build.
     "humidity",
     "pressure"
   ],
+  "units": {
+    "temperature": "°C",
+    "humidity": "%",
+    "pressure": "hPa"
+  },
   "commands": [
     "set_interval"
-  ]
+  ],
+  "command_params": {
+    "set_interval": [
+      {
+        "name": "value",
+        "type": "number"
+      }
+    ]
+  }
 }
 ```
 
@@ -188,25 +224,45 @@ it reflects exactly which modules are enabled in the current firmware build.
     "battery_pct",
     "battery_v"
   ],
+  "units": {
+    "temperature": "°C",
+    "humidity": "%",
+    "pressure": "hPa",
+    "battery_pct": "%",
+    "battery_v": "V"
+  },
   "commands": [
     "set_interval"
-  ]
+  ],
+  "command_params": {
+    "set_interval": [
+      {
+        "name": "value",
+        "type": "number"
+      }
+    ]
+  }
 }
 ```
 
-| Field              | Type     | Required | Description                                        |
-|--------------------|----------|:--------:|----------------------------------------------------|
-| `hardware_id`      | string   |   Yes    | Unique chip ID (`ESP.getChipId()` as hex). Max 256 |
-| `publish_interval` | number   |   Yes    | Current publish frequency in seconds (1-86400)     |
-| `metrics`          | string[] |   Yes    | All metric names from `registry.metrics[]`         |
-| `commands`         | string[] |   Yes    | All command names from `registry.commands[]`       |
+| Field              | Type     | Required | Description                                                              |
+|--------------------|----------|:--------:|--------------------------------------------------------------------------|
+| `hardware_id`      | string   |   Yes    | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256          |
+| `publish_interval` | number   |   Yes    | Current publish frequency in seconds (1-86400)                           |
+| `metrics`          | string[] |   Yes    | All metric names from `registry.metrics[]`                               |
+| `units`            | object   |    No    | Mapping of metric name to unit string (e.g. `"°C"`, `"%"`). Max 16 chars |
+| `commands`         | string[] |   Yes    | All command names from `registry.commands[]`                             |
+| `command_params`   | object   |    No    | Mapping of command name to array of `{name, type}` param definitions     |
+
+**Parameter definition format:** each entry is `{"name": "<param>", "type": "<number|string|boolean>"}`.
 
 - Do NOT include `request_capabilities` in the `commands` list (implicit).
 - `publish_interval` reflects the current value (may have been changed
   by a `set_interval` command or read from RTC memory).
+- `units` and `command_params` are omitted when no module provides them.
 - Publish with `retain = false`.
 
-## 5. Timeout handling
+## 6. Timeout handling
 
 If the device does not respond to `request_capabilities` within 60 seconds,
 the server flags it with `alert_level = "error"` and
@@ -219,12 +275,12 @@ The server requests capabilities in three situations:
 2. **Reconnection** — device was offline and starts publishing again
 3. **After every command** — to refresh capabilities that may have changed
 
-## 6. Authentication
+## 7. Authentication
 
 MQTT broker requires username/password authentication (from `credentials.h`).
 Anonymous access is disabled.
 
-## 7. Device lifecycle (from server perspective)
+## 8. Device lifecycle (from server perspective)
 
 ```
 Unknown
@@ -241,7 +297,7 @@ Approved (active) --> data stored, commands enabled
   |-- Admin revokes --> data dropped again
 ```
 
-## 8. Example session
+## 9. Example session
 
 ```
 # 1. Device powers on (HAS_BME280 + HAS_BATTERY), publishes first reading
@@ -255,7 +311,9 @@ thermo/thermo_1/capabilities <- {
     "hardware_id":"ESP-00A1B2",
     "publish_interval":300,
     "metrics":["temperature","humidity","pressure","battery_pct","battery_v"],
-    "commands":["set_interval"]
+    "units":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
+    "commands":["set_interval"],
+    "command_params":{"set_interval":[{"name":"value","type":"number"}]}
 }
 
 # 4. Admin approves from web UI — data now stored
@@ -266,6 +324,9 @@ thermo/thermo_1/status <- {"level":"warning","message":"low_battery"}
 # 6. Admin changes publish interval via web UI
 thermo/thermo_1/command -> {"action":"set_interval","value":120}
 
+# 6b. Device acknowledges the command
+thermo/thermo_1/ack <- {"action":"set_interval","status":"ok"}
+
 # 7. Server auto-requests capabilities (after every command)
 thermo/thermo_1/command -> {"action":"request_capabilities"}
 
@@ -274,6 +335,8 @@ thermo/thermo_1/capabilities <- {
     "hardware_id":"ESP-00A1B2",
     "publish_interval":120,
     "metrics":["temperature","humidity","pressure","battery_pct","battery_v"],
-    "commands":["set_interval"]
+    "units":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
+    "commands":["set_interval"],
+    "command_params":{"set_interval":[{"name":"value","type":"number"}]}
 }
 ```

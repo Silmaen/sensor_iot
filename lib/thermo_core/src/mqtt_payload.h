@@ -18,13 +18,18 @@ int format_sensor_payload_with_battery(const SensorData& data,
 int format_status_payload(const char* level, const char* message,
                           char* buf, size_t buf_size);
 
-// Format capabilities response as JSON payload
-// metrics and commands are null-terminated string arrays.
+struct ModuleRegistry;
+
+// Format capabilities response as JSON payload from registry contents.
 int format_capabilities_payload(const char* hardware_id,
                                 uint32_t publish_interval,
-                                const char* const* metrics, size_t num_metrics,
-                                const char* const* commands, size_t num_commands,
+                                const ModuleRegistry& registry,
                                 char* buf, size_t buf_size);
+
+// Format command acknowledgement as JSON payload.
+// action: the command action being acknowledged. status: "ok" or "error".
+int format_ack_payload(const char* action, const char* status,
+                       char* buf, size_t buf_size);
 
 // Parse the "action" field from a command payload.
 // Copies the action string into action_buf. Returns true if found.

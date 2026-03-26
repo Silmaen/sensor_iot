@@ -11,6 +11,9 @@ void test_bme280_module_register(void) {
     TEST_ASSERT_EQUAL_STRING("temperature", reg.metrics[0]);
     TEST_ASSERT_EQUAL_STRING("humidity", reg.metrics[1]);
     TEST_ASSERT_EQUAL_STRING("pressure", reg.metrics[2]);
+    TEST_ASSERT_NOT_NULL(reg.metric_units[0]); // °C
+    TEST_ASSERT_EQUAL_STRING("%", reg.metric_units[1]);
+    TEST_ASSERT_EQUAL_STRING("hPa", reg.metric_units[2]);
 }
 
 void test_bme280_module_contribute(void) {
@@ -32,6 +35,8 @@ void test_battery_module_register(void) {
     TEST_ASSERT_EQUAL(2, reg.num_metrics);
     TEST_ASSERT_EQUAL_STRING("battery_pct", reg.metrics[0]);
     TEST_ASSERT_EQUAL_STRING("battery_v", reg.metrics[1]);
+    TEST_ASSERT_EQUAL_STRING("%", reg.metric_units[0]);
+    TEST_ASSERT_EQUAL_STRING("V", reg.metric_units[1]);
 }
 
 void test_battery_module_contribute(void) {

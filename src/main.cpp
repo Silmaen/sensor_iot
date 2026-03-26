@@ -1,4 +1,5 @@
 #include "config.h"
+#include "debug.h"
 #include "module_registry.h"
 #include "mqtt_payload.h"
 #include "payload_builder.h"
@@ -12,11 +13,15 @@
 #endif
 
 #ifndef NATIVE
-#include "hw/esp_network.h"
-
 #include <Arduino.h>
 
+#if defined(ARDUINO_SAMD_MKRWIFI1010)
+#include "hw/nina_network.h"
+static NinaNetwork network;
+#else
+#include "hw/esp_network.h"
 static EspNetwork network;
+#endif
 
 #ifdef HAS_BME280
 #include "hw/bme280_sensor.h"
@@ -36,7 +41,11 @@ static bool last_button_state           = true;
 
 #ifdef HAS_BATTERY
 #include "battery.h"
+#if defined(ARDUINO_SAMD_MKRWIFI1010)
+#include "hw/samd_battery_adc.h"
+#else
 #include "hw/battery_adc.h"
+#endif
 #endif
 
 #ifdef HAS_DEEP_SLEEP
@@ -59,6 +68,7 @@ static bool handle_set_interval(const char* payload) {
     uint32_t value = 0;
     if (!parse_command_value(payload, value))
         return false;
+    DEBUG_PRINTF("[CMD] set_interval: %lu -> %lu\n", (unsigned long)publish_interval_s, (unsigned long)value);
     publish_interval_s = value;
 #if defined(HAS_DEEP_SLEEP) && !defined(NATIVE)
     sleeper.write_rtc_interval(value);
@@ -66,10 +76,16 @@ static bool handle_set_interval(const char* payload) {
     return true;
 }
 
+static const CommandParamDef set_interval_params[] = {
+    {"value", "number"},
+};
+
 // --- Module registration ---
 static void register_modules() {
     registry.init();
-    registry.add_command("set_interval", handle_set_interval);
+    registry.add_command("set_interval", handle_set_interval,
+                         set_interval_params, 1);
+    registry.add_metric("wifi_rssi", "dBm");
 #ifdef HAS_BME280
     bme280_module_register(registry);
 #endif
@@ -94,52 +110,82 @@ static void publish_sensor_data() {
     uint8_t soc      = voltage_to_soc(voltage);
     battery_module_contribute(pb, soc, voltage);
 #endif
+    pb.add_int("wifi_rssi", network.wifi_rssi());
     pb.end();
+    DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_SENSORS, buf);
     network.publish(MQTT_TOPIC_SENSORS, buf);
 
 #ifdef HAS_BATTERY
     if (soc <= BATTERY_LOW_THRESHOLD) {
         char status_buf[64];
         format_status_payload("warning", "low_battery", status_buf, sizeof(status_buf));
+        DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_STATUS, status_buf);
         network.publish(MQTT_TOPIC_STATUS, status_buf);
     }
+#endif
+}
+
+// --- Platform-specific hardware ID ---
+static void get_hw_id(char* buf, size_t len) {
+#if defined(ESP8266)
+    snprintf(buf, len, "ESP-%06X", static_cast<unsigned int>(ESP.getChipId()));
+#elif defined(ARDUINO_SAMD_MKRWIFI1010)
+    // SAMD21 unique ID: 4 x 32-bit words at 0x0080A00C
+    volatile uint32_t* uid = reinterpret_cast<volatile uint32_t*>(0x0080A00C);
+    snprintf(buf, len, "MKR-%08lX", static_cast<unsigned long>(uid[0] ^ uid[1] ^ uid[2] ^ uid[3]));
+#else
+    snprintf(buf, len, "UNKNOWN");
 #endif
 }
 
 // --- Publish capabilities from registry ---
 static void publish_capabilities() {
     char hw_id[20];
-    snprintf(hw_id, sizeof(hw_id), "ESP-%06X", static_cast<unsigned int>(ESP.getChipId()));
+    get_hw_id(hw_id, sizeof(hw_id));
 
-    char buf[320];
+    char buf[512];
     format_capabilities_payload(hw_id,
                                 publish_interval_s,
-                                registry.metrics,
-                                registry.num_metrics,
-                                registry.commands,
-                                registry.num_commands,
+                                registry,
                                 buf,
                                 sizeof(buf));
+    DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_CAPABILITIES, buf);
     network.publish(MQTT_TOPIC_CAPABILITIES, buf);
 }
 
 // --- MQTT message callback ---
 static void on_mqtt_message(char* topic, uint8_t* payload, unsigned int length) {
-    (void)topic;
+    DEBUG_PRINTF("[MQTT] << topic=%s len=%u\n", topic, length);
     char buf[128];
     unsigned int copy_len = length < sizeof(buf) - 1 ? length : sizeof(buf) - 1;
     memcpy(buf, payload, copy_len);
     buf[copy_len] = '\0';
+    DEBUG_PRINTF("[MQTT] << payload: %s\n", buf);
 
     char action[32];
-    if (!parse_command_action(buf, action, sizeof(action)))
+    if (!parse_command_action(buf, action, sizeof(action))) {
+        DEBUG_PRINTF("[MQTT] parse_command_action failed for: %s\n", buf);
         return;
+    }
+
+    DEBUG_PRINTF("[MQTT] command received: action=%s\n", action);
 
     if (strcmp(action, "request_capabilities") == 0) {
+        DEBUG_PRINTLN("[MQTT] publishing capabilities (requested)");
         publish_capabilities();
         return;
     }
-    registry.dispatch(action, buf);
+
+    bool ok = registry.dispatch(action, buf);
+    if (!ok) {
+        DEBUG_PRINTF("[MQTT] unknown command: %s\n", action);
+    }
+
+    // Acknowledge the command
+    char ack_buf[96];
+    format_ack_payload(action, ok ? "ok" : "error", ack_buf, sizeof(ack_buf));
+    DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_ACK, ack_buf);
+    network.publish(MQTT_TOPIC_ACK, ack_buf);
 }
 
 #ifdef HAS_DISPLAY
@@ -191,6 +237,8 @@ void setup() {
 #ifndef NATIVE
     Serial.begin(115200);
     Serial.println("Thermo starting...");
+    DEBUG_PRINTF("[INIT] device=%s type=%s\n", DEVICE_ID, MQTT_DEVICE_TYPE);
+    DEBUG_PRINTF("[INIT] publish_interval=%lus\n", (unsigned long)publish_interval_s);
 
 #ifdef HAS_DEEP_SLEEP
     if (!sleeper.read_rtc_interval(publish_interval_s)) {
@@ -213,23 +261,34 @@ void setup() {
     pinMode(PIN_BUTTON, INPUT_PULLUP);
 #endif
 
+    network.set_callback(on_mqtt_message);
+
+    DEBUG_PRINTLN("[NET] connecting WiFi...");
     if (!network.connect_wifi()) {
         Serial.println("WiFi connection failed!");
 #ifdef HAS_DEEP_SLEEP
         sleeper.deep_sleep(publish_interval_s);
         return;
+#else
+        DEBUG_PRINTLN("[NET] will retry in loop");
 #endif
-    }
-    if (!network.connect_mqtt()) {
-        Serial.println("MQTT connection failed!");
+    } else {
+        DEBUG_PRINTLN("[NET] WiFi connected");
+        DEBUG_PRINTLN("[NET] connecting MQTT...");
+        if (!network.connect_mqtt()) {
+            Serial.println("MQTT connection failed!");
 #ifdef HAS_DEEP_SLEEP
-        sleeper.deep_sleep(publish_interval_s);
-        return;
+            sleeper.deep_sleep(publish_interval_s);
+            return;
+#else
+            DEBUG_PRINTLN("[NET] will retry in loop");
 #endif
+        } else {
+            DEBUG_PRINTLN("[NET] MQTT connected");
+            network.subscribe(MQTT_TOPIC_COMMAND);
+            DEBUG_PRINTF("[MQTT] subscribed to %s\n", MQTT_TOPIC_COMMAND);
+        }
     }
-
-    network.set_callback(on_mqtt_message);
-    network.subscribe(MQTT_TOPIC_COMMAND);
 
 #ifdef HAS_DEEP_SLEEP
     // One-shot mode: wait for retained commands, read, publish, sleep
@@ -279,13 +338,19 @@ void loop() {
 #ifdef HAS_BME280
         last_data = sensor.read();
         if (!last_data.valid) {
+            DEBUG_PRINTLN("[SENSOR] BME280 read failed");
             return;
         }
+        DEBUG_PRINTF("[SENSOR] T=%.1f H=%.1f P=%.1f\n", last_data.temperature, last_data.humidity, last_data.pressure);
 #ifdef HAS_DISPLAY
         update_display();
 #endif
 #endif
-        publish_sensor_data();
+        if (!network.mqtt_connected()) {
+            DEBUG_PRINTLN("[MQTT] skipping publish, not connected");
+        } else {
+            publish_sensor_data();
+        }
     }
 #endif // NATIVE
 }

@@ -1,19 +1,18 @@
-#if defined(ESP8266) && !defined(NATIVE)
+#if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(NATIVE)
 
-#include "hw/esp_network.h"
+#include "hw/nina_network.h"
 #include "config.h"
 #include "credentials.h"
 #include "debug.h"
 
 #ifdef HAS_SERIAL_DEBUG
-static const char* wifi_status_str(wl_status_t status) {
+static const char* wifi_status_str(uint8_t status) {
     switch (status) {
     case WL_IDLE_STATUS:      return "IDLE";
     case WL_NO_SSID_AVAIL:   return "NO_SSID_AVAIL";
     case WL_SCAN_COMPLETED:  return "SCAN_COMPLETED";
     case WL_CONNECTED:       return "CONNECTED";
     case WL_CONNECT_FAILED:  return "CONNECT_FAILED";
-    case WL_WRONG_PASSWORD:  return "WRONG_PASSWORD";
     case WL_DISCONNECTED:    return "DISCONNECTED";
     default:                 return "UNKNOWN";
     }
@@ -36,12 +35,11 @@ static const char* mqtt_state_str(int state) {
 }
 #endif
 
-EspNetwork::EspNetwork() : mqtt_client_(wifi_client_) {
+NinaNetwork::NinaNetwork() : mqtt_client_(wifi_client_) {
     mqtt_client_.setServer(MQTT_SERVER, MQTT_PORT);
 }
 
-bool EspNetwork::connect_wifi() {
-    WiFi.mode(WIFI_STA);
+bool NinaNetwork::connect_wifi() {
     DEBUG_PRINTF("[WIFI] connecting to SSID \"%s\"...\n", WIFI_SSID);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
@@ -50,10 +48,11 @@ bool EspNetwork::connect_wifi() {
         delay(250);
         attempts++;
     }
-    wl_status_t st = WiFi.status();
+    uint8_t st = WiFi.status();
     if (st == WL_CONNECTED) {
-        DEBUG_PRINTF("[WIFI] connected, IP=%s RSSI=%ddBm\n",
-                     WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        IPAddress ip = WiFi.localIP();
+        DEBUG_PRINTF("[WIFI] connected, IP=%d.%d.%d.%d RSSI=%lddBm\n",
+                     ip[0], ip[1], ip[2], ip[3], (long)WiFi.RSSI());
     } else {
         DEBUG_PRINTF("[WIFI] failed after %d attempts, status=%s (%d)\n",
                      attempts, wifi_status_str(st), st);
@@ -61,7 +60,7 @@ bool EspNetwork::connect_wifi() {
     return st == WL_CONNECTED;
 }
 
-bool EspNetwork::connect_mqtt() {
+bool NinaNetwork::connect_mqtt() {
     if (!mqtt_client_.connected()) {
         DEBUG_PRINTF("[MQTT] connecting to %s:%d as \"%s\"...\n", MQTT_SERVER, MQTT_PORT, DEVICE_ID);
         bool connected;
@@ -82,36 +81,37 @@ bool EspNetwork::connect_mqtt() {
     return true;
 }
 
-bool EspNetwork::wifi_connected() {
+bool NinaNetwork::wifi_connected() {
     return WiFi.status() == WL_CONNECTED;
 }
 
-bool EspNetwork::mqtt_connected() {
+bool NinaNetwork::mqtt_connected() {
     return mqtt_client_.connected();
 }
 
-int32_t EspNetwork::wifi_rssi() {
+int32_t NinaNetwork::wifi_rssi() {
     return WiFi.RSSI();
 }
 
-const char* EspNetwork::wifi_ip() {
+const char* NinaNetwork::wifi_ip() {
     static char ip_buf[16];
-    WiFi.localIP().toString().toCharArray(ip_buf, sizeof(ip_buf));
+    IPAddress ip = WiFi.localIP();
+    snprintf(ip_buf, sizeof(ip_buf), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
     return ip_buf;
 }
 
-bool EspNetwork::publish(const char* topic, const char* payload, bool retained) {
+bool NinaNetwork::publish(const char* topic, const char* payload, bool retained) {
     return mqtt_client_.publish(topic, payload, retained);
 }
 
-bool EspNetwork::subscribe(const char* topic) {
+bool NinaNetwork::subscribe(const char* topic) {
     bool ok = mqtt_client_.subscribe(topic);
     DEBUG_PRINTF("[MQTT] subscribe(%s) => %s\n", topic, ok ? "OK" : "FAILED");
     return ok;
 }
 
-void EspNetwork::loop() {
-    // WiFi lost — trigger reconnection (non-blocking, ESP handles it)
+void NinaNetwork::loop() {
+    // WiFi lost — reconnect
     if (WiFi.status() != WL_CONNECTED) {
         if (was_mqtt_connected_) {
             was_mqtt_connected_ = false;
@@ -123,7 +123,8 @@ void EspNetwork::loop() {
             last_reconnect_attempt_ = now;
             DEBUG_PRINTF("[WIFI] reconnecting (status=%s)...\n",
                          wifi_status_str(WiFi.status()));
-            WiFi.reconnect();
+            // WiFiNINA has no reconnect() — call begin() again
+            WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         }
         return;
     }
@@ -148,19 +149,20 @@ void EspNetwork::loop() {
     // Both connected
     if (!was_mqtt_connected_) {
         was_mqtt_connected_ = true;
-        DEBUG_PRINTF("[NET] fully connected, IP=%s RSSI=%ddBm\n",
-                     WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        IPAddress ip = WiFi.localIP();
+        DEBUG_PRINTF("[NET] fully connected, IP=%d.%d.%d.%d RSSI=%lddBm\n",
+                     ip[0], ip[1], ip[2], ip[3], (long)WiFi.RSSI());
     }
     mqtt_client_.loop();
 }
 
-void EspNetwork::disconnect() {
+void NinaNetwork::disconnect() {
     mqtt_client_.disconnect();
-    WiFi.disconnect(true);
+    WiFi.disconnect();
     was_mqtt_connected_ = false;
 }
 
-void EspNetwork::set_callback(std::function<void(char*, uint8_t*, unsigned int)> cb) {
+void NinaNetwork::set_callback(MqttCallback cb) {
     mqtt_client_.setCallback(cb);
 }
 

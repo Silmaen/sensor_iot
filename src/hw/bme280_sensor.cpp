@@ -2,6 +2,7 @@
 
 #include "hw/bme280_sensor.h"
 #include "config.h"
+#include <Arduino.h>
 
 // BME280 registers (from Bosch datasheet BST-BME280-DS002)
 static constexpr uint8_t REG_CHIP_ID   = 0xD0;
@@ -22,7 +23,11 @@ bool Bme280Sensor::begin() {
 
 bool Bme280Sensor::begin(uint8_t addr) {
     addr_ = addr;
+#ifdef ESP8266
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
+#else
+    Wire.begin();
+#endif
 
     uint8_t chip_id = read8(REG_CHIP_ID);
     if (chip_id == BME280_CHIP_ID) {

@@ -1,8 +1,19 @@
 # Thermo
 
-Modular IoT sensor node built with a Wemos D1 Mini v3.0.0 (ESP8266). Publishes
-sensor data over MQTT to a [sensor_server](https://github.com/Silmaen/sensor_server)
-instance. Hardware features are composed at compile time via feature flags.
+Multi-platform modular IoT sensor node. Publishes sensor data over MQTT to a
+[sensor_server](https://github.com/Silmaen/sensor_server) instance. Hardware
+features are composed at compile time via feature flags.
+
+## Supported platforms
+
+| Platform | Board                 | WiFi                        | Notes                                             |
+|----------|-----------------------|-----------------------------|---------------------------------------------------|
+| ESP8266  | Wemos D1 Mini v3.0.0  | Built-in                    | Display, deep sleep, 2S LiPo battery              |
+| SAMD21   | Arduino MKR WiFi 1010 | WiFiNINA (u-blox NINA-W102) | MKR ENV Shield (BME280), built-in 1S LiPo charger |
+
+Platform selection is automatic based on the PlatformIO environment. The same
+`main.cpp` compiles for both platforms using `#if defined(ESP8266)` /
+`#elif defined(ARDUINO_SAMD_MKRWIFI1010)` guards.
 
 ## Modular architecture
 
@@ -12,12 +23,13 @@ via `-DHAS_xxx` build flags in `platformio.ini`. Device identity (`DEVICE_ID`,
 
 ### Available modules
 
-| Flag             | Description                        | MQTT metrics                          | MQTT commands |
-|------------------|------------------------------------|---------------------------------------|---------------|
-| `HAS_BME280`     | BME/BMP280 I2C sensor              | `temperature`, `humidity`, `pressure` | —             |
-| `HAS_BATTERY`    | Battery voltage monitoring (ADC)   | `battery_pct`, `battery_v`            | —             |
-| `HAS_DISPLAY`    | 3-digit 7-segment display + button | —                                     | —             |
-| `HAS_DEEP_SLEEP` | Deep sleep between readings        | —                                     | —             |
+| Flag               | Description                        | MQTT metrics                          | Platform     |
+|--------------------|------------------------------------|---------------------------------------|--------------|
+| `HAS_BME280`       | BME/BMP280 I2C sensor              | `temperature`, `humidity`, `pressure` | All          |
+| `HAS_BATTERY`      | Battery voltage monitoring (ADC)   | `battery_pct`, `battery_v`            | All          |
+| `HAS_DISPLAY`      | 3-digit 7-segment display + button | —                                     | ESP8266 only |
+| `HAS_DEEP_SLEEP`   | Deep sleep between readings        | —                                     | ESP8266 only |
+| `HAS_SERIAL_DEBUG` | Verbose serial debug logging       | —                                     | All          |
 
 Each module registers its metrics and commands into a `ModuleRegistry` at
 startup. The capabilities message is built dynamically from this registry.
@@ -25,33 +37,34 @@ startup. The capabilities message is built dynamically from this registry.
 ### Example configurations
 
 ```ini
-; Wired sensor with display
-[env:thermo1_display]
-build_flags = -DDEVICE_ID='"thermo1"' -DMQTT_DEVICE_TYPE='"thermo"'
-              -DHAS_BME280 -DHAS_DISPLAY
+; ESP8266: wired sensor with display
+[env:thermo_display]
+extends = common_esp8266
+build_flags = ... -DHAS_BME280 -DHAS_DISPLAY -DHAS_SERIAL_DEBUG
 
-; Battery-powered sensor node
-[env:thermo1_battery]
-build_flags = -DDEVICE_ID='"thermo1b"' -DMQTT_DEVICE_TYPE='"thermo"'
-              -DHAS_BME280 -DHAS_BATTERY -DHAS_DEEP_SLEEP
+; ESP8266: battery-powered deep sleep sensor
+[env:thermo_1]
+extends = common_esp8266
+build_flags = ... -DHAS_BME280 -DHAS_BATTERY -DHAS_DEEP_SLEEP
 
-; Minimal sensor (no display, no battery)
-[env:thermo2_minimal]
-build_flags = -DDEVICE_ID='"thermo2"' -DMQTT_DEVICE_TYPE='"thermo"'
-              -DHAS_BME280
+; MKR WiFi 1010: BME280 + 1S LiPo battery
+[env:thermo_mkr]
+extends = common_samd
+build_flags = ... -DHAS_BME280 -DHAS_BATTERY -DHAS_SERIAL_DEBUG
 ```
 
 See [COMPONENTS.md](COMPONENTS.md) for hardware details, wiring, and power budgets.
 
 ## MQTT communication
 
-Devices communicate with the server via four MQTT topics:
+Devices communicate with the server via MQTT topics:
 
 ```
 {type}/{id}/sensors        Device -> Server   Sensor readings (JSON)
 {type}/{id}/status         Device -> Server   Alerts: warning/error/ok (JSON)
 {type}/{id}/command        Server -> Device   Commands (JSON)
 {type}/{id}/capabilities   Device -> Server   Device identity & capabilities (JSON)
+{type}/{id}/ack            Device -> Server   Command acknowledgement (JSON)
 ```
 
 The server auto-discovers devices on first message. An admin must approve
@@ -77,22 +90,33 @@ cp include/credentials.h.example include/credentials.h
 ### Build
 
 ```bash
-pio run -e thermo1_display     # Build display variant
-pio run -e thermo1_battery     # Build battery variant
-pio run -e native              # Build native (local debug)
+# ESP8266
+pio run -e thermo_display       # Build display variant
+pio run -e thermo_1             # Build battery/deep sleep variant
+
+# SAMD21 (Arduino MKR WiFi 1010)
+pio run -e thermo_mkr           # Build MKR variant (BME280 + 1S LiPo)
+
+# Tests
+pio run -e native               # Build native (local debug)
 ```
 
 ### Upload & Monitor
 
 ```bash
-pio run -e thermo1_display -t upload
+# ESP8266
+pio run -e thermo_display -t upload
 pio device monitor                      # Serial monitor (115200 baud)
+
+# MKR WiFi 1010
+pio run -e thermo_mkr -t upload
+pio device monitor                      # Serial monitor (115200 baud, native USB)
 ```
 
 ### Test
 
 ```bash
-pio test -e native              # Run all unit tests (54 tests)
+pio test -e native              # Run all unit tests (57 tests)
 ```
 
 ## Project structure
@@ -100,34 +124,37 @@ pio test -e native              # Run all unit tests (54 tests)
 ```
 src/
   main.cpp                        Modular orchestrator (#ifdef HAS_xxx)
-  hw/                             Hardware drivers (ESP8266-specific)
-    esp_network.cpp/.h              WiFi + MQTT (PubSubClient)
-    bme280_sensor.cpp/.h            BME/BMP280 I2C driver (custom, no Adafruit)
-    shift_display.cpp/.h            7-segment display via shift registers
-    battery_adc.cpp/.h              Battery voltage ADC reading
-    esp_sleep.cpp/.h                Deep sleep + RTC memory
+  hw/                             Hardware drivers (platform-specific)
+    esp_network.cpp/.h              ESP8266 WiFi + MQTT
+    nina_network.cpp/.h             MKR WiFi 1010 WiFiNINA + MQTT
+    bme280_sensor.cpp/.h            BME/BMP280 I2C driver (shared, custom)
+    battery_adc.cpp/.h              ESP8266 battery ADC (10-bit)
+    samd_battery_adc.cpp/.h         MKR battery ADC (12-bit, built-in divider)
+    shift_display.cpp/.h            7-segment display via shift registers (ESP8266)
+    esp_sleep.cpp/.h                Deep sleep + RTC memory (ESP8266)
 
 include/
-  config.h                        MQTT topics, pin assignments, timing constants
+  config.h                        MQTT topics, pin assignments (per-platform), timing
+  debug.h                         Portable serial debug macros
   credentials.h                   WiFi & MQTT credentials (gitignored)
   credentials.h.example           Credentials template
-  interfaces/                     Abstract interfaces
+  interfaces/                     Abstract interfaces (INetwork, ISensor, ISleep, IDisplay)
 
 lib/thermo_core/                  Platform-independent, fully testable library
   src/
     module_registry.h/cpp           Module registration (metrics, commands, handlers)
     payload_builder.h/cpp           Incremental JSON payload construction
-    mqtt_payload.h/cpp              Legacy payload formatting & command parsing
+    mqtt_payload.h/cpp              Payload formatting & command parsing
     modules/
       bme280_module.h/cpp           BME280 module (register + contribute)
       battery_module.h/cpp          Battery module (register + contribute)
     sensor_data.h                   SensorData struct
-    battery.h/cpp                   ADC-to-voltage and voltage-to-SoC conversion
+    battery.h/cpp                   ADC-to-voltage and voltage-to-SoC (per-platform constants)
     display_encoding.h/cpp          BCD encoding for 7-segment display
 
-test/test_native/                 Unit tests (Unity framework, 54 tests)
-docs/                             MQTT protocol specification
-datasheets/                       Component datasheets (BME280, regulators)
+test/test_native/                 Unit tests (Unity framework, 57 tests)
+docs/                             Architecture, MQTT protocol, battery guide
+datasheets/                       Component datasheets
 ```
 
 ## Adding a new module
@@ -139,12 +166,23 @@ datasheets/                       Component datasheets (BME280, regulators)
 3. Add `-DHAS_<NAME>` to the relevant environments in `platformio.ini`
 4. Add tests in `test/test_native/`
 
+## Adding a new platform
+
+1. Create a network driver `src/hw/<platform>_network.h/cpp` implementing `INetwork`
+2. Add platform-specific pin/ADC definitions in `include/config.h`
+3. Add `#elif defined(<PLATFORM_MACRO>)` branches in `src/main.cpp` for network,
+   battery ADC, and hardware ID selection
+4. Add `[common_<platform>]` section and device environment(s) in `platformio.ini`
+5. If battery ADC differs, create `src/hw/<platform>_battery_adc.h/cpp` and add
+   constants in `lib/thermo_core/src/battery.h`
+
 ## Documentation
 
 | Document                                       | Description                                                        |
 |------------------------------------------------|--------------------------------------------------------------------|
 | [docs/architecture.md](docs/architecture.md)   | Modular architecture, module system, data flow, how to add modules |
 | [docs/mqtt-protocol.md](docs/mqtt-protocol.md) | MQTT protocol spec (topics, payloads, capabilities, lifecycle)     |
+| [docs/battery-cells.md](docs/battery-cells.md) | Reclaimed 18650 cell testing, grading, and usage guide             |
 | [COMPONENTS.md](COMPONENTS.md)                 | Electronic components, wiring diagrams, GPIO, power budgets        |
 | [CLAUDE.md](CLAUDE.md)                         | Development conventions, build commands, protocol rules summary    |
 

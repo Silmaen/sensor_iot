@@ -1,4 +1,4 @@
-#ifndef NATIVE
+#if defined(ESP8266) && !defined(NATIVE)
 
 #include "hw/shift_display.h"
 #include "config.h"

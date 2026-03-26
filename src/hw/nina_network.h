@@ -1,15 +1,15 @@
 #pragma once
 
-#ifndef NATIVE
+#if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(NATIVE)
 
 #include "interfaces/i_network.h"
-#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include <functional>
+#include <WiFiNINA.h>
+using MqttCallback = void (*)(char*, uint8_t*, unsigned int);
 
-class EspNetwork : public INetwork {
+class NinaNetwork : public INetwork {
 public:
-    EspNetwork();
+    NinaNetwork();
     bool connect_wifi() override;
     bool connect_mqtt() override;
     bool wifi_connected() override;
@@ -21,7 +21,7 @@ public:
     void loop() override;
     void disconnect() override;
 
-    void set_callback(std::function<void(char*, uint8_t*, unsigned int)> cb);
+    void set_callback(MqttCallback cb);
 
 private:
     WiFiClient wifi_client_;

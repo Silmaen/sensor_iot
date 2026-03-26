@@ -2,8 +2,9 @@
 
 ## Aperçu
 
-Projet PlatformIO modulaire pour des capteurs IoT. Architecture basée sur des feature flags (`HAS_xxx`) permettant de
-composer des variantes hardware à partir d'un noyau MQTT commun.
+Projet PlatformIO modulaire multi-plateforme pour des capteurs IoT. Supporte ESP8266 (D1 Mini) et SAMD21 (Arduino MKR
+WiFi 1010). Architecture basée sur des feature flags (`HAS_xxx`) permettant de composer des variantes hardware à partir
+d'un noyau MQTT commun.
 
 ## Architecture modulaire
 
@@ -18,17 +19,25 @@ Le projet s'articule autour de :
 | `HAS_BATTERY`    | Monitoring batterie           | `battery_pct`, `battery_v`            | —                  |
 | `HAS_DISPLAY`    | Afficheur 7-segments + bouton | —                                     | —                  |
 | `HAS_DEEP_SLEEP` | Deep sleep entre lectures     | —                                     | —                  |
+| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série | —                                     | —                  |
 
 - **Identité device** définie par `-DDEVICE_ID` et `-DMQTT_DEVICE_TYPE` dans `platformio.ini`
 
 ## Environnements PlatformIO
 
 ```bash
-pio run -e thermo1_display     # Build : BME280 + afficheur + USB
-pio run -e thermo1_battery     # Build : BME280 + batterie + deep sleep
+# ESP8266 (D1 Mini)
+pio run -e thermo_display      # Build : BME280 + afficheur + USB
+pio run -e thermo_1            # Build : BME280 + batterie + deep sleep
+pio run -e thermo_display -t upload    # Upload ESP8266
+
+# SAMD21 (Arduino MKR WiFi 1010 + MKR ENV Shield)
+pio run -e thermo_mkr          # Build : BME280 + batterie LiPo 1S
+pio run -e thermo_mkr -t upload        # Upload MKR
+
+# Tests & monitoring
 pio run -e native              # Build natif (tests)
 pio test -e native             # Exécuter les tests unitaires (54 tests)
-pio run -e thermo1_display -t upload   # Upload
 pio device monitor             # Moniteur série (115200 baud)
 ```
 
@@ -37,7 +46,7 @@ pio device monitor             # Moniteur série (115200 baud)
 ```
 src/
   main.cpp              - Orchestrateur modulaire (#ifdef HAS_xxx)
-  hw/                   - Drivers hardware ESP8266
+  hw/                   - Drivers hardware (ESP8266 + SAMD21)
 include/
   config.h              - Pins, timing, topics MQTT (DEVICE_ID/TYPE via -D flags)
   credentials.h         - WiFi & MQTT credentials (gitignored)
@@ -71,7 +80,8 @@ datasheets/             - Datasheets composants
 
 ## Conventions
 
-- Code portable dans `lib/thermo_core/`, code ESP8266 dans `src/hw/`
+- Code portable dans `lib/thermo_core/`, code hardware-spécifique dans `src/hw/`
+- Sélection plateforme via `#if defined(ESP8266)` / `#elif defined(ARDUINO_SAMD_MKRWIFI1010)` dans `main.cpp` et `config.h`
 - `#ifdef NATIVE` / `#ifndef NATIVE` pour le code spécifique à la compilation locale
 - `#ifdef HAS_xxx` pour le code conditionnel aux modules
 - Tests unitaires : framework Unity dans `test/test_native/`

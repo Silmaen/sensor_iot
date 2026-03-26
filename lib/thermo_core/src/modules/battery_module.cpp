@@ -1,8 +1,8 @@
 #include "modules/battery_module.h"
 
 void battery_module_register(ModuleRegistry& reg) {
-    reg.add_metric("battery_pct");
-    reg.add_metric("battery_v");
+    reg.add_metric("battery_pct", "%");
+    reg.add_metric("battery_v", "V");
 }
 
 void battery_module_contribute(PayloadBuilder& pb, uint8_t soc, float voltage) {

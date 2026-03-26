@@ -1,4 +1,4 @@
-#ifndef NATIVE
+#if defined(ESP8266) && !defined(NATIVE)
 
 #include "hw/esp_sleep.h"
 #include "config.h"
