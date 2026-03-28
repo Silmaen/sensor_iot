@@ -7,6 +7,7 @@ Checks: >
   clang-analyzer-*,
   cppcoreguidelines-*,
   -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-avoid-c-arrays,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
@@ -23,6 +24,7 @@ Checks: >
   -readability-magic-numbers,
   -readability-identifier-length,
   -readability-function-cognitive-complexity,
+  -readability-uppercase-literal-suffix,
 
 WarningsAsErrors: ''
 

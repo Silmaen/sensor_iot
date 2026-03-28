@@ -97,6 +97,9 @@ pio run -e thermo_1             # Build battery/deep sleep variant
 # SAMD21 (Arduino MKR WiFi 1010)
 pio run -e thermo_mkr           # Build MKR variant (BME280 + 1S LiPo)
 
+# Utilities
+pio run -e cell_tester          # Build 18650 cell tester (MKR, serial only)
+
 # Tests
 pio run -e native               # Build native (local debug)
 ```
@@ -111,6 +114,10 @@ pio device monitor                      # Serial monitor (115200 baud)
 # MKR WiFi 1010
 pio run -e thermo_mkr -t upload
 pio device monitor                      # Serial monitor (115200 baud, native USB)
+
+# Cell tester
+pio run -e cell_tester -t upload
+pio device monitor                      # Interactive cell tester console
 ```
 
 ### Test
@@ -124,6 +131,7 @@ pio test -e native              # Run all unit tests (57 tests)
 ```
 src/
   main.cpp                        Modular orchestrator (#ifdef HAS_xxx)
+  cell_tester.cpp                 Standalone 18650 cell tester firmware (MKR)
   hw/                             Hardware drivers (platform-specific)
     esp_network.cpp/.h              ESP8266 WiFi + MQTT
     nina_network.cpp/.h             MKR WiFi 1010 WiFiNINA + MQTT
@@ -182,7 +190,7 @@ datasheets/                       Component datasheets
 |------------------------------------------------|--------------------------------------------------------------------|
 | [docs/architecture.md](docs/architecture.md)   | Modular architecture, module system, data flow, how to add modules |
 | [docs/mqtt-protocol.md](docs/mqtt-protocol.md) | MQTT protocol spec (topics, payloads, capabilities, lifecycle)     |
-| [docs/battery-cells.md](docs/battery-cells.md) | Reclaimed 18650 cell testing, grading, and usage guide             |
+| [docs/battery-cells.md](docs/battery-cells.md) | Reclaimed 18650 cell testing, grading, cell tester firmware usage  |
 | [COMPONENTS.md](COMPONENTS.md)                 | Electronic components, wiring diagrams, GPIO, power budgets        |
 | [CLAUDE.md](CLAUDE.md)                         | Development conventions, build commands, protocol rules summary    |
 

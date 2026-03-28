@@ -4,18 +4,18 @@ Components listed here should be used in priority when designing circuits and fe
 
 ## MCU
 
-| Component | Quantity | Notes |
-|---|---|---|
-| Wemos D1 Mini v3.0.0 | 1 | ESP8266, for display and battery/deep-sleep configs |
-| Arduino MKR WiFi 1010 | 1 | SAMD21 + WiFiNINA, built-in LiPo charger (JST connector) |
-| Arduino MKR ENV Shield | 1 | BME280 + UV + lux sensors, plugs on top of MKR board |
+| Component              | Quantity | Notes                                                    |
+|------------------------|----------|----------------------------------------------------------|
+| Wemos D1 Mini v3.0.0   | 1        | ESP8266, for display and battery/deep-sleep configs      |
+| Arduino MKR WiFi 1010  | 1        | SAMD21 + WiFiNINA, built-in LiPo charger (JST connector) |
+| Arduino MKR ENV Shield | 1        | BME280 + UV + lux sensors, plugs on top of MKR board     |
 
 ## Sensors
 
-| Component | Quantity | Notes |
-|---|---|---|
-| bme/bmp280 | 1 | I2C temperature/humidity/pressure (standalone, for ESP8266 configs) |
-| MKR ENV Shield BME280 | 1 | Same sensor, integrated on the shield (for MKR config) |
+| Component             | Quantity | Notes                                                               |
+|-----------------------|----------|---------------------------------------------------------------------|
+| bme/bmp280            | 1        | I2C temperature/humidity/pressure (standalone, for ESP8266 configs) |
+| MKR ENV Shield BME280 | 1        | Same sensor, integrated on the shield (for MKR config)              |
 
 ## Display
 
@@ -106,14 +106,14 @@ Decimal points are driven directly by spare HC595 outputs.
 
 #### Wemos → Shift Registers (SN74HC595N)
 
-| Wemos Pin    | HC595 Pin           | Signal | Notes                            |
-|--------------|---------------------|--------|----------------------------------|
-| D7 (GPIO13)  | #1 SER (14)         | Data   | Serial data input                |
-| D5 (GPIO14)  | #1+#2 SRCLK (11)    | Clock  | Shift clock (shared)             |
-| D8 (GPIO15)  | #1+#2 RCLK (12)     | Latch  | Storage register clock (shared)  |
-| 3V3          | #1+#2 VCC (16)      | Power  | HC595 powered at 3.3V            |
-| GND          | #1+#2 GND (8)       | Ground |                                  |
-| GND          | #1+#2 OE (13)       | Enable | Tied LOW = outputs always active |
+| Wemos Pin   | HC595 Pin        | Signal | Notes                            |
+|-------------|------------------|--------|----------------------------------|
+| D7 (GPIO13) | #1 SER (14)      | Data   | Serial data input                |
+| D5 (GPIO14) | #1+#2 SRCLK (11) | Clock  | Shift clock (shared)             |
+| D8 (GPIO15) | #1+#2 RCLK (12)  | Latch  | Storage register clock (shared)  |
+| 3V3         | #1+#2 VCC (16)   | Power  | HC595 powered at 3.3V            |
+| GND         | #1+#2 GND (8)    | Ground |                                  |
+| GND         | #1+#2 OE (13)    | Enable | Tied LOW = outputs always active |
 
 Daisy-chain: HC595 #1 QH' (pin 9) → HC595 #2 SER (pin 14).
 
@@ -147,6 +147,7 @@ Inverter usage: 8 of 12 gates used (4 spare in LS04 #2).
 
 Each LS247N segment output (a-g) connects directly to the corresponding segment
 pin of the display. Single **120Ω resistor** on the common pin of each digit:
+
 - CC digits (7651): common cathode → 120Ω → GND
 - CA digit (7653): common anode → 120Ω → 5V
 
@@ -179,9 +180,9 @@ Example for "23.5": send `0x2523` → dig0=2, dig1=3, dig2=5, DP1=ON (decimal be
 
 ## Inputs
 
-| Component      | Quantity | Notes                                  |
-|----------------|----------|----------------------------------------|
-| Push button    | 1        | Momentary, for display mode cycling    |
+| Component   | Quantity | Notes                               |
+|-------------|----------|-------------------------------------|
+| Push button | 1        | Momentary, for display mode cycling |
 
 The push button is used in Display config (with display) to cycle through display modes
 (e.g. temperature, humidity, pressure). Connect to a GPIO with internal pull-up,
@@ -189,12 +190,23 @@ active LOW with 100nF debounce capacitor to GND.
 
 ## Power
 
-| Component     | Quantity | Notes                                               |
-|---------------|----------|-----------------------------------------------------|
-| H78M05BT      | 9        | 5V linear regulator 500mA                           |
-| L78M09CV      | 10       | 9V linear regulator 500mA                           |
-| L78m33ACV     | 6        | 3.3V linear regulator 500mA                         |
-| 18650 cells   | several  | Reclaimed from laptop packs, ~3000mAh, 3.7V nominal (see [battery guide](docs/battery-cells.md)) |
+| Component   | Quantity | Notes                                                                                            |
+|-------------|----------|--------------------------------------------------------------------------------------------------|
+| H78M05BT    | 9        | 5V linear regulator 500mA                                                                        |
+| L78M09CV    | 10       | 9V linear regulator 500mA                                                                        |
+| L78m33ACV   | 6        | 3.3V linear regulator 500mA                                                                      |
+| 18650 cells | several  | Reclaimed from laptop packs, ~3000mAh, 3.7V nominal (see [battery guide](docs/battery-cells.md)) |
+
+## Cell Tester
+
+Components for the 18650 cell tester (see [battery guide](docs/battery-cells.md)):
+
+| Component                           | Quantity | Notes                                                   |
+|-------------------------------------|----------|---------------------------------------------------------|
+| Arduino MKR WiFi 1010               | 1        | Provides BQ24195L charger + ADC_BATTERY voltage reading |
+| Sfernice RH10 6.8Ω 10W (meas. 7.3Ω) | 1        | Discharge load (~575mA at 4.2V, ~3.8h for 2000mAh cell) |
+| Toggle switch                       | 1        | In series with resistor to enable/disable discharge     |
+| USB wall charger (≥1A)              | 1        | External 5V power for reliable charging (on MKR 5V pin) |
 
 ---
 
@@ -239,14 +251,14 @@ Standard USB 2.0 provides 500mA — sufficient with margin.
 
 #### Display config — GPIO Assignment
 
-| Wemos Pin    | GPIO   | Function                    |
-|--------------|--------|-----------------------------|
-| D7           | GPIO13 | HC595 SER (shift data)      |
-| D5           | GPIO14 | HC595 SRCLK (shift clock)   |
-| D8           | GPIO15 | HC595 RCLK (latch)          |
-| D1           | GPIO5  | I2C SCL (BME/BMP280)        |
-| D2           | GPIO4  | I2C SDA (BME/BMP280)        |
-| D6           | GPIO12 | Push button (active LOW)    |
+| Wemos Pin | GPIO   | Function                  |
+|-----------|--------|---------------------------|
+| D7        | GPIO13 | HC595 SER (shift data)    |
+| D5        | GPIO14 | HC595 SRCLK (shift clock) |
+| D8        | GPIO15 | HC595 RCLK (latch)        |
+| D1        | GPIO5  | I2C SCL (BME/BMP280)      |
+| D2        | GPIO4  | I2C SDA (BME/BMP280)      |
+| D6        | GPIO12 | Push button (active LOW)  |
 
 ---
 
@@ -279,12 +291,12 @@ Requires **D0 (GPIO16) wired to RST** for deep sleep wake-up.
 
 #### Battery config — Power Budget
 
-| Subsystem         | Rail   | Active     | Deep sleep |
-|-------------------|--------|------------|------------|
-| ESP8266           | 3.3V   | 80mA       | 20µA       |
-| BME/BMP280        | 3.3V   | <1mA       | <1µA       |
-| Voltage divider   | -      | 34µA       | 34µA       |
-| **Total from 5V** | **5V** | **~81mA**  | **~55µA**  |
+| Subsystem         | Rail   | Active    | Deep sleep |
+|-------------------|--------|-----------|------------|
+| ESP8266           | 3.3V   | 80mA      | 20µA       |
+| BME/BMP280        | 3.3V   | <1mA      | <1µA       |
+| Voltage divider   | -      | 34µA      | 34µA       |
+| **Total from 5V** | **5V** | **~81mA** | **~55µA**  |
 
 #### Battery config — Deep Sleep Cycle
 
@@ -307,12 +319,12 @@ Adjustable via sleep interval:
 
 #### Battery config — GPIO Assignment
 
-| Wemos Pin | GPIO   | Function                      |
-|-----------|--------|-------------------------------|
-| D0        | GPIO16 | → RST (deep sleep wake-up)    |
-| D1        | GPIO5  | I2C SCL (BME/BMP280)          |
-| D2        | GPIO4  | I2C SDA (BME/BMP280)          |
-| A0        | ADC    | Battery voltage (divider)     |
+| Wemos Pin | GPIO   | Function                   |
+|-----------|--------|----------------------------|
+| D0        | GPIO16 | → RST (deep sleep wake-up) |
+| D1        | GPIO5  | I2C SCL (BME/BMP280)       |
+| D2        | GPIO4  | I2C SDA (BME/BMP280)       |
+| A0        | ADC    | Battery voltage (divider)  |
 
 #### Battery config — Battery Monitoring
 
@@ -361,12 +373,12 @@ No deep sleep mode — the MKR runs in continuous loop mode.
 
 #### MKR config — Power Budget
 
-| Subsystem | Rail | Active | Idle (WiFi connected) |
-|---|---|---|---|
-| SAMD21 | 3.3V | 15mA | 6mA |
-| WiFiNINA (NINA-W102) | 3.3V | 120mA | 80mA |
-| BME280 (MKR ENV Shield) | 3.3V | <1mA | <1µA |
-| **Total from battery** | **3.7V** | **~140mA** | **~86mA** |
+| Subsystem               | Rail     | Active     | Idle (WiFi connected) |
+|-------------------------|----------|------------|-----------------------|
+| SAMD21                  | 3.3V     | 15mA       | 6mA                   |
+| WiFiNINA (NINA-W102)    | 3.3V     | 120mA      | 80mA                  |
+| BME280 (MKR ENV Shield) | 3.3V     | <1mA       | <1µA                  |
+| **Total from battery**  | **3.7V** | **~140mA** | **~86mA**             |
 
 **Autonomy** (continuous mode, 3000mAh cell): 3000 / 86 ≈ **35 hours** idle.
 For longer autonomy, consider implementing SAMD21 low-power sleep via the
@@ -379,12 +391,12 @@ firmware reads it with 12-bit resolution (0-4095). Battery constants in
 `battery.h` are configured for 1S LiPo (3.0-4.2V).
 
 | Battery voltage | Approx. SoC |
-|---|---|
-| 4.20V | 100% |
-| 3.90V | 75% |
-| 3.70V | 58% |
-| 3.50V | 42% |
-| 3.00V | 0% (cutoff) |
+|-----------------|-------------|
+| 4.20V           | 100%        |
+| 3.90V           | 75%         |
+| 3.70V           | 58%         |
+| 3.50V           | 42%         |
+| 3.00V           | 0% (cutoff) |
 
 The `BATTERY_DIVIDER_RATIO` in `battery.h` is set to an approximate value
 (2.0) and should be calibrated against a multimeter on the actual hardware.

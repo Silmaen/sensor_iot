@@ -28,50 +28,52 @@
 #include <Wire.h>
 
 // --- BQ24195L I2C registers ---
-static constexpr uint8_t BQ24195_ADDR   = 0x6B;
-static constexpr uint8_t REG_PON_CFG    = 0x01;  // Power-On Configuration
-static constexpr uint8_t REG_CHARGE_I   = 0x02;  // Charge Current Control
-static constexpr uint8_t REG_PCHARGE    = 0x03;  // Pre-Charge / Termination Current
-static constexpr uint8_t REG_CHARGE_V   = 0x04;  // Charge Voltage Control
-static constexpr uint8_t REG_TIMER      = 0x05;  // Charge Termination / Timer Control
-static constexpr uint8_t REG_STATUS     = 0x08;  // System Status Register
-static constexpr uint8_t REG_FAULT      = 0x09;  // Fault Register
+static constexpr uint8_t BQ24195_ADDR = 0x6B;
+static constexpr uint8_t REG_PON_CFG  = 0x01; // Power-On Configuration
+static constexpr uint8_t REG_CHARGE_I = 0x02; // Charge Current Control
+static constexpr uint8_t REG_PCHARGE  = 0x03; // Pre-Charge / Termination Current
+static constexpr uint8_t REG_CHARGE_V = 0x04; // Charge Voltage Control
+static constexpr uint8_t REG_TIMER    = 0x05; // Charge Termination / Timer Control
+static constexpr uint8_t REG_STATUS   = 0x08; // System Status Register
+static constexpr uint8_t REG_FAULT    = 0x09; // Fault Register
 
 // --- ADC_BATTERY voltage divider ---
 // On-board divider: R_top=330, R_bottom=1200 → ratio = 1200/(1200+330) = 0.784
 // V_battery = V_adc / 0.784 = V_adc * 1.276
-static constexpr float ADC_DIVIDER_FACTOR = (1200.0f + 330.0f) / 1200.0f;  // ~1.275
-static constexpr int   ADC_MAX_VAL     = 4095;
+static constexpr float ADC_DIVIDER_FACTOR = (1200.0f + 330.0f) / 1200.0f; // ~1.275
+static constexpr int ADC_MAX_VAL          = 4095;
 static constexpr float ADC_REF_V          = 3.3f;
 
 // --- Cell voltage thresholds ---
-static constexpr float V_NO_CELL       = 0.5f;   // Below this: no cell detected
-static constexpr float V_DEAD          = 1.0f;   // Below this: dead cell
-static constexpr float V_DEEP_DISCH    = 2.5f;   // Below this: deep discharged
-static constexpr float V_DISCHARGED    = 3.6f;   // Below this: discharged but OK
-static constexpr float V_FULL          = 4.15f;   // Above this: fully charged
-static constexpr float V_CUTOFF        = 2.8f;    // Discharge test stop voltage
+static constexpr float V_NO_CELL      = 0.5f;  // Below this: no cell detected
+static constexpr float V_DEAD         = 1.0f;  // Below this: dead cell
+static constexpr float V_DEEP_DISCH   = 2.5f;  // Below this: deep discharged
+static constexpr float V_DISCHARGED   = 3.6f;  // Below this: discharged but OK
+static constexpr float V_FULL         = 4.15f; // Above this: fully charged
+static constexpr float V_CUTOFF       = 2.8f;  // Discharge test stop voltage
+static constexpr float V_DROP_REMOVAL = 0.5f;  // Sudden drop threshold → cell removed
 
 // --- Timing ---
-static constexpr unsigned long PRINT_INTERVAL_MS    = 2000;
-static constexpr unsigned long DISCHARGE_SAMPLE_MS  = 5000;
-static constexpr unsigned long OCV_SETTLE_MS        = 3000;
+static constexpr unsigned long PRINT_INTERVAL_MS   = 2000;
+static constexpr unsigned long DISCHARGE_SAMPLE_MS = 5000;
+static constexpr unsigned long OCV_SETTLE_MS       = 3000;
+static constexpr unsigned long CHARGE_CHECK_MS     = 60000; // Charge health check every 60s
 
 // --- State machine ---
 enum class State : uint8_t {
-    IDLE,             // No cell or waiting
-    OCV_MEASURE,      // Cell detected, settling OCV
-    MONITORING,       // Displaying voltage, charging if USB connected
-    DISCHARGE_TEST,   // Discharge in progress, integrating mAh
-    TEST_COMPLETE,    // Results displayed
+    IDLE,           // No cell or waiting
+    OCV_MEASURE,    // Cell detected, settling OCV
+    MONITORING,     // Displaying voltage, charging if USB connected
+    DISCHARGE_TEST, // Discharge in progress, integrating mAh
+    TEST_COMPLETE,  // Results displayed
 };
 
-static State state = State::IDLE;
-static float load_resistance_ohm = 10.0f;
+static State state               = State::IDLE;
+static float load_resistance_ohm = 7.3f;
 
 // OCV measurement
 static unsigned long ocv_start_ms = 0;
-static float ocv_voltage = 0.0f;
+static float ocv_voltage          = 0.0f;
 
 // Discharge test
 static unsigned long discharge_start_ms = 0;
@@ -80,15 +82,49 @@ static float last_sample_voltage        = 0.0f;
 static float accumulated_mah            = 0.0f;
 static float start_voltage              = 0.0f;
 
+// Charge monitoring
+static unsigned long charge_start_ms      = 0;
+static float charge_start_voltage         = 0.0f;
+static float charge_last_check_voltage    = 0.0f;
+static unsigned long charge_last_check_ms = 0;
+static float charge_max_voltage           = 0.0f;
+static bool charge_warned                 = false;
+static bool charge_complete_seen          = false; // Hysteresis: true once charge complete
+
+// Last known voltage (for removal detection)
+static float last_known_voltage = 0.0f;
+
 // Cell counter
 static uint8_t cell_number = 1;
 
-// --- Read battery voltage ---
-static float read_battery_voltage() {
+// --- Read battery voltage (EMA-smoothed) ---
+// Exponential moving average with alpha ~0.1 (smooth over ~10 samples).
+// At 2s print interval, this averages over ~20 seconds.
+static float ema_voltage         = 0.0f;
+static bool ema_initialized      = false;
+static constexpr float EMA_ALPHA = 0.1f;
+
+static float read_battery_voltage_raw() {
     analogReadResolution(12);
     uint16_t raw = analogRead(ADC_BATTERY);
-    float v_adc = (static_cast<float>(raw) / ADC_MAX_VAL) * ADC_REF_V;
+    float v_adc  = (static_cast<float>(raw) / ADC_MAX_VAL) * ADC_REF_V;
     return v_adc * ADC_DIVIDER_FACTOR;
+}
+
+static float read_battery_voltage() {
+    float raw = read_battery_voltage_raw();
+    if (!ema_initialized) {
+        ema_voltage     = raw;
+        ema_initialized = true;
+    } else {
+        ema_voltage += EMA_ALPHA * (raw - ema_voltage);
+    }
+    return ema_voltage;
+}
+
+static void reset_ema() {
+    ema_initialized = false;
+    ema_voltage     = 0.0f;
 }
 
 // --- BQ24195 I2C helpers ---
@@ -97,7 +133,9 @@ static uint8_t bq_read_reg(uint8_t reg) {
     Wire.write(reg);
     Wire.endTransmission(false);
     Wire.requestFrom(BQ24195_ADDR, static_cast<uint8_t>(1));
-    if (Wire.available()) return Wire.read();
+    if (Wire.available()) {
+        return Wire.read();
+    }
     return 0xFF;
 }
 
@@ -106,6 +144,14 @@ static bool bq_write_reg(uint8_t reg, uint8_t value) {
     Wire.write(reg);
     Wire.write(value);
     return Wire.endTransmission() == 0;
+}
+
+// Enable or disable charging via REG01 CHG_CONFIG bits
+static void bq_set_charging(bool enable) {
+    // REG01 bit5-4: CHG_CONFIG = 01 (charge) or 00 (disable)
+    // Keep other bits: no reset, sys_min=3.5V
+    const uint8_t val = enable ? 0b00011010 : 0b00001010;
+    bq_write_reg(REG_PON_CFG, val);
 }
 
 // Configure BQ24195 for cell recovery / testing:
@@ -187,39 +233,168 @@ static uint8_t read_charge_status() {
 }
 
 static const char* charge_status_str(uint8_t status) {
-    if (status == 0xFF) return "read error";
+    if (status == 0xFF)
+        return "read error";
     uint8_t chrg = (status >> 4) & 0x03;
     switch (chrg) {
-    case 0: return "not charging";
-    case 1: return "pre-charge (<3V)";
-    case 2: return "fast charging";
-    case 3: return "charge complete";
-    default: return "unknown";
+    case 0:
+        return "not charging";
+    case 1:
+        return "pre-charge (<3V)";
+    case 2:
+        return "fast charging";
+    case 3:
+        return "charge complete";
+    default:
+        return "unknown";
     }
 }
 
 static bool is_charging(uint8_t status) {
-    if (status == 0xFF) return false;
+    if (status == 0xFF)
+        return false;
     uint8_t chrg = (status >> 4) & 0x03;
     return chrg == 1 || chrg == 2;
 }
 
+static bool is_charge_complete(uint8_t status) {
+    if (status == 0xFF)
+        return false;
+    return ((status >> 4) & 0x03) == 3;
+}
+
+static bool is_usb_connected() {
+    // On MKR WiFi 1010, Serial is native USB CDC.
+    // If we have serial communication, USB power is available.
+    return Serial;
+}
+
 // --- Classify cell from OCV ---
 static const char* classify_cell(float voltage) {
-    if (voltage < V_NO_CELL)    return "NO CELL";
-    if (voltage < V_DEAD)       return "DEAD (<1V) - discard";
-    if (voltage < V_DEEP_DISCH) return "DEEP DISCHARGED - recovery needed";
-    if (voltage < V_DISCHARGED) return "DISCHARGED - charge before testing";
-    if (voltage < V_FULL)       return "GOOD - partially charged";
+    if (voltage < V_NO_CELL)
+        return "NO CELL";
+    if (voltage < V_DEAD)
+        return "DEAD (<1V) - discard";
+    if (voltage < V_DEEP_DISCH)
+        return "DEEP DISCHARGED - recovery needed";
+    if (voltage < V_DISCHARGED)
+        return "DISCHARGED - charge before testing";
+    if (voltage < V_FULL)
+        return "GOOD - partially charged";
     return "FULLY CHARGED - ready for discharge test";
 }
 
 // --- Grade cell from capacity ---
 static const char* grade_cell(float mah) {
-    if (mah > 2000) return "A (>2000mAh) - excellent";
-    if (mah > 1000) return "B (1000-2000mAh) - good for IoT";
-    if (mah > 500)  return "C (500-1000mAh) - marginal";
+    if (mah > 2000)
+        return "A (>2000mAh) - excellent";
+    if (mah > 1000)
+        return "B (1000-2000mAh) - good for IoT";
+    if (mah > 500)
+        return "C (500-1000mAh) - marginal";
     return "D (<500mAh) - recycle";
+}
+
+// --- Cell removal detection ---
+// Detects cell removal by: absolute low voltage, sudden voltage drop,
+// or BQ24195 losing VBUS (PMIC glitches when battery is disconnected
+// even though USB cable is still physically connected).
+static bool cell_removed(float v) {
+    if (v < V_NO_CELL)
+        return true;
+    // Sudden drop > 0.5V from last known reading → cell physically removed
+    if (last_known_voltage > V_DEAD && (last_known_voltage - v) > V_DROP_REMOVAL)
+        return true;
+    return false;
+}
+
+// --- Format elapsed time as Xh Ym ---
+static void print_elapsed(unsigned long start_ms) {
+    unsigned long elapsed_s = (millis() - start_ms) / 1000;
+    unsigned long h         = elapsed_s / 3600;
+    unsigned long m         = (elapsed_s % 3600) / 60;
+    unsigned long s         = elapsed_s % 60;
+    if (h > 0) {
+        Serial.print(h);
+        Serial.print(F("h"));
+        Serial.print(m);
+        Serial.print(F("m"));
+    } else if (m > 0) {
+        Serial.print(m);
+        Serial.print(F("m"));
+        if (m < 10) {
+            Serial.print(s);
+            Serial.print(F("s"));
+        }
+    } else {
+        Serial.print(s);
+        Serial.print(F("s"));
+    }
+}
+
+// --- Charge health analysis ---
+// Returns true if charge looks healthy, false if cell should be discarded.
+// Called every CHARGE_CHECK_MS during MONITORING state.
+static bool check_charge_health(float current_v) {
+    unsigned long now        = millis();
+    unsigned long elapsed_s  = (now - charge_start_ms) / 1000;
+    float delta_since_start  = current_v - charge_start_voltage;
+    float delta_since_check  = current_v - charge_last_check_voltage;
+    float check_interval_min = static_cast<float>(now - charge_last_check_ms) / 60000.0f;
+
+    // Track maximum voltage seen
+    if (current_v > charge_max_voltage) {
+        charge_max_voltage = current_v;
+    }
+
+    // Rule 1: voltage dropping while charging → internal short
+    if (current_v < charge_max_voltage - 0.05f) {
+        Serial.println(F("\n>>> WARNING: voltage DROPPING during charge <<<"));
+        Serial.print(F("    Peak was "));
+        Serial.print(charge_max_voltage, 3);
+        Serial.print(F("V, now "));
+        Serial.print(current_v, 3);
+        Serial.println(F("V"));
+        Serial.println(F(">>> CELL LIKELY DEAD (internal short) — discard <<<\n"));
+        return false;
+    }
+
+    // Rule 2: deep discharged cell (<2.5V) not gaining after 30 min
+    if (charge_start_voltage < V_DEEP_DISCH && elapsed_s > 1800 && delta_since_start < 0.05f) {
+        Serial.println(F("\n>>> WARNING: cell not responding to charge <<<"));
+        Serial.print(F("    Started at "));
+        Serial.print(charge_start_voltage, 3);
+        Serial.print(F("V, now "));
+        Serial.print(current_v, 3);
+        Serial.print(F("V after "));
+        print_elapsed(charge_start_ms);
+        Serial.println();
+        Serial.println(F(">>> CELL LIKELY DEAD — discard <<<\n"));
+        return false;
+    }
+
+    // Rule 3: no progress in the last check interval (stalled)
+    // Only flag after at least 5 minutes of stall, and not near full charge
+    if (current_v < 4.0f && check_interval_min > 1.0f && delta_since_check < 0.005f) {
+        if (!charge_warned) {
+            Serial.println(F("\n>>> WARNING: charge stalled (no voltage gain) <<<"));
+            Serial.print(F("    Voltage: "));
+            Serial.print(current_v, 3);
+            Serial.print(F("V ("));
+            Serial.print(delta_since_check * 1000, 0);
+            Serial.println(F("mV gain in last check interval)"));
+            Serial.println(F("    If this persists, consider discarding."));
+            Serial.println(F("    Send 'N' to skip to next cell.\n"));
+            charge_warned = true;
+        }
+    } else {
+        charge_warned = false; // Reset warning if progress resumes
+    }
+
+    // Update checkpoint
+    charge_last_check_voltage = current_v;
+    charge_last_check_ms      = now;
+    return true;
 }
 
 // --- Print help ---
@@ -240,11 +415,13 @@ static void print_help() {
 
 // --- Process serial commands ---
 static void process_serial() {
-    if (!Serial.available()) return;
+    if (!Serial.available())
+        return;
 
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
-    if (cmd.length() == 0) return;
+    if (cmd.length() == 0)
+        return;
 
     char c = toupper(cmd.charAt(0));
 
@@ -255,8 +432,10 @@ static void process_serial() {
 
     case 'N':
         cell_number++;
-        state = State::IDLE;
-        accumulated_mah = 0;
+        state              = State::IDLE;
+        accumulated_mah    = 0;
+        last_known_voltage = 0;
+        reset_ema();
         Serial.println(F("\n--- Ready for next cell ---"));
         Serial.print(F("Cell #"));
         Serial.println(cell_number);
@@ -272,7 +451,8 @@ static void process_serial() {
                 Serial.print(v, 2);
                 Serial.println(F("V). Charge first."));
             } else {
-                Serial.println(F("\n>>> DISCHARGE TEST STARTED <<<"));
+                bq_set_charging(false);
+                Serial.println(F("\n>>> DISCHARGE TEST STARTED (charging disabled) <<<"));
                 Serial.print(F("Make sure "));
                 Serial.print(load_resistance_ohm, 1);
                 Serial.println(F(" ohm resistor is connected!"));
@@ -284,12 +464,12 @@ static void process_serial() {
                 Serial.println(F("V"));
                 Serial.println(F("Send 'S' to stop manually.\n"));
 
-                state = State::DISCHARGE_TEST;
-                discharge_start_ms = millis();
-                last_sample_ms = discharge_start_ms;
+                state               = State::DISCHARGE_TEST;
+                discharge_start_ms  = millis();
+                last_sample_ms      = discharge_start_ms;
                 last_sample_voltage = v;
-                start_voltage = v;
-                accumulated_mah = 0.0f;
+                start_voltage       = v;
+                accumulated_mah     = 0.0f;
             }
         }
         break;
@@ -297,6 +477,7 @@ static void process_serial() {
     case 'S':
         if (state == State::DISCHARGE_TEST) {
             Serial.println(F("\n>>> DISCHARGE TEST STOPPED (manual) <<<"));
+            bq_set_charging(true);
             state = State::TEST_COMPLETE;
         }
         break;
@@ -331,34 +512,40 @@ static unsigned long last_print_ms = 0;
 
 static void print_status() {
     unsigned long now = millis();
-    if (now - last_print_ms < PRINT_INTERVAL_MS) return;
+    if (now - last_print_ms < PRINT_INTERVAL_MS)
+        return;
     last_print_ms = now;
 
-    float v = read_battery_voltage();
+    float v_raw       = read_battery_voltage_raw();
+    float v           = read_battery_voltage(); // EMA-smoothed
     uint8_t bq_status = read_charge_status();
 
     switch (state) {
     case State::IDLE:
-        if (v >= V_NO_CELL) {
+        if (v_raw >= V_NO_CELL) {
+            last_known_voltage = v_raw;
             Serial.print(F("\nCell #"));
             Serial.print(cell_number);
             Serial.println(F(" detected. Measuring OCV..."));
             ocv_start_ms = now;
-            state = State::OCV_MEASURE;
+            state        = State::OCV_MEASURE;
         }
         break;
 
     case State::OCV_MEASURE:
-        if (v < V_NO_CELL) {
+        if (cell_removed(v_raw)) {
             Serial.println(F("Cell removed."));
+            last_known_voltage = 0;
+            reset_ema();
             state = State::IDLE;
             break;
         }
+        last_known_voltage = v_raw;
         Serial.print(F("  settling... "));
-        Serial.print(v, 3);
+        Serial.print(v_raw, 3);
         Serial.println(F("V"));
         if (now - ocv_start_ms >= OCV_SETTLE_MS) {
-            ocv_voltage = v;
+            ocv_voltage = v_raw;
             Serial.println(F("\n============================="));
             Serial.print(F("Cell #"));
             Serial.print(cell_number);
@@ -374,25 +561,82 @@ static void print_status() {
             } else if (ocv_voltage >= V_FULL) {
                 Serial.println(F("Ready for discharge test. Send 'D' to start."));
             }
+            // Seed EMA with settled OCV so gain starts at 0
+            reset_ema();
+            ema_voltage     = ocv_voltage;
+            ema_initialized = true;
+            // Init charge monitoring
+            charge_start_ms           = now;
+            charge_start_voltage      = ocv_voltage;
+            charge_last_check_voltage = ocv_voltage;
+            charge_last_check_ms      = now;
+            charge_max_voltage        = ocv_voltage;
+            charge_warned             = false;
+            charge_complete_seen      = false;
+            // Enable charging now if USB is available
+            if (is_usb_connected()) {
+                bq_configure_charger();
+            }
             state = State::MONITORING;
         }
         break;
 
-    case State::MONITORING:
-        if (v < V_NO_CELL) {
+    case State::MONITORING: {
+        if (cell_removed(v_raw)) {
             Serial.println(F("Cell removed."));
+            last_known_voltage = 0;
+            reset_ema();
             state = State::IDLE;
             break;
         }
+        last_known_voltage = v_raw;
+
+        bool usb      = is_usb_connected();
+        bool charging = is_charging(bq_status);
+        bool complete = is_charge_complete(bq_status);
+
+        // Hysteresis: once charge complete seen, stay "FULL" until below 4.0V
+        if (complete) {
+            charge_complete_seen = true;
+        } else if (charge_complete_seen && v < 4.0f) {
+            charge_complete_seen = false;
+        }
+
+        // Auto-enable charging if USB just connected
+        if (usb && !charging && !complete && !charge_complete_seen) {
+            bq_set_charging(true);
+        }
+
+        // Status line: voltage | elapsed | gain | charge status
         Serial.print(F("  "));
         Serial.print(v, 3);
-        Serial.print(F("V | charge: "));
-        Serial.print(charge_status_str(bq_status));
-        if (is_charging(bq_status) && v >= V_FULL) {
-            Serial.print(F(" | FULL - send 'D' to test"));
+        Serial.print(F("V | "));
+        print_elapsed(charge_start_ms);
+        Serial.print(F(" | "));
+        {
+            float gain = v - charge_start_voltage;
+            if (gain >= 0)
+                Serial.print(F("+"));
+            Serial.print(gain * 1000, 0);
+            Serial.print(F("mV"));
+        }
+        Serial.print(F(" | "));
+
+        if (charge_complete_seen || complete) {
+            Serial.print(F("FULL - send 'D' to test"));
+        } else if (!usb) {
+            Serial.print(F("no USB"));
+        } else {
+            Serial.print(charge_status_str(bq_status));
         }
         Serial.println();
+
+        // Periodic charge health check (only while actively charging)
+        if (charging && (now - charge_last_check_ms >= CHARGE_CHECK_MS)) {
+            check_charge_health(v);
+        }
         break;
+    }
 
     case State::TEST_COMPLETE:
         // Print once, handled elsewhere
@@ -406,22 +650,24 @@ static void print_status() {
 
 // --- Discharge test tick ---
 static void discharge_tick() {
-    if (state != State::DISCHARGE_TEST) return;
+    if (state != State::DISCHARGE_TEST)
+        return;
 
     unsigned long now = millis();
-    if (now - last_sample_ms < DISCHARGE_SAMPLE_MS) return;
+    if (now - last_sample_ms < DISCHARGE_SAMPLE_MS)
+        return;
 
-    float v = read_battery_voltage();
+    float v             = read_battery_voltage();
     unsigned long dt_ms = now - last_sample_ms;
-    float dt_h = static_cast<float>(dt_ms) / 3600000.0f;
+    float dt_h          = static_cast<float>(dt_ms) / 3600000.0f;
 
     // Trapezoidal integration: average voltage over interval → current → mAh
-    float avg_v = (last_sample_voltage + v) / 2.0f;
+    float avg_v    = (last_sample_voltage + v) / 2.0f;
     float avg_i_ma = (avg_v / load_resistance_ohm) * 1000.0f;
     accumulated_mah += avg_i_ma * dt_h;
 
     float elapsed_min = static_cast<float>(now - discharge_start_ms) / 60000.0f;
-    float current_ma = (v / load_resistance_ohm) * 1000.0f;
+    float current_ma  = (v / load_resistance_ohm) * 1000.0f;
 
     Serial.print(F("  "));
     Serial.print(elapsed_min, 1);
@@ -433,19 +679,23 @@ static void discharge_tick() {
     Serial.print(accumulated_mah, 0);
     Serial.println(F("mAh"));
 
-    last_sample_ms = now;
+    last_sample_ms      = now;
     last_sample_voltage = v;
 
     // Check cutoff
     if (v <= V_CUTOFF) {
         Serial.println(F("\n>>> CUTOFF REACHED <<<"));
+        bq_set_charging(true);
         state = State::TEST_COMPLETE;
     }
 
     // Check cell removed
-    if (v < V_NO_CELL) {
+    if (cell_removed(v)) {
         Serial.println(F("\n>>> CELL REMOVED - test aborted <<<"));
-        state = State::IDLE;
+        bq_set_charging(true);
+        last_known_voltage = 0;
+        reset_ema();
+        state           = State::IDLE;
         accumulated_mah = 0;
     }
 }
@@ -454,11 +704,13 @@ static void discharge_tick() {
 static bool results_printed = false;
 
 static void print_results() {
-    if (state != State::TEST_COMPLETE || results_printed) return;
+    if (state != State::TEST_COMPLETE || results_printed) {
+        return;
+    }
     results_printed = true;
 
-    unsigned long elapsed_ms = millis() - discharge_start_ms;
-    float elapsed_min = static_cast<float>(elapsed_ms) / 60000.0f;
+    unsigned long const elapsed_ms = millis() - discharge_start_ms;
+    float const elapsed_min        = static_cast<float>(elapsed_ms) / 60000.0f;
 
     Serial.println(F("\n╔══════════════════════════════════════╗"));
     Serial.println(F("║       DISCHARGE TEST RESULTS         ║"));
@@ -490,7 +742,8 @@ static void print_results() {
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial && millis() < 5000) { /* wait for native USB */ }
+    while (!Serial && millis() < 5000) { /* wait for native USB */
+    }
 
     Wire.begin();
     analogReadResolution(12);
@@ -501,8 +754,14 @@ void setup() {
     Serial.println(F("╚══════════════════════════════════════╝"));
     Serial.println();
 
-    // Configure BQ24195 for cell recovery
-    bq_configure_charger();
+    // Configure BQ24195 — only enable charging if USB is connected
+    if (is_usb_connected()) {
+        bq_configure_charger();
+        Serial.println(F("USB detected — charging enabled."));
+    } else {
+        Serial.println(F("No USB power detected — charging disabled."));
+        Serial.println(F("Connect USB to enable charging."));
+    }
     bq_print_config();
 
     Serial.println(F("Insert a cell into the JST connector."));

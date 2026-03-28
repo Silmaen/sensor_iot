@@ -13,13 +13,13 @@ Le projet s'articule autour de :
 - **Noyau MQTT** (`src/main.cpp`) : connexion, publication, commandes, capabilities — toujours présent
 - **Modules optionnels** activés par feature flags dans `platformio.ini` :
 
-| Flag             | Module                        | Metrics ajoutées                      | Commandes ajoutées |
-|------------------|-------------------------------|---------------------------------------|--------------------|
-| `HAS_BME280`     | Capteur BME/BMP280            | `temperature`, `humidity`, `pressure` | —                  |
-| `HAS_BATTERY`    | Monitoring batterie           | `battery_pct`, `battery_v`            | —                  |
-| `HAS_DISPLAY`    | Afficheur 7-segments + bouton | —                                     | —                  |
-| `HAS_DEEP_SLEEP` | Deep sleep entre lectures     | —                                     | —                  |
-| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série | —                                     | —                  |
+| Flag               | Module                        | Metrics ajoutées                      | Commandes ajoutées |
+|--------------------|-------------------------------|---------------------------------------|--------------------|
+| `HAS_BME280`       | Capteur BME/BMP280            | `temperature`, `humidity`, `pressure` | —                  |
+| `HAS_BATTERY`      | Monitoring batterie           | `battery_pct`, `battery_v`            | —                  |
+| `HAS_DISPLAY`      | Afficheur 7-segments + bouton | —                                     | —                  |
+| `HAS_DEEP_SLEEP`   | Deep sleep entre lectures     | —                                     | —                  |
+| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série  | —                                     | —                  |
 
 - **Identité device** définie par `-DDEVICE_ID` et `-DMQTT_DEVICE_TYPE` dans `platformio.ini`
 
@@ -35,9 +35,13 @@ pio run -e thermo_display -t upload    # Upload ESP8266
 pio run -e thermo_mkr          # Build : BME280 + batterie LiPo 1S
 pio run -e thermo_mkr -t upload        # Upload MKR
 
+# Utilitaires
+pio run -e cell_tester         # Build : testeur de cellules 18650 (MKR, série uniquement)
+pio run -e cell_tester -t upload       # Upload testeur
+
 # Tests & monitoring
 pio run -e native              # Build natif (tests)
-pio test -e native             # Exécuter les tests unitaires (54 tests)
+pio test -e native             # Exécuter les tests unitaires (57 tests)
 pio device monitor             # Moniteur série (115200 baud)
 ```
 
@@ -46,6 +50,7 @@ pio device monitor             # Moniteur série (115200 baud)
 ```
 src/
   main.cpp              - Orchestrateur modulaire (#ifdef HAS_xxx)
+  cell_tester.cpp       - Firmware testeur de cellules 18650 (MKR, standalone)
   hw/                   - Drivers hardware (ESP8266 + SAMD21)
 include/
   config.h              - Pins, timing, topics MQTT (DEVICE_ID/TYPE via -D flags)
