@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" font-family="monospace" font-size="12">
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #1a1a2e; }
+        .text { fill: #e0e0e0; }
+        .text-dim { fill: #999; }
+        .line { stroke: #ccc; stroke-width: 1.5; fill: none; }
+        .line-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+        .line-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+        .line-sig { stroke: #a29bfe; stroke-width: 2; fill: none; }
+        .comp-fill { fill: #2a2a3e; stroke: #888; }
+        .ic-fill { fill: #2a2a3e; stroke: #aaa; }
+        .mcu-fill { fill: #1a3a5c; stroke: #3a6a9c; }
+        .legend-box { fill: #2a2a3e; stroke: #555; }
+        .ttl { fill: #e0e0e0; font-size: 16px; font-weight: bold; }
+        .gnd-sym { fill: #74b9ff; }
+        .vdd-text { fill: #ff6b6b; }
+        .res-fill { fill: #3a3a4e; stroke: #aaa; }
+        .cap-stroke { stroke: #aaa; }
+      }
+      @media (prefers-color-scheme: light) {
+        .bg { fill: #ffffff; }
+        .text { fill: #333; }
+        .text-dim { fill: #777; }
+        .line { stroke: #333; stroke-width: 1.5; fill: none; }
+        .line-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+        .line-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+        .line-sig { stroke: #2980b9; stroke-width: 2; fill: none; }
+        .comp-fill { fill: #f0f0f0; stroke: #555; }
+        .ic-fill { fill: #ecf0f1; stroke: #7f8c8d; }
+        .mcu-fill { fill: #d4e6f1; stroke: #5b9bd5; }
+        .legend-box { fill: #f8f8f8; stroke: #ccc; }
+        .ttl { fill: #222; font-size: 16px; font-weight: bold; }
+        .gnd-sym { fill: #2c3e50; }
+        .vdd-text { fill: #c0392b; }
+        .res-fill { fill: #f5f0e0; stroke: #b8a88a; }
+        .cap-stroke { stroke: #555; }
+      }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="560" class="bg"/>
+
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="ttl">SHT30 Shield — Schematic</text>
+
+  <!-- ==================== VDD RAIL ==================== -->
+  <line x1="100" y1="75" x2="650" y2="75" class="line-pwr"/>
+  <text x="660" y="79" class="vdd-text" font-size="12" font-weight="bold">VDD (3.3V)</text>
+
+  <!-- ==================== GND RAIL ==================== -->
+  <line x1="100" y1="460" x2="650" y2="460" class="line-gnd"/>
+  <text x="660" y="464" class="text" font-size="12" font-weight="bold">GND</text>
+
+  <!-- GND symbols on rail -->
+  <line x1="148" y1="460" x2="148" y2="470" class="line-gnd"/>
+  <line x1="138" y1="470" x2="158" y2="470" class="line-gnd"/>
+  <line x1="142" y1="474" x2="154" y2="474" class="line-gnd"/>
+  <line x1="146" y1="478" x2="150" y2="478" class="line-gnd"/>
+
+  <line x1="550" y1="460" x2="550" y2="470" class="line-gnd"/>
+  <line x1="540" y1="470" x2="560" y2="470" class="line-gnd"/>
+  <line x1="544" y1="474" x2="556" y2="474" class="line-gnd"/>
+  <line x1="548" y1="478" x2="552" y2="478" class="line-gnd"/>
+
+  <!-- ==================== MCU BLOCK ==================== -->
+  <rect x="40" y="160" width="120" height="200" rx="6" class="mcu-fill" stroke-width="2"/>
+  <text x="100" y="190" text-anchor="middle" class="text" font-size="13" font-weight="bold">MCU</text>
+  <text x="100" y="208" text-anchor="middle" class="text-dim" font-size="9">ESP8266</text>
+  <text x="100" y="220" text-anchor="middle" class="text-dim" font-size="9">D1 Mini</text>
+
+  <!-- MCU pins -->
+  <text x="145" y="260" class="text" font-size="10">SCL (D1)</text>
+  <line x1="160" y1="256" x2="190" y2="256" class="line-sig"/>
+  <circle cx="160" cy="256" r="3" class="line-sig" fill="none" stroke-width="1.5"/>
+
+  <text x="145" y="296" class="text" font-size="10">SDA (D2)</text>
+  <line x1="160" y1="292" x2="190" y2="292" class="line-sig"/>
+  <circle cx="160" cy="292" r="3" class="line-sig" fill="none" stroke-width="1.5"/>
+
+  <text x="52" y="340" class="text" font-size="10">VCC</text>
+  <line x1="100" y1="336" x2="100" y2="360" class="line-pwr"/>
+  <line x1="100" y1="360" x2="100" y2="395" class="line-pwr"/>
+
+  <!-- MCU VCC to VDD rail -->
+  <line x1="100" y1="160" x2="100" y2="75" class="line-pwr"/>
+
+  <!-- MCU GND -->
+  <line x1="100" y1="360" x2="100" y2="460" class="line-gnd"/>
+
+  <!-- ==================== 10k PULL-UP on SCL ==================== -->
+  <!-- SCL line from MCU -->
+  <line x1="190" y1="256" x2="280" y2="256" class="line-sig"/>
+
+  <!-- Pull-up resistor R1 (SCL) - vertical -->
+  <line x1="280" y1="75" x2="280" y2="120" class="line-pwr"/>
+  <rect x="272" y="120" width="16" height="50" rx="3" class="res-fill" stroke-width="1.5"/>
+  <text x="295" y="148" class="text" font-size="9">R1</text>
+  <text x="295" y="160" class="text-dim" font-size="9">10k</text>
+  <line x1="280" y1="170" x2="280" y2="256" class="line-sig"/>
+
+  <!-- SCL continues to SHT30 -->
+  <line x1="280" y1="256" x2="420" y2="256" class="line-sig"/>
+
+  <!-- ==================== 10k PULL-UP on SDA ==================== -->
+  <!-- SDA line from MCU -->
+  <line x1="190" y1="292" x2="350" y2="292" class="line-sig"/>
+
+  <!-- Pull-up resistor R2 (SDA) - vertical -->
+  <line x1="350" y1="75" x2="350" y2="120" class="line-pwr"/>
+  <rect x="342" y="120" width="16" height="50" rx="3" class="res-fill" stroke-width="1.5"/>
+  <text x="365" y="148" class="text" font-size="9">R2</text>
+  <text x="365" y="160" class="text-dim" font-size="9">10k</text>
+  <line x1="350" y1="170" x2="350" y2="292" class="line-sig"/>
+
+  <!-- SDA continues to SHT30 -->
+  <line x1="350" y1="292" x2="420" y2="292" class="line-sig"/>
+
+  <!-- ==================== SHT30-DIS IC ==================== -->
+  <rect x="420" y="200" width="160" height="180" rx="6" class="ic-fill" stroke-width="2"/>
+  <text x="500" y="235" text-anchor="middle" class="text" font-size="13" font-weight="bold">SHT30-DIS</text>
+  <circle cx="440" cy="220" r="4" fill="#888"/>
+
+  <!-- SHT30 pin labels (inside IC) -->
+  <!-- Pin 4: SCL (left) -->
+  <text x="432" y="260" class="text" font-size="10">4 SCL</text>
+  <circle cx="420" cy="256" r="3" class="line-sig" fill="none" stroke-width="1.5"/>
+
+  <!-- Pin 1: SDA (left) -->
+  <text x="432" y="296" class="text" font-size="10">1 SDA</text>
+  <circle cx="420" cy="292" r="3" class="line-sig" fill="none" stroke-width="1.5"/>
+
+  <!-- Pin 2: ADDR (left) -->
+  <text x="432" y="332" class="text" font-size="10">2 ADDR</text>
+  <circle cx="420" cy="328" r="3" class="line" fill="none" stroke-width="1.5"/>
+
+  <!-- Pin 6: nRESET (left) -->
+  <text x="432" y="368" class="text" font-size="10">6 nRST</text>
+  <circle cx="420" cy="364" r="3" class="line" fill="none" stroke-width="1.5"/>
+
+  <!-- Pin 5: VDD (right) -->
+  <text x="548" y="260" text-anchor="end" class="text" font-size="10">VDD 5</text>
+  <circle cx="580" cy="256" r="3" class="line-pwr" fill="none" stroke-width="1.5"/>
+
+  <!-- Pin 3: NC -->
+  <text x="548" y="296" text-anchor="end" class="text-dim" font-size="10">n/c 3</text>
+
+  <!-- Pin 8: VSS (right) -->
+  <text x="548" y="368" text-anchor="end" class="text" font-size="10">VSS 8</text>
+  <circle cx="580" cy="364" r="3" class="line-gnd" fill="none" stroke-width="1.5"/>
+
+  <!-- ==================== SHT30 VDD connection ==================== -->
+  <line x1="580" y1="256" x2="620" y2="256" class="line-pwr"/>
+  <line x1="620" y1="256" x2="620" y2="75" class="line-pwr"/>
+
+  <!-- ==================== SHT30 VSS connection ==================== -->
+  <line x1="580" y1="364" x2="620" y2="364" class="line-gnd"/>
+  <line x1="620" y1="364" x2="620" y2="460" class="line-gnd"/>
+
+  <!-- ==================== 100nF DECOUPLING CAP ==================== -->
+  <!-- Between VDD and VSS, on right side -->
+  <line x1="620" y1="256" x2="690" y2="256" class="line-pwr"/>
+  <line x1="690" y1="256" x2="690" y2="295" class="line-pwr"/>
+  <!-- Cap symbol (two parallel lines) -->
+  <line x1="680" y1="295" x2="700" y2="295" class="cap-stroke" stroke-width="2.5"/>
+  <line x1="680" y1="303" x2="700" y2="303" class="cap-stroke" stroke-width="2.5"/>
+  <text x="710" y="303" class="text" font-size="9">C1</text>
+  <text x="710" y="315" class="text-dim" font-size="9">100nF</text>
+  <line x1="690" y1="303" x2="690" y2="340" class="line-gnd"/>
+  <line x1="620" y1="364" x2="690" y2="364" class="line-gnd"/>
+  <line x1="690" y1="340" x2="690" y2="364" class="line-gnd"/>
+
+  <!-- ==================== ADDR PIN ==================== -->
+  <!-- ADDR to GND (0x44 default) -->
+  <line x1="420" y1="328" x2="350" y2="328" class="line"/>
+  <line x1="350" y1="328" x2="350" y2="420" class="line"/>
+
+  <!-- Switch/jumper symbol for ADDR -->
+  <line x1="350" y1="420" x2="350" y2="430" class="line-gnd"/>
+  <circle cx="350" cy="432" r="3" class="line-gnd" fill="none" stroke-width="1.5"/>
+  <line x1="350" y1="435" x2="350" y2="460" class="line-gnd"/>
+  <!-- Jumper annotation -->
+  <text x="310" y="408" class="text-dim" font-size="9">ADDR pad</text>
+  <text x="304" y="420" class="text-dim" font-size="9">GND = 0x44</text>
+  <text x="304" y="432" class="text-dim" font-size="9">VDD = 0x45</text>
+
+  <!-- ==================== nRESET PIN ==================== -->
+  <!-- nRESET pull-up to VDD via line -->
+  <line x1="420" y1="364" x2="400" y2="364" class="line"/>
+  <line x1="400" y1="364" x2="400" y2="410" class="line"/>
+  <!-- Small resistor symbol for nRESET pull-up -->
+  <rect x="393" y="410" width="14" height="36" rx="2" class="res-fill" stroke-width="1"/>
+  <text x="380" y="432" text-anchor="end" class="text-dim" font-size="8">to VDD</text>
+  <line x1="400" y1="446" x2="400" y2="460" class="line"/>
+  <!-- Actually nRESET goes to VDD -->
+  <line x1="400" y1="364" x2="400" y2="75" class="line-pwr" stroke-dasharray="4,3"/>
+  <text x="412" y="140" class="text-dim" font-size="8">nRST</text>
+
+  <!-- ==================== LEGEND ==================== -->
+  <rect x="30" y="480" width="220" height="68" rx="5" class="legend-box" stroke-width="1"/>
+  <text x="140" y="496" text-anchor="middle" class="text" font-size="11" font-weight="bold">Legend</text>
+  <line x1="42" y1="508" x2="72" y2="508" class="line-sig" stroke-width="2"/>
+  <text x="78" y="512" class="text" font-size="10">I2C signal (SCL/SDA)</text>
+  <line x1="42" y1="524" x2="72" y2="524" class="line-pwr" stroke-width="2"/>
+  <text x="78" y="528" class="text" font-size="10">Power (VDD 3.3V)</text>
+  <line x1="42" y1="540" x2="72" y2="540" class="line-gnd" stroke-width="2"/>
+  <text x="78" y="544" class="text" font-size="10">Ground (GND/VSS)</text>
+
+  <!-- ==================== NOTES ==================== -->
+  <text x="400" y="555" text-anchor="middle" class="text-dim" font-size="10">All components on shield PCB — no external wiring required</text>
+</svg>

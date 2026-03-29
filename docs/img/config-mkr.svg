@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 400" width="750" height="400">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a2e; }
+      .text { fill: #e0e0e0; }
+      .text-dim { fill: #999; }
+      .text-title { fill: #e0e0e0; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #55efc4; stroke-width: 1.5; fill: none; }
+      .box { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #2e1e4e; stroke: #6e4eae; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #22223a; stroke: #444; rx: 4; }
+      .arrow { fill: #ccc; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #ffffff; }
+      .text { fill: #333; }
+      .text-dim { fill: #777; }
+      .text-title { fill: #222; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #00b894; stroke-width: 1.5; fill: none; }
+      .box { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #e8daef; stroke: #8e44ad; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #f8f9fa; stroke: #ddd; rx: 4; }
+      .arrow { fill: #333; }
+    }
+    text { font-family: monospace; font-size: 12px; }
+  </style>
+
+  <!-- Background -->
+  <rect class="bg" width="750" height="400" rx="4"/>
+
+  <!-- Title -->
+  <text class="text-title" x="375" y="25" text-anchor="middle">MKR Config (Arduino MKR WiFi 1010 + ENV Shield)</text>
+
+  <!-- 18650 cell -->
+  <rect class="box" x="30" y="100" width="120" height="55" rx="4"/>
+  <text class="text" x="90" y="120" text-anchor="middle" font-weight="bold">18650 cell</text>
+  <text class="text-dim" x="90" y="140" text-anchor="middle" font-size="10">3.7V (1S LiPo)</text>
+
+  <!-- JST connector -->
+  <rect class="box" x="185" y="100" width="100" height="55" rx="4"/>
+  <text class="text" x="235" y="120" text-anchor="middle" font-weight="bold">JST PH</text>
+  <text class="text-dim" x="235" y="140" text-anchor="middle" font-size="10">2-pin connector</text>
+
+  <!-- Cell to JST -->
+  <line class="wire-pwr" x1="150" y1="127" x2="185" y2="127"/>
+  <polygon class="arrow" points="185,127 177,123 177,131"/>
+
+  <!-- MKR WiFi 1010 -->
+  <rect class="box-mcu" x="330" y="50" width="230" height="210" rx="4"/>
+  <text class="text" x="445" y="75" text-anchor="middle" font-weight="bold">MKR WiFi 1010</text>
+  <text class="text-dim" x="445" y="93" text-anchor="middle" font-size="10">SAMD21 + BQ24195L</text>
+
+  <!-- JST input on MKR -->
+  <text class="text-dim" x="345" y="127" font-size="10">JST in</text>
+  <line class="wire-pwr" x1="285" y1="127" x2="330" y2="127"/>
+  <polygon class="arrow" points="330,127 322,123 322,131"/>
+  <text class="text-dim" x="345" y="147" font-size="10">(built-in charger)</text>
+
+  <!-- WiFiNINA on-board -->
+  <rect class="box" x="355" y="160" width="185" height="40" rx="4"/>
+  <text class="text" x="448" y="178" text-anchor="middle" font-size="11">WiFiNINA (on-board)</text>
+  <text class="text-dim" x="448" y="192" text-anchor="middle" font-size="9">NINA-W102 module</text>
+
+  <!-- ADC_BATTERY -->
+  <rect class="box" x="355" y="210" width="185" height="35" rx="4"/>
+  <text class="text" x="448" y="230" text-anchor="middle" font-size="11">ADC_BATTERY</text>
+  <text class="text-dim" x="448" y="240" text-anchor="middle" font-size="9">built-in divider, 12-bit</text>
+
+  <!-- MKR ENV Shield -->
+  <rect class="box-sensor" x="600" y="80" width="120" height="120" rx="4"/>
+  <text class="text" x="660" y="105" text-anchor="middle" font-weight="bold" font-size="11">MKR ENV</text>
+  <text class="text" x="660" y="120" text-anchor="middle" font-weight="bold" font-size="11">Shield</text>
+  <text class="text-dim" x="660" y="140" text-anchor="middle" font-size="10">(stacked)</text>
+
+  <!-- BME280 inside ENV Shield -->
+  <rect class="box-sensor" x="615" y="150" width="90" height="35" rx="4" style="opacity:0.7"/>
+  <text class="text" x="660" y="170" text-anchor="middle" font-size="10">BME280</text>
+  <text class="text-dim" x="660" y="182" text-anchor="middle" font-size="9">I2C</text>
+
+  <!-- MKR to ENV Shield -->
+  <line class="wire-i2c" x1="560" y1="140" x2="600" y2="140"/>
+  <polygon class="arrow" points="600,140 592,136 592,144"/>
+  <text class="text-dim" x="565" y="134" font-size="9">I2C (Wire)</text>
+
+  <!-- USB charging note -->
+  <rect class="box" x="30" y="200" width="120" height="40" rx="4"/>
+  <text class="text" x="90" y="218" text-anchor="middle" font-size="11">USB-C</text>
+  <text class="text-dim" x="90" y="232" text-anchor="middle" font-size="9">charges cell</text>
+
+  <line class="wire-pwr" x1="150" y1="215" x2="200" y2="215"/>
+  <line class="wire-pwr" x1="200" y1="215" x2="200" y2="165"/>
+  <line class="wire-pwr" x1="200" y1="165" x2="330" y2="165"/>
+  <polygon class="arrow" points="330,165 322,161 322,169"/>
+  <text class="text-dim" x="240" y="160" font-size="9">USB-C port</text>
+
+  <!-- Features summary -->
+  <rect class="box-lib" x="30" y="280" width="690" height="70" rx="4"/>
+  <text class="text" x="375" y="300" text-anchor="middle" font-weight="bold">Key Features</text>
+  <text class="text-dim" x="170" y="320" text-anchor="middle" font-size="10">Built-in LiPo charger (BQ24195L)</text>
+  <text class="text-dim" x="445" y="320" text-anchor="middle" font-size="10">No deep sleep (continuous loop)</text>
+  <text class="text-dim" x="170" y="338" text-anchor="middle" font-size="10">ADC_BATTERY for voltage monitoring</text>
+  <text class="text-dim" x="445" y="338" text-anchor="middle" font-size="10">ENV Shield stacks with zero wiring</text>
+
+  <!-- Legend -->
+  <rect class="legend-bg" x="30" y="365" width="690" height="28" rx="4"/>
+  <line class="wire-pwr" x1="45" y1="380" x2="75" y2="380"/>
+  <text class="text-dim" x="80" y="384" font-size="10">Power</text>
+  <line class="wire-i2c" x1="165" y1="380" x2="195" y2="380"/>
+  <text class="text-dim" x="200" y="384" font-size="10">I2C</text>
+  <rect class="box-mcu" x="285" y="374" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="302" y="384" font-size="10">MCU</text>
+  <rect class="box-sensor" x="365" y="374" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="382" y="384" font-size="10">Sensor</text>
+  <rect class="box-lib" x="455" y="374" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="472" y="384" font-size="10">Info</text>
+</svg>

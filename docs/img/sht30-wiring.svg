@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" font-family="monospace" font-size="12">
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #1a1a2e; }
+        .text { fill: #e0e0e0; }
+        .text-dim { fill: #999; }
+        .line { stroke: #ccc; }
+        .line-pwr { stroke: #ff6b6b; }
+        .line-gnd { stroke: #74b9ff; }
+        .line-sig { stroke: #a29bfe; }
+        .pcb-d1 { fill: #1a3a5c; stroke: #3a6a9c; }
+        .pcb-shield { fill: #1a4a2a; stroke: #3a8a4a; }
+        .pin-fill { fill: #b0b0b0; }
+        .chip-fill { fill: #2a2a3e; stroke: #666; }
+        .jumper-fill { fill: #3a3a4e; stroke: #888; }
+        .connector-fill { fill: #555; stroke: #888; }
+        .legend-box { fill: #2a2a3e; stroke: #555; }
+        .ttl { fill: #e0e0e0; font-size: 16px; font-weight: bold; }
+      }
+      @media (prefers-color-scheme: light) {
+        .bg { fill: #ffffff; }
+        .text { fill: #333; }
+        .text-dim { fill: #777; }
+        .line { stroke: #333; }
+        .line-pwr { stroke: #c0392b; }
+        .line-gnd { stroke: #2c3e50; }
+        .line-sig { stroke: #2980b9; }
+        .pcb-d1 { fill: #3498db; stroke: #2471a3; }
+        .pcb-shield { fill: #27ae60; stroke: #1e8449; }
+        .pin-fill { fill: #555; }
+        .chip-fill { fill: #ecf0f1; stroke: #7f8c8d; }
+        .jumper-fill { fill: #f0e6d3; stroke: #b8a88a; }
+        .connector-fill { fill: #777; stroke: #555; }
+        .legend-box { fill: #f8f8f8; stroke: #ccc; }
+        .ttl { fill: #222; font-size: 16px; font-weight: bold; }
+      }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" class="bg"/>
+
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="ttl">SHT30 Shield v2.1.0 — Wiring on Wemos D1 Mini</text>
+
+  <!-- ==================== D1 MINI PCB ==================== -->
+  <rect x="120" y="70" width="260" height="360" rx="8" class="pcb-d1" stroke-width="2"/>
+  <text x="250" y="100" text-anchor="middle" class="text" font-size="14" font-weight="bold">Wemos D1 Mini</text>
+  <text x="250" y="118" text-anchor="middle" class="text-dim" font-size="10">ESP8266</text>
+
+  <!-- USB connector -->
+  <rect x="215" y="60" width="70" height="24" rx="3" class="connector-fill" stroke-width="1.5"/>
+  <text x="250" y="77" text-anchor="middle" class="text" font-size="9">USB</text>
+
+  <!-- ESP chip -->
+  <rect x="185" y="200" width="130" height="90" rx="4" class="chip-fill" stroke-width="1.5"/>
+  <text x="250" y="240" text-anchor="middle" class="text-dim" font-size="10">ESP-8266</text>
+  <text x="250" y="255" text-anchor="middle" class="text-dim" font-size="9">SoC</text>
+  <circle cx="200" cy="215" r="4" fill="#888"/>
+
+  <!-- Left pins (D1 Mini) -->
+  <rect x="110" y="130" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="140" class="text" font-size="10">RST</text>
+
+  <rect x="110" y="158" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="168" class="text" font-size="10">A0</text>
+
+  <rect x="110" y="186" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="196" class="text" font-size="10">D0</text>
+
+  <rect x="110" y="214" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="224" class="text" font-size="10" font-weight="bold">D1 (SCL)</text>
+
+  <rect x="110" y="242" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="252" class="text" font-size="10" font-weight="bold">D2 (SDA)</text>
+
+  <rect x="110" y="270" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="280" class="text" font-size="10">D3</text>
+
+  <rect x="110" y="298" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="308" class="text" font-size="10">D4</text>
+
+  <rect x="110" y="326" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="336" class="text" font-size="10" font-weight="bold">GND</text>
+
+  <rect x="110" y="354" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="148" y="364" class="text" font-size="10">5V</text>
+
+  <!-- Right pins (D1 Mini) -->
+  <rect x="366" y="130" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="140" text-anchor="end" class="text" font-size="10">TX</text>
+
+  <rect x="366" y="158" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="168" text-anchor="end" class="text" font-size="10">RX</text>
+
+  <rect x="366" y="186" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="196" text-anchor="end" class="text" font-size="10">D5</text>
+
+  <rect x="366" y="214" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="224" text-anchor="end" class="text" font-size="10">D6</text>
+
+  <rect x="366" y="242" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="252" text-anchor="end" class="text" font-size="10">D7</text>
+
+  <rect x="366" y="270" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="280" text-anchor="end" class="text" font-size="10">D8</text>
+
+  <rect x="366" y="298" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="308" text-anchor="end" class="text" font-size="10" font-weight="bold">3V3</text>
+
+  <rect x="366" y="326" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="336" text-anchor="end" class="text" font-size="10" font-weight="bold">GND</text>
+
+  <rect x="366" y="354" width="24" height="12" rx="2" class="pin-fill"/>
+  <text x="360" y="364" text-anchor="end" class="text" font-size="10">5V</text>
+
+  <!-- ==================== SHT30 SHIELD ==================== -->
+  <rect x="460" y="100" width="280" height="280" rx="8" class="pcb-shield" stroke-width="2"/>
+  <text x="600" y="130" text-anchor="middle" class="text" font-size="14" font-weight="bold">SHT30 Shield v2.1.0</text>
+
+  <!-- SHT30 IC on shield -->
+  <rect x="550" y="170" width="100" height="60" rx="3" class="chip-fill" stroke-width="1.5"/>
+  <text x="600" y="198" text-anchor="middle" class="text" font-size="10">SHT30-DIS</text>
+  <text x="600" y="215" text-anchor="middle" class="text-dim" font-size="9">I2C sensor</text>
+  <circle cx="563" cy="183" r="3" fill="#888"/>
+
+  <!-- 100nF decoupling cap on shield -->
+  <rect x="560" y="250" width="30" height="14" rx="2" fill="#c8a96e" stroke="#a08040" stroke-width="1"/>
+  <text x="575" y="260" text-anchor="middle" font-size="7" fill="#fff">100n</text>
+  <text x="610" y="260" class="text-dim" font-size="9">Decoupling cap</text>
+
+  <!-- ADDR jumper on shield -->
+  <rect x="530" y="295" width="50" height="22" rx="3" class="jumper-fill" stroke-width="1"/>
+  <text x="555" y="310" text-anchor="middle" class="text" font-size="9">ADDR</text>
+  <circle cx="541" cy="305" r="4" fill="#888"/>
+  <circle cx="569" cy="305" r="4" fill="#888"/>
+  <text x="555" y="335" text-anchor="middle" class="text-dim" font-size="9">Open = 0x44</text>
+  <text x="555" y="347" text-anchor="middle" class="text-dim" font-size="9">Shorted = 0x45</text>
+
+  <!-- Shield pin connections (left side) -->
+  <rect x="450" y="214" width="24" height="12" rx="2" class="pin-fill"/>
+  <rect x="450" y="242" width="24" height="12" rx="2" class="pin-fill"/>
+  <rect x="450" y="298" width="24" height="12" rx="2" class="pin-fill"/>
+  <rect x="450" y="326" width="24" height="12" rx="2" class="pin-fill"/>
+
+  <!-- ==================== CONNECTION LINES ==================== -->
+
+  <!-- D1 (SCL) -> Shield SCL -->
+  <line x1="110" y1="220" x2="60" y2="220" class="line-sig" stroke-width="2.5"/>
+  <line x1="60" y1="220" x2="60" y2="440" class="line-sig" stroke-width="2.5"/>
+  <line x1="60" y1="440" x2="430" y2="440" class="line-sig" stroke-width="2.5"/>
+  <line x1="430" y1="440" x2="430" y2="220" class="line-sig" stroke-width="2.5"/>
+  <line x1="430" y1="220" x2="450" y2="220" class="line-sig" stroke-width="2.5"/>
+  <text x="430" y="210" text-anchor="end" class="text" font-size="9" font-weight="bold">SCL</text>
+
+  <!-- D2 (SDA) -> Shield SDA -->
+  <line x1="110" y1="248" x2="72" y2="248" class="line-sig" stroke-width="2.5"/>
+  <line x1="72" y1="248" x2="72" y2="456" class="line-sig" stroke-width="2.5"/>
+  <line x1="72" y1="456" x2="440" y2="456" class="line-sig" stroke-width="2.5"/>
+  <line x1="440" y1="456" x2="440" y2="248" class="line-sig" stroke-width="2.5"/>
+  <line x1="440" y1="248" x2="450" y2="248" class="line-sig" stroke-width="2.5"/>
+  <text x="430" y="254" text-anchor="end" class="text" font-size="9" font-weight="bold">SDA</text>
+
+  <!-- 3V3 -> Shield VDD -->
+  <line x1="390" y1="304" x2="410" y2="304" class="line-pwr" stroke-width="2.5"/>
+  <line x1="410" y1="304" x2="450" y2="304" class="line-pwr" stroke-width="2.5"/>
+  <text x="430" y="296" text-anchor="end" class="text" font-size="9" font-weight="bold">3V3</text>
+
+  <!-- GND -> Shield GND -->
+  <line x1="390" y1="332" x2="410" y2="332" class="line-gnd" stroke-width="2.5"/>
+  <line x1="410" y1="332" x2="450" y2="332" class="line-gnd" stroke-width="2.5"/>
+  <text x="430" y="340" text-anchor="end" class="text" font-size="9" font-weight="bold">GND</text>
+
+  <!-- Stacking indicator -->
+  <text x="415" y="175" text-anchor="middle" class="text-dim" font-size="11" font-style="italic">stacks</text>
+  <path d="M 400 180 L 400 200 L 410 195 M 400 200 L 390 195" class="line" stroke-width="1.5" fill="none"/>
+
+  <!-- ==================== LEGEND ==================== -->
+  <rect x="570" y="380" width="180" height="80" rx="5" class="legend-box" stroke-width="1"/>
+  <text x="660" y="398" text-anchor="middle" class="text" font-size="11" font-weight="bold">Legend</text>
+  <line x1="585" y1="410" x2="615" y2="410" class="line-sig" stroke-width="2.5"/>
+  <text x="622" y="414" class="text" font-size="10">I2C (SCL, SDA)</text>
+  <line x1="585" y1="428" x2="615" y2="428" class="line-pwr" stroke-width="2.5"/>
+  <text x="622" y="432" class="text" font-size="10">Power (3V3)</text>
+  <line x1="585" y1="446" x2="615" y2="446" class="line-gnd" stroke-width="2.5"/>
+  <text x="622" y="450" class="text" font-size="10">Ground (GND)</text>
+</svg>

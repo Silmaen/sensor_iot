@@ -16,10 +16,13 @@ Le projet s'articule autour de :
 | Flag               | Module                        | Metrics ajoutées                      | Commandes ajoutées |
 |--------------------|-------------------------------|---------------------------------------|--------------------|
 | `HAS_BME280`       | Capteur BME/BMP280            | `temperature`, `humidity`, `pressure` | —                  |
+| `HAS_SHT30`        | Capteur SHT30 (shield Wemos)  | `temperature`, `humidity`             | —                  |
 | `HAS_BATTERY`      | Monitoring batterie           | `battery_pct`, `battery_v`            | —                  |
 | `HAS_DISPLAY`      | Afficheur 7-segments + bouton | —                                     | —                  |
 | `HAS_DEEP_SLEEP`   | Deep sleep entre lectures     | —                                     | —                  |
 | `HAS_SERIAL_DEBUG` | Logs debug verbose sur série  | —                                     | —                  |
+
+> **Note** : `HAS_BME280` et `HAS_SHT30` sont mutuellement exclusifs.
 
 - **Identité device** définie par `-DDEVICE_ID` et `-DMQTT_DEVICE_TYPE` dans `platformio.ini`
 
@@ -29,6 +32,8 @@ Le projet s'articule autour de :
 # ESP8266 (D1 Mini)
 pio run -e thermo_display      # Build : BME280 + afficheur + USB
 pio run -e thermo_1            # Build : BME280 + batterie + deep sleep
+pio run -e thermo_sht30        # Build : SHT30 + batterie + deep sleep
+pio run -e thermo_display_sht30 # Build : SHT30 + afficheur + USB
 pio run -e thermo_display -t upload    # Upload ESP8266
 
 # SAMD21 (Arduino MKR WiFi 1010 + MKR ENV Shield)
@@ -41,7 +46,7 @@ pio run -e cell_tester -t upload       # Upload testeur
 
 # Tests & monitoring
 pio run -e native              # Build natif (tests)
-pio test -e native             # Exécuter les tests unitaires (57 tests)
+pio test -e native             # Exécuter les tests unitaires (60 tests)
 pio device monitor             # Moniteur série (115200 baud)
 ```
 
@@ -63,11 +68,19 @@ lib/thermo_core/        - Bibliothèque portable et testable
     mqtt_payload.h/cpp       - Formatage payloads & parsing commandes
     modules/
       bme280_module.h/cpp    - Module BME280 (register + contribute)
+      sht30_module.h/cpp     - Module SHT30 (register + contribute)
       battery_module.h/cpp   - Module batterie (register + contribute)
     sensor_data.h, battery.h/cpp, display_encoding.h/cpp
 test/test_native/       - Tests unitaires (Unity)
-docs/                   - Documentation (protocole MQTT)
-datasheets/             - Datasheets composants
+docs/
+  architecture.md       - Architecture logicielle
+  configurations.md     - Index des configurations hardware
+  mqtt-protocol.md      - Protocole MQTT device-side
+  battery-cells.md      - Guide test/récup cellules 18650
+  modules/              - Doc par module optionnel (user-facing, SVG)
+  configs/              - Doc par configuration hardware (user-facing)
+  datasheets/           - Datasheets composants (PDF)
+  img/                  - Schémas SVG (wiring + schematic, light/dark)
 ```
 
 ## Ajouter un nouveau module

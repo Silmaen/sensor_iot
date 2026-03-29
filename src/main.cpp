@@ -8,6 +8,10 @@
 #include "modules/bme280_module.h"
 #endif
 
+#ifdef HAS_SHT30
+#include "modules/sht30_module.h"
+#endif
+
 #ifdef HAS_BATTERY
 #include "modules/battery_module.h"
 #endif
@@ -28,12 +32,21 @@ static EspNetwork network;
 static Bme280Sensor sensor;
 #endif
 
+#ifdef HAS_SHT30
+#include "hw/sht30_sensor.h"
+static Sht30Sensor sensor;
+#endif
+
 #ifdef HAS_DISPLAY
 #include "display_encoding.h"
 #include "hw/shift_display.h"
 static ShiftDisplay display;
 
+#ifdef HAS_BME280
 enum class DisplayMode : uint8_t { TEMPERATURE, HUMIDITY, PRESSURE, COUNT };
+#else
+enum class DisplayMode : uint8_t { TEMPERATURE, HUMIDITY, COUNT };
+#endif
 static DisplayMode current_mode         = DisplayMode::TEMPERATURE;
 static unsigned long last_button_change = 0;
 static bool last_button_state           = true;
@@ -59,7 +72,7 @@ static EspSleep sleeper;
 static ModuleRegistry registry;
 static uint32_t publish_interval_s = DEFAULT_PUBLISH_INTERVAL_S;
 
-#if defined(HAS_BME280) && !defined(NATIVE)
+#if (defined(HAS_BME280) || defined(HAS_SHT30)) && !defined(NATIVE)
 static SensorData last_data = {};
 #endif
 
@@ -89,6 +102,9 @@ static void register_modules() {
 #ifdef HAS_BME280
     bme280_module_register(registry);
 #endif
+#ifdef HAS_SHT30
+    sht30_module_register(registry);
+#endif
 #ifdef HAS_BATTERY
     battery_module_register(registry);
 #endif
@@ -103,6 +119,9 @@ static void publish_sensor_data() {
     pb.begin();
 #ifdef HAS_BME280
     bme280_module_contribute(pb, last_data);
+#endif
+#ifdef HAS_SHT30
+    sht30_module_contribute(pb, last_data);
 #endif
 #ifdef HAS_BATTERY
     uint16_t adc_raw = read_battery_adc();
@@ -198,9 +217,11 @@ static void update_display() {
     case DisplayMode::HUMIDITY:
         encoded = encode_humidity(last_data.humidity);
         break;
+#ifdef HAS_BME280
     case DisplayMode::PRESSURE:
         encoded = encode_pressure(last_data.pressure);
         break;
+#endif
     default:
         break;
     }
@@ -256,6 +277,16 @@ void setup() {
     }
 #endif
 
+#ifdef HAS_SHT30
+    if (!sensor.begin()) {
+        Serial.println("SHT30 init failed!");
+#ifdef HAS_DEEP_SLEEP
+        sleeper.deep_sleep(publish_interval_s);
+        return;
+#endif
+    }
+#endif
+
 #ifdef HAS_DISPLAY
     display.begin();
     pinMode(PIN_BUTTON, INPUT_PULLUP);
@@ -300,7 +331,7 @@ void setup() {
         delay(10);
     }
 
-#ifdef HAS_BME280
+#if defined(HAS_BME280) || defined(HAS_SHT30)
     last_data = sensor.read();
     if (last_data.valid) {
         publish_sensor_data();
@@ -345,6 +376,14 @@ void loop() {
 #ifdef HAS_DISPLAY
         update_display();
 #endif
+#endif
+#ifdef HAS_SHT30
+        last_data = sensor.read();
+        if (!last_data.valid) {
+            DEBUG_PRINTLN("[SENSOR] SHT30 read failed");
+            return;
+        }
+        DEBUG_PRINTF("[SENSOR] T=%.1f H=%.1f\n", last_data.temperature, last_data.humidity);
 #endif
         if (!network.mqtt_connected()) {
             DEBUG_PRINTLN("[MQTT] skipping publish, not connected");

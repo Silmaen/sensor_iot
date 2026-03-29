@@ -15,6 +15,7 @@ Components listed here should be used in priority when designing circuits and fe
 | Component             | Quantity | Notes                                                               |
 |-----------------------|----------|---------------------------------------------------------------------|
 | bme/bmp280            | 1        | I2C temperature/humidity/pressure (standalone, for ESP8266 configs) |
+| SHT30 Shield v2.1.0   | several  | Wemos D1 Mini stackable shield, I2C 0x44/0x45, ±0.2°C / ±2%RH       |
 | MKR ENV Shield BME280 | 1        | Same sensor, integrated on the shield (for MKR config)              |
 
 ## Display
@@ -190,12 +191,15 @@ active LOW with 100nF debounce capacitor to GND.
 
 ## Power
 
-| Component   | Quantity | Notes                                                                                            |
-|-------------|----------|--------------------------------------------------------------------------------------------------|
-| H78M05BT    | 9        | 5V linear regulator 500mA                                                                        |
-| L78M09CV    | 10       | 9V linear regulator 500mA                                                                        |
-| L78m33ACV   | 6        | 3.3V linear regulator 500mA                                                                      |
-| 18650 cells | several  | Reclaimed from laptop packs, ~3000mAh, 3.7V nominal (see [battery guide](docs/battery-cells.md)) |
+| Component          | Quantity | Notes                                                                                            |
+|--------------------|----------|--------------------------------------------------------------------------------------------------|
+| H78M05BT           | 9        | 5V linear regulator 500mA                                                                        |
+| L78M09CV           | 10       | 9V linear regulator 500mA                                                                        |
+| L78m33ACV          | 6        | 3.3V linear regulator 500mA                                                                      |
+| 18650 cells        | several  | Reclaimed from laptop packs, ~3000mAh, 3.7V nominal (see [battery guide](docs/battery-cells.md)) |
+| BMS 2S (7.4V/8.4V) | 5        | JZK HX-2S, overcharge/overdischarge/short-circuit protection for 2S 18650                        |
+| MP1584 buck module | -        | Adjustable step-down 4.5–28V → 0.8–20V, 3A max, set to 5V for D1 Mini                            |
+| 100µF electrolytic | -        | Bulk decoupling on buck output, filters ripple for ESP8266 WiFi + ADC                            |
 
 ## Cell Tester
 
@@ -212,206 +216,6 @@ Components for the 18650 cell tester (see [battery guide](docs/battery-cells.md)
 
 ## Device Configurations
 
-Two hardware configurations share the same Wemos D1 Mini and BME/BMP280 sensor.
-
-### Display Config (USB-powered)
-
-Powered via the Wemos D1 Mini USB port (5V). Includes the 7-segment display
-circuit and a push button to cycle display modes. WiFi always active.
-
-```
-  USB 5V ──► Wemos D1 Mini USB port
-                  │
-                  ├──► 5V pin ──► LS247 x3, LS04 x2 (display logic)
-                  │
-                  ├──► 3V3 pin ──► BME/BMP280
-                  │                HC595 x2
-                  │
-                  ├──► D7,D5,D8 ──► HC595 (shift registers) ──► display
-                  │
-                  ├──► D1 (GPIO5) ──► BME/BMP280 SCL (I2C)
-                  ├──► D2 (GPIO4) ──► BME/BMP280 SDA (I2C)
-                  │
-                  └──► D6 (GPIO12) ──► push button ──► GND
-                                       + 100nF debounce cap
-```
-
-#### Display config — Power Budget
-
-| Subsystem             | Rail   | Avg current | Peak current |
-|-----------------------|--------|-------------|--------------|
-| ESP8266 (WiFi active) | 3.3V   | 80mA        | 300mA        |
-| BME/BMP280            | 3.3V   | <1mA        | <1mA         |
-| HC595 ×2              | 3.3V   | 1mA         | 1mA          |
-| Display (3 digits)    | 5V     | 75mA        | 75mA         |
-| LS247 ×3 + LS04 ×2    | 5V     | 50mA        | 50mA         |
-| **Total from USB**    | **5V** | **~210mA**  | **~430mA**   |
-
-Standard USB 2.0 provides 500mA — sufficient with margin.
-
-#### Display config — GPIO Assignment
-
-| Wemos Pin | GPIO   | Function                  |
-|-----------|--------|---------------------------|
-| D7        | GPIO13 | HC595 SER (shift data)    |
-| D5        | GPIO14 | HC595 SRCLK (shift clock) |
-| D8        | GPIO15 | HC595 RCLK (latch)        |
-| D1        | GPIO5  | I2C SCL (BME/BMP280)      |
-| D2        | GPIO4  | I2C SDA (BME/BMP280)      |
-| D6        | GPIO12 | Push button (active LOW)  |
-
----
-
-### Battery Config (Battery-powered, Deep Sleep)
-
-Minimal sensor node. No display, no buttons. Powered by a 2S 18650 pack via
-H78M05BT. Maximizes autonomy using ESP8266 deep sleep. Battery voltage is
-reported as a sensor value via WiFi.
-
-Requires **D0 (GPIO16) wired to RST** for deep sleep wake-up.
-
-```
-  [18650]──┬──[18650]──► 2S BMS ──► H78M05BT ──► 5V ──► Wemos 5V pin
-   3.7V    └── series    (6.0-8.4V)     │
-                                   [100nF in/out]
-                                   [10µF/400V in]
-                                        │
-                          R1 (150kΩ) ───┤
-                                        ├──► Wemos A0 (battery voltage)
-                          R2 (100kΩ) ───┤
-                                       GND
-
-  Wemos D1 Mini
-    ├──► D0 (GPIO16) ──► RST  (deep sleep wake-up)
-    ├──► D1 (GPIO5)  ──► BME/BMP280 SCL (I2C)
-    ├──► D2 (GPIO4)  ──► BME/BMP280 SDA (I2C)
-    ├──► 3V3         ──► BME/BMP280 VCC
-    └──► A0          ──► battery voltage divider
-```
-
-#### Battery config — Power Budget
-
-| Subsystem         | Rail   | Active    | Deep sleep |
-|-------------------|--------|-----------|------------|
-| ESP8266           | 3.3V   | 80mA      | 20µA       |
-| BME/BMP280        | 3.3V   | <1mA      | <1µA       |
-| Voltage divider   | -      | 34µA      | 34µA       |
-| **Total from 5V** | **5V** | **~81mA** | **~55µA**  |
-
-#### Battery config — Deep Sleep Cycle
-
-| Phase               | Duration | Current       | Energy per cycle |
-|---------------------|----------|---------------|------------------|
-| Wake + WiFi         | ~5s      | 81mA          | 0.113 mAh        |
-| Deep sleep          | ~295s    | 55µA          | 0.005 mAh        |
-| **Per 5 min cycle** |          | avg **1.4mA** | 0.118 mAh        |
-
-**Autonomy**: 3000mAh / 1.4mA ≈ **2140 hours ≈ 89 days**
-
-Adjustable via sleep interval:
-
-| Interval | Avg current | Autonomy  |
-|----------|-------------|-----------|
-| 1 min    | 7.0 mA      | 18 days   |
-| 5 min    | 1.4 mA      | 89 days   |
-| 10 min   | 0.7 mA      | 178 days  |
-| 30 min   | 0.25 mA     | ~1.4 year |
-
-#### Battery config — GPIO Assignment
-
-| Wemos Pin | GPIO   | Function                   |
-|-----------|--------|----------------------------|
-| D0        | GPIO16 | → RST (deep sleep wake-up) |
-| D1        | GPIO5  | I2C SCL (BME/BMP280)       |
-| D2        | GPIO4  | I2C SDA (BME/BMP280)       |
-| A0        | ADC    | Battery voltage (divider)  |
-
-#### Battery config — Battery Monitoring
-
-Voltage divider R1=150kΩ / R2=100kΩ scales 2S voltage (6.0-8.4V) to Wemos A0 range
-(0-3.3V). Quiescent current through divider: 8.4V / 250kΩ = 34µA.
-
-| 2S Voltage | A0 reading | Approx. SoC |
-|------------|------------|-------------|
-| 8.40V      | 3.36V      | 100%        |
-| 7.80V      | 3.12V      | 75%         |
-| 7.40V      | 2.96V      | 50%         |
-| 7.00V      | 2.80V      | 25%         |
-| 6.00V      | 2.40V      | 0% (cutoff) |
-
-Battery level is sent as a sensor value alongside temperature/humidity/pressure
-via WiFi on each wake cycle.
-
-#### Battery config — Parts to Buy
-
-| Part            | Purpose                     | Approx. cost |
-|-----------------|-----------------------------|--------------|
-| 2S BMS module   | Cell balancing + protection | ~2€          |
-| 2× 18650 holder | Or spot-weld a 2S pack      | ~2€          |
-
----
-
-### MKR Config (Arduino MKR WiFi 1010 + MKR ENV Shield)
-
-Compact sensor node with built-in WiFi and battery charging. The MKR ENV
-Shield provides a BME280 sensor. A single 18650 cell (or any 1S LiPo 3.7V)
-plugs into the MKR's JST PH 2-pin connector and charges automatically via USB.
-
-No deep sleep mode — the MKR runs in continuous loop mode.
-
-```
-  [18650 cell] ──► JST connector ──► MKR WiFi 1010
-   3.7V (1S)        (built-in             │
-                     charge circuit)       ├──► WiFiNINA module (on-board)
-                                           │
-                                           ├──► MKR ENV Shield (stacked)
-                                           │      └──► BME280 (I2C, default Wire)
-                                           │
-                                           └──► ADC_BATTERY (built-in voltage divider)
-                                                  reads battery voltage
-```
-
-#### MKR config — Power Budget
-
-| Subsystem               | Rail     | Active     | Idle (WiFi connected) |
-|-------------------------|----------|------------|-----------------------|
-| SAMD21                  | 3.3V     | 15mA       | 6mA                   |
-| WiFiNINA (NINA-W102)    | 3.3V     | 120mA      | 80mA                  |
-| BME280 (MKR ENV Shield) | 3.3V     | <1mA       | <1µA                  |
-| **Total from battery**  | **3.7V** | **~140mA** | **~86mA**             |
-
-**Autonomy** (continuous mode, 3000mAh cell): 3000 / 86 ≈ **35 hours** idle.
-For longer autonomy, consider implementing SAMD21 low-power sleep via the
-`ArduinoLowPower` library (future improvement).
-
-#### MKR config — Battery Monitoring
-
-The MKR WiFi 1010 has a built-in voltage divider on the `ADC_BATTERY` pin. The
-firmware reads it with 12-bit resolution (0-4095). Battery constants in
-`battery.h` are configured for 1S LiPo (3.0-4.2V).
-
-| Battery voltage | Approx. SoC |
-|-----------------|-------------|
-| 4.20V           | 100%        |
-| 3.90V           | 75%         |
-| 3.70V           | 58%         |
-| 3.50V           | 42%         |
-| 3.00V           | 0% (cutoff) |
-
-The `BATTERY_DIVIDER_RATIO` in `battery.h` is set to an approximate value
-(2.0) and should be calibrated against a multimeter on the actual hardware.
-
-#### MKR config — PlatformIO Environment
-
-```ini
-[env:thermo_mkr]
-extends = common_samd
-board = mkrwifi1010
-build_flags =
-    ${common_samd.build_flags}
-    -DDEVICE_ID='"thermo_mkr"'
-    -DMQTT_DEVICE_TYPE='"thermo"'
-    -DHAS_BME280
-    -DHAS_BATTERY
-    -DHAS_SERIAL_DEBUG
-```
+See [Hardware Configurations](docs/configurations.md) for detailed documentation of each
+device assembly, including wiring diagrams, power budgets, GPIO assignments, and PlatformIO
+environments.

@@ -155,14 +155,20 @@ lib/thermo_core/                  Platform-independent, fully testable library
     mqtt_payload.h/cpp              Payload formatting & command parsing
     modules/
       bme280_module.h/cpp           BME280 module (register + contribute)
+      sht30_module.h/cpp            SHT30 module (register + contribute)
       battery_module.h/cpp          Battery module (register + contribute)
     sensor_data.h                   SensorData struct
     battery.h/cpp                   ADC-to-voltage and voltage-to-SoC (per-platform constants)
     display_encoding.h/cpp          BCD encoding for 7-segment display
 
-test/test_native/                 Unit tests (Unity framework, 57 tests)
-docs/                             Architecture, MQTT protocol, battery guide
-datasheets/                       Component datasheets
+test/test_native/                 Unit tests (Unity framework, 60 tests)
+docs/
+  architecture.md                 Software architecture & module system
+  configurations.md               Hardware configurations index
+  modules/                        Per-module documentation (wiring, schematics)
+  configs/                        Per-configuration assembly guides
+  datasheets/                     Component datasheets (PDF)
+  img/                            SVG diagrams (light/dark themed)
 ```
 
 ## Adding a new module
@@ -186,13 +192,16 @@ datasheets/                       Component datasheets
 
 ## Documentation
 
-| Document                                       | Description                                                        |
-|------------------------------------------------|--------------------------------------------------------------------|
-| [docs/architecture.md](docs/architecture.md)   | Modular architecture, module system, data flow, how to add modules |
-| [docs/mqtt-protocol.md](docs/mqtt-protocol.md) | MQTT protocol spec (topics, payloads, capabilities, lifecycle)     |
-| [docs/battery-cells.md](docs/battery-cells.md) | Reclaimed 18650 cell testing, grading, cell tester firmware usage  |
-| [COMPONENTS.md](COMPONENTS.md)                 | Electronic components, wiring diagrams, GPIO, power budgets        |
-| [CLAUDE.md](CLAUDE.md)                         | Development conventions, build commands, protocol rules summary    |
+| Document                                         | Description                                                      |
+|--------------------------------------------------|------------------------------------------------------------------|
+| [docs/architecture.md](docs/architecture.md)     | Modular architecture, module system, data flow                   |
+| [docs/configurations.md](docs/configurations.md) | Hardware configurations index (5 configs)                        |
+| [docs/modules/](docs/modules/)                   | Per-module docs: sht30, bme280, battery, power-2s, display, etc. |
+| [docs/configs/](docs/configs/)                   | Per-configuration assembly guides with wiring diagrams           |
+| [docs/mqtt-protocol.md](docs/mqtt-protocol.md)   | MQTT protocol spec (topics, payloads, capabilities, lifecycle)   |
+| [docs/battery-cells.md](docs/battery-cells.md)   | Reclaimed 18650 cell testing, grading, cell tester firmware      |
+| [COMPONENTS.md](COMPONENTS.md)                   | Electronic component inventory                                   |
+| [CLAUDE.md](CLAUDE.md)                           | Development conventions, build commands, protocol rules          |
 
 ## License
 

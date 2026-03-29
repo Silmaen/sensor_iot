@@ -339,6 +339,8 @@ Cutoff: 2.8V
 
 ### Hardware setup
 
+![Cell Tester Setup](img/cell-tester-setup.svg)
+
 #### Power supply
 
 The BQ24195L charger requires sufficient USB current to charge cells,

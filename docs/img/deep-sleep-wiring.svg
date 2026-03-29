@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" font-family="monospace" font-size="12">
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #1a1a2e; }
+        .text { fill: #e0e0e0; }
+        .text-dim { fill: #999; }
+        .wire { stroke: #ccc; }
+        .wire-pwr { stroke: #ff6b6b; }
+        .wire-gnd { stroke: #74b9ff; }
+        .wire-sig { stroke: #a29bfe; }
+        .board { fill: #1a3a5c; stroke: #5dade2; }
+        .pin-row { fill: #2d2d2d; stroke: #666; }
+        .pin-active { fill: #a29bfe; stroke: #7c6ee6; }
+        .pin-normal { fill: #444; stroke: #666; }
+        .jumper { stroke: #ffd43b; stroke-width: 3; fill: none; }
+        .jumper-dot { fill: #ffd43b; }
+        .note-box { fill: #2d2800; stroke: #f39c12; }
+        .note-text { fill: #f0a030; }
+        .legend-box { fill: #222; stroke: #555; }
+        .usb { fill: #555; stroke: #888; }
+        .chip { fill: #333; stroke: #888; }
+        .antenna { fill: #2d2d2d; stroke: #888; }
+      }
+      @media (prefers-color-scheme: light) {
+        .bg { fill: #ffffff; }
+        .text { fill: #333; }
+        .text-dim { fill: #777; }
+        .wire { stroke: #333; }
+        .wire-pwr { stroke: #c0392b; }
+        .wire-gnd { stroke: #2c3e50; }
+        .wire-sig { stroke: #2980b9; }
+        .board { fill: #3498db; stroke: #2471a3; }
+        .pin-row { fill: #ecf0f1; stroke: #bdc3c7; }
+        .pin-active { fill: #8e44ad; stroke: #6c3483; }
+        .pin-normal { fill: #bdc3c7; stroke: #95a5a6; }
+        .jumper { stroke: #e67e22; stroke-width: 3; fill: none; }
+        .jumper-dot { fill: #e67e22; }
+        .note-box { fill: #fef9e7; stroke: #f39c12; }
+        .note-text { fill: #d35400; }
+        .legend-box { fill: #f8f9fa; stroke: #ddd; }
+        .usb { fill: #95a5a6; stroke: #7f8c8d; }
+        .chip { fill: #2c3e50; stroke: #1a252f; }
+        .antenna { fill: #d5dbdb; stroke: #aab7b8; }
+      }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" class="bg"/>
+
+  <!-- Title -->
+  <text x="400" y="28" text-anchor="middle" font-size="15" font-weight="bold" class="text">Deep Sleep Wiring — GPIO16 (D0) to RST</text>
+
+  <!-- ==================== WEMOS D1 MINI BOARD ==================== -->
+  <rect x="200" y="60" width="280" height="360" rx="8" class="board"/>
+  <text x="340" y="90" text-anchor="middle" font-weight="bold" font-size="16" fill="#fff">Wemos D1 Mini</text>
+  <text x="340" y="108" text-anchor="middle" font-size="10" fill="#ddd">ESP8266 (ESP-12F)</text>
+
+  <!-- USB connector at top -->
+  <rect x="305" y="55" width="50" height="20" rx="3" class="usb"/>
+  <text x="330" y="69" text-anchor="middle" font-size="8" fill="#fff">USB</text>
+
+  <!-- ESP chip in center -->
+  <rect x="270" y="170" width="120" height="80" rx="4" class="chip"/>
+  <text x="330" y="205" text-anchor="middle" font-size="10" fill="#aaa">ESP-12F</text>
+  <text x="330" y="220" text-anchor="middle" font-size="9" fill="#777">ESP8266</text>
+
+  <!-- Antenna -->
+  <rect x="305" y="130" width="50" height="35" rx="2" class="antenna"/>
+  <text x="330" y="152" text-anchor="middle" font-size="8" class="text-dim">ANT</text>
+
+  <!-- ==================== LEFT PIN HEADER ==================== -->
+  <!-- Pin labels on left side (top to bottom) -->
+  <!-- RST -->
+  <rect x="200" y="280" width="45" height="20" rx="3" class="pin-active"/>
+  <text x="222" y="294" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">RST</text>
+  <!-- A0 -->
+  <rect x="200" y="305" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="222" y="319" text-anchor="middle" font-size="10" fill="#fff">A0</text>
+  <!-- D0 -->
+  <rect x="200" y="330" width="45" height="20" rx="3" class="pin-active"/>
+  <text x="222" y="344" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">D0</text>
+  <!-- D5 -->
+  <rect x="200" y="355" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="222" y="369" text-anchor="middle" font-size="10" fill="#fff">D5</text>
+  <!-- D6 -->
+  <rect x="200" y="380" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="222" y="394" text-anchor="middle" font-size="10" fill="#fff">D6</text>
+
+  <!-- ==================== RIGHT PIN HEADER ==================== -->
+  <!-- 5V -->
+  <rect x="435" y="280" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="457" y="294" text-anchor="middle" font-size="10" fill="#fff">5V</text>
+  <!-- GND -->
+  <rect x="435" y="305" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="457" y="319" text-anchor="middle" font-size="10" fill="#fff">GND</text>
+  <!-- D4 -->
+  <rect x="435" y="330" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="457" y="344" text-anchor="middle" font-size="10" fill="#fff">D4</text>
+  <!-- D3 -->
+  <rect x="435" y="355" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="457" y="369" text-anchor="middle" font-size="10" fill="#fff">D3</text>
+  <!-- D2 -->
+  <rect x="435" y="380" width="45" height="20" rx="3" class="pin-normal"/>
+  <text x="457" y="394" text-anchor="middle" font-size="10" fill="#fff">D2</text>
+
+  <!-- Left side GPIO labels -->
+  <text x="190" y="294" text-anchor="end" font-size="10" class="text-dim">Reset</text>
+  <text x="190" y="319" text-anchor="end" font-size="10" class="text-dim">ADC</text>
+  <text x="190" y="344" text-anchor="end" font-size="10" class="text-dim">GPIO16</text>
+  <text x="190" y="369" text-anchor="end" font-size="10" class="text-dim">GPIO14</text>
+  <text x="190" y="394" text-anchor="end" font-size="10" class="text-dim">GPIO12</text>
+
+  <!-- Right side GPIO labels -->
+  <text x="490" y="294" font-size="10" class="text-dim">VCC</text>
+  <text x="490" y="319" font-size="10" class="text-dim">Ground</text>
+  <text x="490" y="344" font-size="10" class="text-dim">GPIO2</text>
+  <text x="490" y="369" font-size="10" class="text-dim">GPIO0</text>
+  <text x="490" y="394" font-size="10" class="text-dim">GPIO4</text>
+
+  <!-- ==================== JUMPER WIRE: D0 to RST ==================== -->
+  <!-- Connection points on the pins -->
+  <circle cx="200" cy="290" r="5" class="jumper-dot"/>
+  <circle cx="200" cy="340" r="5" class="jumper-dot"/>
+
+  <!-- Curved jumper wire going left of the board -->
+  <path d="M 200,290 C 130,290 130,340 200,340" class="jumper"/>
+
+  <!-- Label for the jumper -->
+  <text x="115" y="312" text-anchor="middle" font-size="11" font-weight="bold" class="jumper-dot" fill="currentColor">JUMPER</text>
+  <text x="115" y="326" text-anchor="middle" font-size="10" class="jumper-dot" fill="currentColor">WIRE</text>
+
+  <!-- Arrow annotations -->
+  <text x="140" y="280" text-anchor="middle" font-size="10" font-weight="bold" class="wire-sig" fill="currentColor">RST</text>
+  <text x="140" y="355" text-anchor="middle" font-size="10" font-weight="bold" class="wire-sig" fill="currentColor">D0</text>
+
+  <!-- ==================== EXPLANATION BOX ==================== -->
+  <rect x="540" y="130" width="230" height="155" rx="6" class="note-box"/>
+  <text x="655" y="152" text-anchor="middle" font-size="11" font-weight="bold" class="note-text">How it works</text>
+  <text x="550" y="172" font-size="10" class="text">1. ESP8266 enters deep sleep</text>
+  <text x="550" y="189" font-size="10" class="text">2. RTC timer counts down</text>
+  <text x="550" y="206" font-size="10" class="text">3. GPIO16 pulses LOW</text>
+  <text x="550" y="223" font-size="10" class="text">4. RST pin goes LOW</text>
+  <text x="550" y="240" font-size="10" class="text">5. ESP8266 resets (wakes)</text>
+  <text x="550" y="262" font-size="10" class="text-dim">Sleep current: ~20uA</text>
+  <text x="550" y="276" font-size="10" class="text-dim">Total system: ~55uA</text>
+
+  <!-- ==================== WARNING NOTE ==================== -->
+  <rect x="540" y="310" width="230" height="60" rx="6" class="note-box"/>
+  <text x="655" y="332" text-anchor="middle" font-size="10" font-weight="bold" class="note-text">!! Firmware upload note</text>
+  <text x="550" y="350" font-size="9" class="text">Disconnect D0-RST wire before</text>
+  <text x="550" y="363" font-size="9" class="text">flashing. Reconnect after upload.</text>
+
+  <!-- ==================== LEGEND ==================== -->
+  <rect x="540" y="60" width="230" height="55" rx="4" class="legend-box"/>
+  <text x="550" y="78" font-size="10" font-weight="bold" class="text">Legend</text>
+  <rect x="550" y="86" width="20" height="12" rx="2" class="pin-active"/>
+  <text x="578" y="96" font-size="10" class="text-dim">Connected pins (D0, RST)</text>
+  <line x1="550" y1="106" x2="570" y2="106" class="jumper"/>
+  <text x="578" y="110" font-size="10" class="text-dim">Jumper wire</text>
+
+  <!-- Bottom note -->
+  <text x="400" y="450" text-anchor="middle" font-size="11" class="text-dim">Required for ESP8266 deep sleep wake-up</text>
+  <text x="400" y="468" text-anchor="middle" font-size="10" class="text-dim">Build flag: -DHAS_DEEP_SLEEP (requires HAS_BATTERY)</text>
+</svg>

@@ -1,0 +1,266 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" font-family="monospace" font-size="11">
+  <defs>
+    <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <path d="M0,0 L7,2.5 L0,5 Z" class="text" fill="currentColor"/>
+    </marker>
+    <marker id="arr-pwr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <path d="M0,0 L7,2.5 L0,5 Z" class="wire-pwr" fill="currentColor"/>
+    </marker>
+    <marker id="arr-data" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <path d="M0,0 L7,2.5 L0,5 Z" class="wire-data" fill="currentColor"/>
+    </marker>
+    <marker id="arr-sig" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <path d="M0,0 L7,2.5 L0,5 Z" class="wire-sig" fill="currentColor"/>
+    </marker>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #1a1a2e; }
+        .text { fill: #e0e0e0; }
+        .text-dim { fill: #999; }
+        .wire { stroke: #ccc; }
+        .wire-pwr { stroke: #ff6b6b; }
+        .wire-gnd { stroke: #74b9ff; }
+        .wire-sig { stroke: #a29bfe; }
+        .wire-data { stroke: #ffeaa7; }
+        .comp { fill: #2d2d4a; stroke: #666; }
+        .comp-mcu { fill: #1e3a5f; stroke: #4a90d9; }
+        .comp-sr { fill: #2d3a2d; stroke: #6b9b6b; }
+        .comp-inv { fill: #3a2d2d; stroke: #9b6b6b; }
+        .comp-dec { fill: #3a3a2d; stroke: #9b9b6b; }
+        .comp-disp { fill: #2d2d3a; stroke: #6b6b9b; }
+        .comp-btn { fill: #3a2d3a; stroke: #9b6b9b; }
+        .pin { fill: #888; }
+        .seg-on { fill: #ff4444; }
+      }
+      @media (prefers-color-scheme: light) {
+        .bg { fill: #ffffff; }
+        .text { fill: #333; }
+        .text-dim { fill: #777; }
+        .wire { stroke: #333; }
+        .wire-pwr { stroke: #c0392b; }
+        .wire-gnd { stroke: #2c3e50; }
+        .wire-sig { stroke: #2980b9; }
+        .wire-data { stroke: #e17055; }
+        .comp { fill: #f0f0f0; stroke: #999; }
+        .comp-mcu { fill: #d4e6f1; stroke: #2980b9; }
+        .comp-sr { fill: #d5f5e3; stroke: #27ae60; }
+        .comp-inv { fill: #fadbd8; stroke: #c0392b; }
+        .comp-dec { fill: #fdebd0; stroke: #e67e22; }
+        .comp-disp { fill: #d6dbdf; stroke: #566573; }
+        .comp-btn { fill: #e8daef; stroke: #8e44ad; }
+        .pin { fill: #666; }
+        .seg-on { fill: #cc0000; }
+      }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1000" height="600" class="bg"/>
+
+  <!-- Title -->
+  <text x="500" y="24" text-anchor="middle" font-size="14" font-weight="bold" class="text">7-Segment Display Module — Wiring Diagram</text>
+
+  <!-- ========== WEMOS D1 MINI ========== -->
+  <rect x="20" y="60" width="100" height="200" rx="6" class="comp-mcu" stroke-width="2"/>
+  <rect x="30" y="64" width="80" height="14" rx="3" fill="#2471a3" opacity="0.6"/>
+  <text x="70" y="74" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">Wemos D1 Mini</text>
+  <!-- Pin labels -->
+  <text x="115" y="108" font-size="9" class="text">D7 (GPIO13)</text>
+  <text x="115" y="133" font-size="9" class="text">D5 (GPIO14)</text>
+  <text x="115" y="158" font-size="9" class="text">D8 (GPIO15)</text>
+  <text x="115" y="193" font-size="9" class="text">D6 (GPIO12)</text>
+  <text x="115" y="218" font-size="9" class="text">3V3</text>
+  <text x="115" y="243" font-size="9" class="text">GND</text>
+  <!-- Pin dots -->
+  <circle cx="110" cy="105" r="3" class="pin"/>
+  <circle cx="110" cy="130" r="3" class="pin"/>
+  <circle cx="110" cy="155" r="3" class="pin"/>
+  <circle cx="110" cy="190" r="3" class="pin"/>
+  <circle cx="110" cy="215" r="3" class="pin"/>
+  <circle cx="110" cy="240" r="3" class="pin"/>
+
+  <!-- ========== HC595 #1 ========== -->
+  <rect x="230" y="60" width="110" height="130" rx="4" class="comp-sr" stroke-width="1.5"/>
+  <text x="285" y="78" text-anchor="middle" font-size="9" font-weight="bold" class="text">SN74HC595N #1</text>
+  <text x="285" y="90" text-anchor="middle" font-size="8" class="text-dim">Shift Reg (3.3V)</text>
+  <!-- Input pins -->
+  <text x="236" y="108" font-size="8" class="text">SER</text>
+  <text x="236" y="123" font-size="8" class="text">SRCLK</text>
+  <text x="236" y="138" font-size="8" class="text">RCLK</text>
+  <!-- Output pins -->
+  <text x="310" y="108" font-size="8" class="text">Q0-Q3</text>
+  <text x="310" y="123" font-size="8" class="text">Q4-Q7</text>
+  <text x="310" y="145" font-size="8" class="text">QH'</text>
+
+  <!-- ========== HC595 #2 ========== -->
+  <rect x="230" y="220" width="110" height="130" rx="4" class="comp-sr" stroke-width="1.5"/>
+  <text x="285" y="238" text-anchor="middle" font-size="9" font-weight="bold" class="text">SN74HC595N #2</text>
+  <text x="285" y="250" text-anchor="middle" font-size="8" class="text-dim">Shift Reg (3.3V)</text>
+  <text x="236" y="268" font-size="8" class="text">SER</text>
+  <text x="236" y="283" font-size="8" class="text">SRCLK</text>
+  <text x="236" y="298" font-size="8" class="text">RCLK</text>
+  <text x="310" y="268" font-size="8" class="text">Q0-Q3</text>
+  <text x="310" y="283" font-size="8" class="text">Q4-Q6</text>
+
+  <!-- ========== LS04 #1 (Inverter) ========== -->
+  <rect x="420" y="60" width="100" height="50" rx="4" class="comp-inv" stroke-width="1.5"/>
+  <text x="470" y="80" text-anchor="middle" font-size="9" font-weight="bold" class="text">SN54LS04J #1</text>
+  <text x="470" y="100" text-anchor="middle" font-size="8" class="text-dim">Inverter (5V)</text>
+
+  <!-- ========== LS04 #2 (Inverter) ========== -->
+  <rect x="420" y="120" width="100" height="50" rx="4" class="comp-inv" stroke-width="1.5"/>
+  <text x="470" y="140" text-anchor="middle" font-size="9" font-weight="bold" class="text">SN54LS04J #2</text>
+  <text x="470" y="160" text-anchor="middle" font-size="8" class="text-dim">Inverter (5V)</text>
+
+  <!-- ========== LS247 #1 (BCD Decoder) ========== -->
+  <rect x="580" y="50" width="110" height="50" rx="4" class="comp-dec" stroke-width="1.5"/>
+  <text x="635" y="70" text-anchor="middle" font-size="9" font-weight="bold" class="text">SN74LS247N #1</text>
+  <text x="635" y="88" text-anchor="middle" font-size="8" class="text-dim">BCD Decoder (5V)</text>
+
+  <!-- ========== LS247 #2 (BCD Decoder) ========== -->
+  <rect x="580" y="120" width="110" height="50" rx="4" class="comp-dec" stroke-width="1.5"/>
+  <text x="635" y="140" text-anchor="middle" font-size="9" font-weight="bold" class="text">SN74LS247N #2</text>
+  <text x="635" y="158" text-anchor="middle" font-size="8" class="text-dim">BCD Decoder (5V)</text>
+
+  <!-- ========== LS247 #3 (BCD Decoder, direct) ========== -->
+  <rect x="580" y="230" width="110" height="50" rx="4" class="comp-dec" stroke-width="1.5"/>
+  <text x="635" y="250" text-anchor="middle" font-size="9" font-weight="bold" class="text">SN74LS247N #3</text>
+  <text x="635" y="268" text-anchor="middle" font-size="8" class="text-dim">BCD Decoder (5V)</text>
+
+  <!-- ========== 7-Segment Displays ========== -->
+  <!-- Digit 0 (CC) -->
+  <rect x="750" y="40" width="70" height="60" rx="4" class="comp-disp" stroke-width="1.5"/>
+  <text x="785" y="58" text-anchor="middle" font-size="9" font-weight="bold" class="text">Digit 0</text>
+  <text x="785" y="72" text-anchor="middle" font-size="8" class="text-dim">5082-7651</text>
+  <text x="785" y="92" text-anchor="middle" font-size="8" class="text-dim">Common Cathode</text>
+  <!-- Simple 7-seg representation -->
+  <line x1="772" y1="53" x2="798" y2="53" stroke-width="3" class="seg-on"/>
+
+  <!-- Digit 1 (CC) -->
+  <rect x="750" y="115" width="70" height="60" rx="4" class="comp-disp" stroke-width="1.5"/>
+  <text x="785" y="133" text-anchor="middle" font-size="9" font-weight="bold" class="text">Digit 1</text>
+  <text x="785" y="147" text-anchor="middle" font-size="8" class="text-dim">5082-7651</text>
+  <text x="785" y="167" text-anchor="middle" font-size="8" class="text-dim">Common Cathode</text>
+  <line x1="772" y1="128" x2="798" y2="128" stroke-width="3" class="seg-on"/>
+
+  <!-- Digit 2 (CA) -->
+  <rect x="750" y="220" width="70" height="60" rx="4" class="comp-disp" stroke-width="1.5"/>
+  <text x="785" y="238" text-anchor="middle" font-size="9" font-weight="bold" class="text">Digit 2</text>
+  <text x="785" y="252" text-anchor="middle" font-size="8" class="text-dim">5082-7653</text>
+  <text x="785" y="272" text-anchor="middle" font-size="8" class="text-dim">Common Anode</text>
+  <line x1="772" y1="233" x2="798" y2="233" stroke-width="3" class="seg-on"/>
+
+  <!-- ========== PUSH BUTTON ========== -->
+  <rect x="230" y="400" width="80" height="40" rx="4" class="comp-btn" stroke-width="1.5"/>
+  <text x="270" y="418" text-anchor="middle" font-size="9" font-weight="bold" class="text">Button</text>
+  <text x="270" y="432" text-anchor="middle" font-size="8" class="text-dim">D6 (GPIO12)</text>
+
+  <!-- ========== WIRES ========== -->
+
+  <!-- D7 (SER) -> HC595 #1 SER -->
+  <line x1="110" y1="105" x2="230" y2="105" stroke-width="2" class="wire-data"/>
+  <text x="170" y="100" text-anchor="middle" font-size="8" class="wire-data" fill="currentColor">SER</text>
+
+  <!-- D5 (SRCLK) -> HC595 #1 SRCLK -->
+  <line x1="110" y1="130" x2="200" y2="130" stroke-width="2" class="wire-sig"/>
+  <line x1="200" y1="130" x2="200" y2="120" stroke-width="2" class="wire-sig"/>
+  <line x1="200" y1="120" x2="230" y2="120" stroke-width="2" class="wire-sig"/>
+  <!-- D5 (SRCLK) -> HC595 #2 SRCLK (branch down) -->
+  <line x1="200" y1="130" x2="200" y2="280" stroke-width="2" class="wire-sig"/>
+  <line x1="200" y1="280" x2="230" y2="280" stroke-width="2" class="wire-sig"/>
+  <circle cx="200" cy="130" r="3" class="wire-sig" fill="currentColor"/>
+  <text x="208" y="200" font-size="8" class="wire-sig" fill="currentColor">SRCLK</text>
+
+  <!-- D8 (RCLK) -> HC595 #1 RCLK -->
+  <line x1="110" y1="155" x2="215" y2="155" stroke-width="2" class="wire-sig"/>
+  <line x1="215" y1="155" x2="215" y2="135" stroke-width="2" class="wire-sig"/>
+  <line x1="215" y1="135" x2="230" y2="135" stroke-width="2" class="wire-sig"/>
+  <!-- D8 (RCLK) -> HC595 #2 RCLK (branch down) -->
+  <line x1="215" y1="155" x2="215" y2="295" stroke-width="2" class="wire-sig"/>
+  <line x1="215" y1="295" x2="230" y2="295" stroke-width="2" class="wire-sig"/>
+  <circle cx="215" cy="155" r="3" class="wire-sig" fill="currentColor"/>
+  <text x="222" y="230" font-size="8" class="wire-sig" fill="currentColor">RCLK</text>
+
+  <!-- HC595 #1 QH' -> HC595 #2 SER (daisy chain) -->
+  <line x1="340" y1="142" x2="370" y2="142" stroke-width="2" class="wire-data"/>
+  <line x1="370" y1="142" x2="370" y2="265" stroke-width="2" class="wire-data"/>
+  <line x1="370" y1="265" x2="230" y2="265" stroke-width="2" class="wire-data"/>
+  <text x="378" y="200" font-size="8" class="wire-data" fill="currentColor">QH'</text>
+
+  <!-- HC595 #1 Q0-Q3 -> LS04 #1 -->
+  <line x1="340" y1="105" x2="380" y2="105" stroke-width="2" class="wire-data"/>
+  <line x1="380" y1="105" x2="380" y2="80" stroke-width="2" class="wire-data"/>
+  <line x1="380" y1="80" x2="420" y2="80" stroke-width="2" class="wire-data"/>
+
+  <!-- HC595 #1 Q4-Q7 -> LS04 #2 -->
+  <line x1="340" y1="120" x2="390" y2="120" stroke-width="2" class="wire-data"/>
+  <line x1="390" y1="120" x2="390" y2="140" stroke-width="2" class="wire-data"/>
+  <line x1="390" y1="140" x2="420" y2="140" stroke-width="2" class="wire-data"/>
+
+  <!-- LS04 #1 -> LS247 #1 -->
+  <line x1="520" y1="80" x2="550" y2="80" stroke-width="2" class="wire-data"/>
+  <line x1="550" y1="80" x2="550" y2="70" stroke-width="2" class="wire-data"/>
+  <line x1="550" y1="70" x2="580" y2="70" stroke-width="2" class="wire-data"/>
+
+  <!-- LS04 #2 -> LS247 #2 -->
+  <line x1="520" y1="140" x2="580" y2="140" stroke-width="2" class="wire-data"/>
+
+  <!-- HC595 #2 Q0-Q3 -> LS247 #3 (direct, no inverter) -->
+  <line x1="340" y1="265" x2="400" y2="265" stroke-width="2" class="wire-data"/>
+  <line x1="400" y1="265" x2="400" y2="250" stroke-width="2" class="wire-data"/>
+  <line x1="400" y1="250" x2="580" y2="250" stroke-width="2" class="wire-data"/>
+  <text x="490" y="245" text-anchor="middle" font-size="8" class="text-dim">direct (no inverter)</text>
+
+  <!-- HC595 #2 Q4-Q6 -> Decimal points label -->
+  <line x1="340" y1="280" x2="400" y2="280" stroke-width="2" class="wire-data"/>
+  <line x1="400" y1="280" x2="400" y2="320" stroke-width="2" class="wire-data"/>
+  <text x="410" y="310" font-size="8" class="text-dim">DP0, DP1, DP2</text>
+
+  <!-- LS247 #1 -> Digit 0 -->
+  <line x1="690" y1="70" x2="750" y2="70" stroke-width="2" class="wire"/>
+  <text x="720" y="65" text-anchor="middle" font-size="8" class="text-dim">a-g</text>
+
+  <!-- LS247 #2 -> Digit 1 -->
+  <line x1="690" y1="140" x2="750" y2="140" stroke-width="2" class="wire"/>
+  <text x="720" y="135" text-anchor="middle" font-size="8" class="text-dim">a-g</text>
+
+  <!-- LS247 #3 -> Digit 2 -->
+  <line x1="690" y1="250" x2="750" y2="250" stroke-width="2" class="wire"/>
+  <text x="720" y="245" text-anchor="middle" font-size="8" class="text-dim">a-g</text>
+
+  <!-- D6 -> Button -->
+  <line x1="110" y1="190" x2="185" y2="190" stroke-width="2" class="wire-sig"/>
+  <line x1="185" y1="190" x2="185" y2="420" stroke-width="2" class="wire-sig"/>
+  <line x1="185" y1="420" x2="230" y2="420" stroke-width="2" class="wire-sig"/>
+  <text x="175" y="310" font-size="8" class="wire-sig" fill="currentColor">BTN</text>
+
+  <!-- Button to GND -->
+  <line x1="310" y1="420" x2="340" y2="420" stroke-width="2" class="wire-gnd"/>
+  <text x="350" y="424" font-size="8" class="wire-gnd" fill="currentColor">GND</text>
+
+  <!-- ========== POWER RAILS ========== -->
+  <!-- 3.3V label for HC595s -->
+  <rect x="230" y="365" width="110" height="18" rx="3" fill="none" class="wire-pwr" stroke-width="1"/>
+  <text x="285" y="378" text-anchor="middle" font-size="9" font-weight="bold" class="wire-pwr" fill="currentColor">3.3V (HC595)</text>
+
+  <!-- 5V label for LS series and displays -->
+  <rect x="530" y="300" width="200" height="18" rx="3" fill="none" class="wire-pwr" stroke-width="1"/>
+  <text x="630" y="313" text-anchor="middle" font-size="9" font-weight="bold" class="wire-pwr" fill="currentColor">5V (LS247, LS04, Displays)</text>
+
+  <!-- ========== LEGEND ========== -->
+  <rect x="740" y="340" width="240" height="120" rx="6" class="comp" stroke-width="1"/>
+  <text x="860" y="358" text-anchor="middle" font-size="10" font-weight="bold" class="text">Legend</text>
+  <line x1="755" y1="370" x2="785" y2="370" stroke-width="2" class="wire-data"/>
+  <text x="792" y="374" font-size="9" class="text">Data (SER, BCD)</text>
+  <line x1="755" y1="390" x2="785" y2="390" stroke-width="2" class="wire-sig"/>
+  <text x="792" y="394" font-size="9" class="text">Control (CLK, RCLK, BTN)</text>
+  <line x1="755" y1="410" x2="785" y2="410" stroke-width="2" class="wire-pwr"/>
+  <text x="792" y="414" font-size="9" class="text">Power (3.3V / 5V)</text>
+  <line x1="755" y1="430" x2="785" y2="430" stroke-width="2" class="wire-gnd"/>
+  <text x="792" y="434" font-size="9" class="text">Ground (GND)</text>
+  <line x1="755" y1="450" x2="785" y2="450" stroke-width="2" class="wire"/>
+  <text x="792" y="454" font-size="9" class="text">Segment lines (a-g)</text>
+
+  <!-- ========== ANNOTATIONS ========== -->
+  <text x="500" y="580" text-anchor="middle" font-size="9" class="text-dim">HC595 #1 low byte (dig0, dig1) | HC595 #2 high byte (dig2, DPs) | Daisy-chained via QH'</text>
+</svg>

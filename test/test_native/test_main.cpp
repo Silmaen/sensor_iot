@@ -65,6 +65,9 @@ void test_payload_builder_float_decimals(void);
 // Module tests
 void test_bme280_module_register(void);
 void test_bme280_module_contribute(void);
+void test_sht30_module_register(void);
+void test_sht30_module_contribute(void);
+void test_sht30_module_with_battery(void);
 void test_battery_module_register(void);
 void test_battery_module_contribute(void);
 void test_combined_modules_contribute(void);
@@ -143,6 +146,9 @@ int main(int argc, char** argv) {
     // Modules
     RUN_TEST(test_bme280_module_register);
     RUN_TEST(test_bme280_module_contribute);
+    RUN_TEST(test_sht30_module_register);
+    RUN_TEST(test_sht30_module_contribute);
+    RUN_TEST(test_sht30_module_with_battery);
     RUN_TEST(test_battery_module_register);
     RUN_TEST(test_battery_module_contribute);
     RUN_TEST(test_combined_modules_contribute);

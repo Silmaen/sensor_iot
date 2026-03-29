@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 400" font-family="monospace" font-size="12">
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #1a1a2e; }
+        .text { fill: #e0e0e0; }
+        .text-dim { fill: #999; }
+        .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+        .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+        .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+        .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+        .comp { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; }
+        .comp-bms { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; }
+        .comp-buck { fill: #3a3a2e; stroke: #8a8a5e; stroke-width: 1.5; }
+        .comp-cap { fill: #4a3a2e; stroke: #9a7a5e; stroke-width: 1.5; }
+        .comp-cell { fill: #3e3a2a; stroke: #8e8a5a; stroke-width: 1.5; }
+        .comp-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; }
+        .legend-bg { fill: #22223a; stroke: #444; }
+      }
+      @media (prefers-color-scheme: light) {
+        .bg { fill: #ffffff; }
+        .text { fill: #333; }
+        .text-dim { fill: #999; }
+        .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+        .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+        .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+        .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+        .comp { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; }
+        .comp-bms { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; }
+        .comp-buck { fill: #fef9e7; stroke: #f39c12; stroke-width: 1.5; }
+        .comp-cap { fill: #fdebd0; stroke: #e67e22; stroke-width: 1.5; }
+        .comp-cell { fill: #fef9e7; stroke: #d4ac0d; stroke-width: 1.5; }
+        .comp-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; }
+        .legend-bg { fill: #f8f9fa; stroke: #ddd; }
+      }
+    </style>
+  </defs>
+
+  <rect width="750" height="400" class="bg" rx="4"/>
+
+  <!-- Title -->
+  <text x="375" y="28" text-anchor="middle" font-size="15" font-weight="bold" class="text">2S Power Supply — Schematic</text>
+
+  <!-- ==================== BATTERY SYMBOL (2S stacked vertically) ==================== -->
+  <!-- Top wire (B+) -->
+  <line x1="70" y1="65" x2="70" y2="85" class="wire-pwr"/>
+  <text x="55" y="73" text-anchor="end" font-size="10" font-weight="bold" class="text">+</text>
+
+  <!-- Cell 1: long line = +, short line = - -->
+  <line x1="55" y1="85" x2="85" y2="85" stroke-width="3" class="wire-pwr"/>
+  <line x1="60" y1="95" x2="80" y2="95" stroke-width="1.5" class="wire"/>
+  <text x="95" y="93" font-size="9" class="text-dim">Cell 1</text>
+
+  <!-- Wire between cells -->
+  <line x1="70" y1="95" x2="70" y2="115" class="wire"/>
+
+  <!-- Mid-point tap -->
+  <circle cx="70" cy="105" r="3" fill="#a29bfe"/>
+  <line x1="70" y1="105" x2="100" y2="105" class="wire"/>
+  <text x="105" y="109" font-size="9" class="text-dim">BM</text>
+
+  <!-- Cell 2: long line = +, short line = - -->
+  <line x1="55" y1="115" x2="85" y2="115" stroke-width="3" class="wire-pwr"/>
+  <line x1="60" y1="125" x2="80" y2="125" stroke-width="1.5" class="wire"/>
+  <text x="95" y="123" font-size="9" class="text-dim">Cell 2</text>
+
+  <!-- Bottom wire (B-) -->
+  <line x1="70" y1="125" x2="70" y2="245" class="wire-gnd"/>
+  <text x="55" y="140" text-anchor="end" font-size="10" font-weight="bold" class="text">-</text>
+
+  <!-- Voltage annotation -->
+  <text x="25" y="105" text-anchor="middle" font-size="9" class="text-dim" transform="rotate(-90,25,105)">7.4V nom</text>
+
+  <!-- ==================== BMS BLOCK ==================== -->
+  <rect x="155" y="50" width="110" height="210" rx="4" class="comp-bms"/>
+  <text x="210" y="145" text-anchor="middle" font-size="12" font-weight="bold" class="text">BMS</text>
+  <text x="210" y="162" text-anchor="middle" font-size="9" class="text-dim">2S</text>
+
+  <!-- BMS input labels (left) -->
+  <text x="161" y="73" font-size="9" class="text">B+</text>
+  <text x="161" y="109" font-size="9" class="text">BM</text>
+  <text x="161" y="248" font-size="9" class="text">B-</text>
+
+  <!-- BMS output labels (right) -->
+  <text x="243" y="73" font-size="9" class="text">P+</text>
+  <text x="243" y="248" font-size="9" class="text">P-</text>
+
+  <!-- Wires: Battery to BMS -->
+  <!-- B+ -->
+  <line x1="70" y1="65" x2="130" y2="65" class="wire-pwr"/>
+  <line x1="130" y1="65" x2="130" y2="70" class="wire-pwr"/>
+  <line x1="130" y1="70" x2="155" y2="70" class="wire-pwr"/>
+
+  <!-- BM -->
+  <line x1="100" y1="105" x2="130" y2="105" class="wire"/>
+  <line x1="130" y1="105" x2="155" y2="105" class="wire"/>
+
+  <!-- B- -->
+  <line x1="70" y1="245" x2="130" y2="245" class="wire-gnd"/>
+  <line x1="130" y1="245" x2="155" y2="245" class="wire-gnd"/>
+
+  <!-- BMS P+ output -->
+  <line x1="265" y1="70" x2="350" y2="70" class="wire-pwr"/>
+  <text x="308" y="60" text-anchor="middle" font-size="10" font-weight="bold" class="text">6.0-8.4V</text>
+
+  <!-- BMS P- output -->
+  <line x1="265" y1="245" x2="350" y2="245" class="wire-gnd"/>
+
+  <!-- ==================== MP1584 BUCK BLOCK ==================== -->
+  <rect x="350" y="50" width="130" height="210" rx="4" class="comp-buck"/>
+  <text x="415" y="140" text-anchor="middle" font-size="12" font-weight="bold" class="text">MP1584</text>
+  <text x="415" y="157" text-anchor="middle" font-size="9" class="text-dim">Buck</text>
+  <text x="415" y="172" text-anchor="middle" font-size="9" class="text-dim">Converter</text>
+
+  <!-- Buck labels -->
+  <text x="356" y="73" font-size="9" class="text">IN+</text>
+  <text x="356" y="248" font-size="9" class="text">IN-</text>
+  <text x="458" y="73" font-size="9" class="text">OUT+</text>
+  <text x="458" y="248" font-size="9" class="text">OUT-</text>
+
+  <!-- Buck outputs -->
+  <line x1="480" y1="70" x2="545" y2="70" class="wire-pwr"/>
+  <line x1="480" y1="245" x2="620" y2="245" class="wire-gnd"/>
+  <text x="510" y="58" text-anchor="middle" font-size="11" font-weight="bold" class="text">5.0V</text>
+
+  <!-- ==================== CAPACITOR C1 ==================== -->
+  <line x1="545" y1="70" x2="545" y2="125" class="wire-pwr"/>
+  <!-- Cap plates -->
+  <line x1="535" y1="125" x2="555" y2="125" stroke-width="3" class="wire"/>
+  <line x1="535" y1="133" x2="555" y2="133" stroke-width="3" class="wire"/>
+  <text x="562" y="123" font-size="9" font-weight="bold" fill="#e74c3c">+</text>
+  <line x1="545" y1="133" x2="545" y2="245" class="wire-gnd"/>
+  <circle cx="545" cy="245" r="3" class="wire-gnd" fill="currentColor"/>
+
+  <text x="565" y="138" font-size="10" font-weight="bold" class="text">C1</text>
+  <text x="565" y="152" font-size="9" class="text-dim">100uF</text>
+
+  <!-- Continue 5V to output -->
+  <line x1="545" y1="70" x2="620" y2="70" class="wire-pwr"/>
+  <circle cx="545" cy="70" r="3" class="wire-pwr" fill="currentColor"/>
+
+  <!-- ==================== OUTPUT LABELS ==================== -->
+  <rect x="620" y="55" width="100" height="32" rx="4" class="comp"/>
+  <text x="670" y="72" text-anchor="middle" font-size="11" font-weight="bold" class="text">5V Wemos</text>
+  <text x="670" y="84" text-anchor="middle" font-size="9" class="text-dim">output</text>
+
+  <rect x="620" y="232" width="100" height="32" rx="4" class="comp"/>
+  <text x="670" y="249" text-anchor="middle" font-size="11" font-weight="bold" class="text">GND Wemos</text>
+  <text x="670" y="261" text-anchor="middle" font-size="9" class="text-dim">output</text>
+
+  <!-- ==================== GND SYMBOLS ==================== -->
+  <!-- GND under battery -->
+  <line x1="70" y1="245" x2="70" y2="275" class="wire-gnd"/>
+  <line x1="58" y1="275" x2="82" y2="275" stroke-width="2" class="wire-gnd"/>
+  <line x1="62" y1="281" x2="78" y2="281" stroke-width="1.5" class="wire-gnd"/>
+  <line x1="66" y1="287" x2="74" y2="287" stroke-width="1" class="wire-gnd"/>
+
+  <!-- GND under output -->
+  <line x1="670" y1="264" x2="670" y2="290" class="wire-gnd"/>
+  <line x1="658" y1="290" x2="682" y2="290" stroke-width="2" class="wire-gnd"/>
+  <line x1="662" y1="296" x2="678" y2="296" stroke-width="1.5" class="wire-gnd"/>
+  <line x1="666" y1="302" x2="674" y2="302" stroke-width="1" class="wire-gnd"/>
+
+  <!-- ==================== LEGEND ==================== -->
+  <rect x="40" y="330" width="390" height="55" rx="4" class="legend-bg"/>
+  <text x="52" y="348" font-size="10" font-weight="bold" class="text">Legend</text>
+  <line x1="52" y1="362" x2="77" y2="362" class="wire-pwr" stroke-width="2"/>
+  <text x="82" y="366" font-size="9" class="text">V+ rail</text>
+  <line x1="140" y1="362" x2="165" y2="362" class="wire-gnd" stroke-width="2"/>
+  <text x="170" y="366" font-size="9" class="text">GND rail</text>
+  <line x1="230" y1="362" x2="255" y2="362" class="wire" stroke-width="2"/>
+  <text x="260" y="366" font-size="9" class="text">Mid-point</text>
+
+  <!-- Cap symbol in legend -->
+  <line x1="52" y1="373" x2="52" y2="377" stroke-width="3" class="wire"/>
+  <line x1="52" y1="380" x2="52" y2="384" stroke-width="3" class="wire"/>
+  <text x="62" y="382" font-size="9" class="text">Capacitor</text>
+
+  <!-- Note -->
+  <text x="160" y="382" font-size="9" class="text-dim">C1 filters MP1584 switching noise for stable ESP8266 WiFi</text>
+</svg>

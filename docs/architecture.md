@@ -17,70 +17,20 @@ This document describes the modular architecture of the thermo firmware.
 
 ## Layers
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  platformio.ini                                         │
-│  Defines: DEVICE_ID, MQTT_DEVICE_TYPE, HAS_xxx flags    │
-└──────────────────────────┬──────────────────────────────┘
-                           │ -D build flags
-┌──────────────────────────▼──────────────────────────────┐
-│  src/main.cpp  — Core orchestrator                      │
-│  - Always: MQTT connect, subscribe, publish, dispatch   │
-│  - #ifdef HAS_xxx: init module, register, contribute    │
-│  - #ifdef HAS_DEEP_SLEEP: one-shot mode                 │
-│  - #ifndef HAS_DEEP_SLEEP: continuous loop mode         │
-└──┬──────────────┬───────────────────────────────────────┘
-   │              │
-   │  ┌───────────▼──────────────┐
-   │  │  src/hw/                 │  Platform-specific drivers
-   │  │                          │
-   │  │  ESP8266:                │  SAMD21 (MKR):
-   │  │  esp_network             │  nina_network
-   │  │  battery_adc             │  samd_battery_adc
-   │  │  esp_sleep               │
-   │  │  shift_display           │
-   │  │                          │
-   │  │  Shared:                 │
-   │  │  bme280_sensor           │
-   │  └──────────────────────────┘
-   │
-   ▼
-┌────────────────────────────────────────────────────────┐
-│  lib/thermo_core/  — Platform-independent library      │
-│                                                        │
-│  ┌─────────────────┐  ┌──────────────────┐             │
-│  │ ModuleRegistry  │  │ PayloadBuilder   │             │
-│  │ metrics[]       │  │ begin/add/end    │             │
-│  │ commands[]      │  │ (snprintf-based) │             │
-│  │ handlers[]      │  └──────────────────┘             │
-│  │ dispatch()      │                                   │
-│  └─────────────────┘                                   │
-│                                                        │
-│  ┌─────────────────────────────────────────────┐       │
-│  │ modules/                                    │       │
-│  │  bme280_module   → register + contribute    │       │
-│  │  battery_module  → register + contribute    │       │
-│  │  (future modules here)                      │       │
-│  └─────────────────────────────────────────────┘       │
-│                                                        │
-│  mqtt_payload   — command parsing, capabilities format │
-│  battery        — ADC math, SoC calculation            │
-│  display_encoding — BCD encoding for 7-segment         │
-│  sensor_data    — SensorData struct                    │
-└────────────────────────────────────────────────────────┘
-```
+![Architecture Layers](img/architecture-layers.svg)
 
 ## Feature flags
 
 Feature flags are defined as `-DHAS_xxx` in `platformio.ini` build flags.
 They control which code is compiled into the firmware via `#ifdef` guards.
 
-| Flag             | What it enables                                                |
-|------------------|----------------------------------------------------------------|
-| `HAS_BME280`     | BME/BMP280 I2C sensor initialization, reading, metrics         |
-| `HAS_BATTERY`    | Battery ADC reading, SoC calculation, low-battery alert        |
-| `HAS_DISPLAY`    | 7-segment display, push button, display mode cycling           |
-| `HAS_DEEP_SLEEP` | One-shot execution mode with ESP8266 deep sleep (ESP8266 only) |
+| Flag             | What it enables                                                 |
+|------------------|-----------------------------------------------------------------|
+| `HAS_BME280`     | BME/BMP280 I2C sensor initialization, reading, metrics          |
+| `HAS_SHT30`      | SHT30 I2C sensor initialization, reading, metrics (no pressure) |
+| `HAS_BATTERY`    | Battery ADC reading, SoC calculation, low-battery alert         |
+| `HAS_DISPLAY`    | 7-segment display, push button, display mode cycling            |
+| `HAS_DEEP_SLEEP` | One-shot execution mode with ESP8266 deep sleep (ESP8266 only)  |
 
 The `NATIVE` flag is set automatically for the native test build. Code
 inside `#ifndef NATIVE` is excluded from tests (hardware drivers, Arduino
@@ -309,10 +259,11 @@ PayloadBuilder pb
     ├── bme280_module_contribute(pb, sensor_data)  [if HAS_BME280]
     │     → adds temperature, humidity, pressure
     │
+    ├── sht30_module_contribute(pb, sensor_data)   [if HAS_SHT30]
+    │     → adds temperature, humidity
+    │
     ├── battery_module_contribute(pb, soc, voltage)  [if HAS_BATTERY]
     │     → adds battery_pct, battery_v
-    │
-    ├── (future modules contribute here)
     │
     ▼
 network.publish(MQTT_TOPIC_SENSORS, buf)
@@ -413,6 +364,7 @@ Add declarations and `RUN_TEST` calls to `test/test_native/test_main.cpp`.
 | `src/hw/esp_network.cpp`                         | HW     | ESP8266 WiFi + MQTT via PubSubClient                |
 | `src/hw/nina_network.cpp`                        | HW     | MKR WiFiNINA + MQTT via PubSubClient                |
 | `src/hw/bme280_sensor.cpp`                       | HW     | BME/BMP280 I2C driver (shared, Bosch formulas)      |
+| `src/hw/sht30_sensor.cpp`                        | HW     | SHT30 I2C driver (Sensirion, CRC-8 verified)        |
 | `src/hw/shift_display.cpp`                       | HW     | 7-segment via shift registers (ESP8266 only)        |
 | `src/hw/battery_adc.cpp`                         | HW     | ESP8266 ADC reading (10-bit, A0)                    |
 | `src/hw/samd_battery_adc.cpp`                    | HW     | MKR ADC reading (12-bit, ADC_BATTERY)               |
@@ -421,6 +373,7 @@ Add declarations and `RUN_TEST` calls to `test/test_native/test_main.cpp`.
 | `lib/thermo_core/src/payload_builder.cpp`        | Core   | Incremental JSON builder                            |
 | `lib/thermo_core/src/mqtt_payload.cpp`           | Core   | Capabilities format, command parsing, status format |
 | `lib/thermo_core/src/modules/bme280_module.cpp`  | Module | BME280 metrics registration and contribution        |
+| `lib/thermo_core/src/modules/sht30_module.cpp`   | Module | SHT30 metrics registration and contribution         |
 | `lib/thermo_core/src/modules/battery_module.cpp` | Module | Battery metrics registration and contribution       |
 | `lib/thermo_core/src/battery.cpp`                | Core   | ADC-to-voltage, voltage-to-SoC math                 |
 | `lib/thermo_core/src/display_encoding.cpp`       | Core   | BCD encoding for 7-segment display                  |

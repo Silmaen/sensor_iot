@@ -1,6 +1,7 @@
 #include <unity.h>
 #include <string.h>
 #include "modules/bme280_module.h"
+#include "modules/sht30_module.h"
 #include "modules/battery_module.h"
 
 void test_bme280_module_register(void) {
@@ -47,6 +48,45 @@ void test_battery_module_contribute(void) {
     pb.end();
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_pct\":75"));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_v\":7.80"));
+}
+
+void test_sht30_module_register(void) {
+    ModuleRegistry reg;
+    reg.init();
+    sht30_module_register(reg);
+    TEST_ASSERT_EQUAL(2, reg.num_metrics);
+    TEST_ASSERT_EQUAL_STRING("temperature", reg.metrics[0]);
+    TEST_ASSERT_EQUAL_STRING("humidity", reg.metrics[1]);
+    TEST_ASSERT_NOT_NULL(reg.metric_units[0]); // °C
+    TEST_ASSERT_EQUAL_STRING("%", reg.metric_units[1]);
+}
+
+void test_sht30_module_contribute(void) {
+    SensorData data = {23.7f, 52.3f, 0.0f, true};
+    char buf[128];
+    PayloadBuilder pb{buf, sizeof(buf), 0, true};
+    pb.begin();
+    sht30_module_contribute(pb, data);
+    pb.end();
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"temperature\":23.7"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humidity\":52.3"));
+    // SHT30 does not contribute pressure
+    TEST_ASSERT_NULL(strstr(buf, "\"pressure\""));
+}
+
+void test_sht30_module_with_battery(void) {
+    SensorData data = {21.0f, 60.0f, 0.0f, true};
+    char buf[256];
+    PayloadBuilder pb{buf, sizeof(buf), 0, true};
+    pb.begin();
+    sht30_module_contribute(pb, data);
+    battery_module_contribute(pb, 80, 7.9f);
+    pb.end();
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"temperature\":21.0"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humidity\":60.0"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_pct\":80"));
+    TEST_ASSERT_EQUAL('{', buf[0]);
+    TEST_ASSERT_EQUAL('}', buf[strlen(buf) - 1]);
 }
 
 void test_combined_modules_contribute(void) {
