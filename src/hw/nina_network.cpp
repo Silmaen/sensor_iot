@@ -162,6 +162,11 @@ void NinaNetwork::disconnect() {
     was_mqtt_connected_ = false;
 }
 
+void NinaNetwork::power_down() {
+    disconnect();
+    WiFi.end();  // Powers down the NINA-W102 radio module
+}
+
 void NinaNetwork::set_callback(MqttCallback cb) {
     mqtt_client_.setCallback(cb);
 }

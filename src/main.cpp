@@ -12,6 +12,10 @@
 #include "modules/sht30_module.h"
 #endif
 
+#ifdef HAS_MKR_ENV
+#include "modules/mkr_env_module.h"
+#endif
+
 #ifdef HAS_BATTERY
 #include "modules/battery_module.h"
 #endif
@@ -35,6 +39,11 @@ static Bme280Sensor sensor;
 #ifdef HAS_SHT30
 #include "hw/sht30_sensor.h"
 static Sht30Sensor sensor;
+#endif
+
+#ifdef HAS_MKR_ENV
+#include "hw/mkr_env_sensor.h"
+static MkrEnvSensor sensor;
 #endif
 
 #ifdef HAS_DISPLAY
@@ -72,7 +81,7 @@ static EspSleep sleeper;
 static ModuleRegistry registry;
 static uint32_t publish_interval_s = DEFAULT_PUBLISH_INTERVAL_S;
 
-#if (defined(HAS_BME280) || defined(HAS_SHT30)) && !defined(NATIVE)
+#if (defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)) && !defined(NATIVE)
 static SensorData last_data = {};
 #endif
 
@@ -98,12 +107,15 @@ static void register_modules() {
     registry.init();
     registry.add_command("set_interval", handle_set_interval,
                          set_interval_params, 1);
-    registry.add_metric("wifi_rssi", "dBm");
+    registry.add_metric("rssi", "dBm");
 #ifdef HAS_BME280
     bme280_module_register(registry);
 #endif
 #ifdef HAS_SHT30
     sht30_module_register(registry);
+#endif
+#ifdef HAS_MKR_ENV
+    mkr_env_module_register(registry);
 #endif
 #ifdef HAS_BATTERY
     battery_module_register(registry);
@@ -123,19 +135,27 @@ static void publish_sensor_data() {
 #ifdef HAS_SHT30
     sht30_module_contribute(pb, last_data);
 #endif
+#ifdef HAS_MKR_ENV
+    mkr_env_module_contribute(pb, last_data);
+#endif
 #ifdef HAS_BATTERY
     uint16_t adc_raw = read_battery_adc();
     float voltage    = adc_to_voltage(adc_raw);
     uint8_t soc      = voltage_to_soc(voltage);
     battery_module_contribute(pb, soc, voltage);
 #endif
-    pb.add_int("wifi_rssi", network.wifi_rssi());
+    pb.add_int("rssi", network.wifi_rssi());
     pb.end();
     DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_SENSORS, buf);
     network.publish(MQTT_TOPIC_SENSORS, buf);
 
 #ifdef HAS_BATTERY
-    if (soc <= BATTERY_LOW_THRESHOLD) {
+    if (soc <= BATTERY_CRITICAL_THRESHOLD) {
+        char status_buf[64];
+        format_status_payload("error", "critical_battery", status_buf, sizeof(status_buf));
+        DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_STATUS, status_buf);
+        network.publish(MQTT_TOPIC_STATUS, status_buf);
+    } else if (soc <= BATTERY_WARN_THRESHOLD) {
         char status_buf[64];
         format_status_payload("warning", "low_battery", status_buf, sizeof(status_buf));
         DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_STATUS, status_buf);
@@ -162,7 +182,7 @@ static void publish_capabilities() {
     char hw_id[20];
     get_hw_id(hw_id, sizeof(hw_id));
 
-    char buf[512];
+    char buf[768];
     format_capabilities_payload(hw_id,
                                 publish_interval_s,
                                 registry,
@@ -257,6 +277,13 @@ void setup() {
 
 #ifndef NATIVE
     Serial.begin(115200);
+#if defined(ARDUINO_SAMD_MKRWIFI1010) && defined(HAS_SERIAL_DEBUG)
+    // Wait up to 3s for USB CDC serial to be ready (non-blocking if no monitor)
+    unsigned long serial_start = millis();
+    while (!Serial && millis() - serial_start < 3000) {
+        delay(10);
+    }
+#endif
     Serial.println("Thermo starting...");
     DEBUG_PRINTF("[INIT] device=%s type=%s\n", DEVICE_ID, MQTT_DEVICE_TYPE);
     DEBUG_PRINTF("[INIT] publish_interval=%lus\n", (unsigned long)publish_interval_s);
@@ -287,6 +314,16 @@ void setup() {
     }
 #endif
 
+#ifdef HAS_MKR_ENV
+    if (!sensor.begin()) {
+        Serial.println("MKR ENV init failed!");
+#ifdef HAS_DEEP_SLEEP
+        sleeper.deep_sleep(publish_interval_s);
+        return;
+#endif
+    }
+#endif
+
 #ifdef HAS_DISPLAY
     display.begin();
     pinMode(PIN_BUTTON, INPUT_PULLUP);
@@ -294,6 +331,10 @@ void setup() {
 
     network.set_callback(on_mqtt_message);
 
+#if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY) && !defined(HAS_DEEP_SLEEP)
+    // Duty-cycle mode: WiFi will be brought up on first publish in loop()
+    DEBUG_PRINTLN("[NET] duty-cycle mode, WiFi deferred to first publish");
+#else
     DEBUG_PRINTLN("[NET] connecting WiFi...");
     if (!network.connect_wifi()) {
         Serial.println("WiFi connection failed!");
@@ -320,18 +361,13 @@ void setup() {
             DEBUG_PRINTF("[MQTT] subscribed to %s\n", MQTT_TOPIC_COMMAND);
         }
     }
+#endif
 
 #ifdef HAS_DEEP_SLEEP
-    // One-shot mode: wait for retained commands, read, publish, sleep
+    // One-shot mode: publish sensors (triggers server command flush),
+    // wait for commands, send capabilities, then sleep.
 
-    volatile bool cmd_received = false;
-    unsigned long start        = millis();
-    while (!cmd_received && millis() - start < MQTT_COMMAND_WAIT_MS) {
-        network.loop();
-        delay(10);
-    }
-
-#if defined(HAS_BME280) || defined(HAS_SHT30)
+#if defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)
     last_data = sensor.read();
     if (last_data.valid) {
         publish_sensor_data();
@@ -340,6 +376,16 @@ void setup() {
     publish_sensor_data();
 #endif
 
+    // Wait for server to flush pending commands (may be multiple)
+    unsigned long start = millis();
+    while (millis() - start < MQTT_COMMAND_WAIT_MS) {
+        network.loop();
+        delay(10);
+    }
+
+    // Capabilities sent last — reflects state after all commands applied
+    publish_capabilities();
+
     network.disconnect();
     sleeper.deep_sleep(publish_interval_s);
 #endif // HAS_DEEP_SLEEP
@@ -347,7 +393,70 @@ void setup() {
 #endif // NATIVE
 }
 
-static unsigned long last_sensor_read = 0;
+// Initialized so that (millis() - last_sensor_read >= interval) is true on
+// the very first loop() iteration, triggering an immediate first publish.
+static unsigned long last_sensor_read = -static_cast<unsigned long>(DEFAULT_PUBLISH_INTERVAL_S) * 1000UL;
+
+// --- Read all sensors, return true if data is valid ---
+#if (defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)) && !defined(NATIVE)
+static bool read_sensors() {
+    last_data = sensor.read();
+    if (!last_data.valid) {
+#ifdef HAS_BME280
+        DEBUG_PRINTLN("[SENSOR] BME280 read failed");
+#elif defined(HAS_SHT30)
+        DEBUG_PRINTLN("[SENSOR] SHT30 read failed");
+#elif defined(HAS_MKR_ENV)
+        DEBUG_PRINTLN("[SENSOR] MKR ENV read failed");
+#endif
+        return false;
+    }
+#ifdef HAS_BME280
+    DEBUG_PRINTF("[SENSOR] T=%.1f H=%.1f P=%.1f\n", last_data.temperature, last_data.humidity, last_data.pressure);
+#ifdef HAS_DISPLAY
+    update_display();
+#endif
+#elif defined(HAS_SHT30)
+    DEBUG_PRINTF("[SENSOR] T=%.1f H=%.1f\n", last_data.temperature, last_data.humidity);
+#elif defined(HAS_MKR_ENV)
+    DEBUG_PRINTF("[SENSOR] T=%.1f H=%.1f P=%.1f L=%.0f UV=%.2f\n", last_data.temperature, last_data.humidity, last_data.pressure, last_data.light_lux, last_data.uv_index);
+#endif
+    return true;
+}
+#endif
+
+// --- Connect, publish, disconnect (duty-cycle) ---
+#ifndef NATIVE
+static void duty_cycle_publish() {
+    DEBUG_PRINTLN("[NET] connecting WiFi...");
+    if (!network.connect_wifi()) {
+        DEBUG_PRINTLN("[NET] WiFi failed, skipping cycle");
+        return;
+    }
+    if (!network.connect_mqtt()) {
+        DEBUG_PRINTLN("[NET] MQTT failed, skipping cycle");
+        network.power_down();
+        return;
+    }
+    network.subscribe(MQTT_TOPIC_COMMAND);
+
+    // Publish sensors first — triggers server-side command flush
+    publish_sensor_data();
+
+    // Wait for server to flush pending commands (may be multiple)
+    unsigned long cmd_start = millis();
+    while (millis() - cmd_start < MQTT_COMMAND_WAIT_MS) {
+        network.loop();
+        delay(10);
+    }
+
+    // Capabilities sent last — reflects state after all commands applied
+    publish_capabilities();
+
+    network.power_down();
+    DEBUG_PRINTLN("[NET] radio powered down");
+}
+#endif
 
 void loop() {
 #ifdef HAS_DEEP_SLEEP
@@ -356,6 +465,25 @@ void loop() {
 #endif
 
 #ifndef NATIVE
+
+#if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
+    // --- SAMD duty-cycle mode ---
+    // WiFi is off between publications to save power.
+    // Sensors are read first, then WiFi is brought up only to publish.
+    if (unsigned long const now = millis();
+        now - last_sensor_read >= static_cast<unsigned long>(publish_interval_s) * 1000UL) {
+        last_sensor_read = now;
+
+#if defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)
+        if (!read_sensors()) return;
+#endif
+        duty_cycle_publish();
+    }
+    delay(100); // Low-power idle between checks
+
+#else
+    // --- Continuous mode (ESP8266, or any config with display) ---
+    // WiFi stays connected for responsive display + low-latency commands.
     network.loop();
 
 #ifdef HAS_DISPLAY
@@ -366,24 +494,8 @@ void loop() {
         now - last_sensor_read >= static_cast<unsigned long>(publish_interval_s) * 1000UL) {
         last_sensor_read = now;
 
-#ifdef HAS_BME280
-        last_data = sensor.read();
-        if (!last_data.valid) {
-            DEBUG_PRINTLN("[SENSOR] BME280 read failed");
-            return;
-        }
-        DEBUG_PRINTF("[SENSOR] T=%.1f H=%.1f P=%.1f\n", last_data.temperature, last_data.humidity, last_data.pressure);
-#ifdef HAS_DISPLAY
-        update_display();
-#endif
-#endif
-#ifdef HAS_SHT30
-        last_data = sensor.read();
-        if (!last_data.valid) {
-            DEBUG_PRINTLN("[SENSOR] SHT30 read failed");
-            return;
-        }
-        DEBUG_PRINTF("[SENSOR] T=%.1f H=%.1f\n", last_data.temperature, last_data.humidity);
+#if defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)
+        if (!read_sensors()) return;
 #endif
         if (!network.mqtt_connected()) {
             DEBUG_PRINTLN("[MQTT] skipping publish, not connected");
@@ -391,6 +503,8 @@ void loop() {
             publish_sensor_data();
         }
     }
+#endif // SAMD duty-cycle vs continuous
+
 #endif // NATIVE
 }
 

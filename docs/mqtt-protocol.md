@@ -93,9 +93,17 @@ Publish structured alerts when the device detects a problem or recovers.
 
 ### Automatic alerts
 
-| Condition          | Level     | Message       | Module        |
-|--------------------|-----------|---------------|---------------|
-| Battery SoC <= 15% | `warning` | `low_battery` | `HAS_BATTERY` |
+| Condition                    | Level     | Message            | Module        |
+|------------------------------|-----------|--------------------|---------------|
+| Battery SoC <= warn threshold | `warning` | `low_battery`      | `HAS_BATTERY` |
+| Battery SoC <= crit threshold | `error`   | `critical_battery` | `HAS_BATTERY` |
+
+Thresholds are platform-specific (defined in `config.h`):
+
+| Platform          | Warning | Critical |
+|-------------------|---------|----------|
+| ESP8266 (2S LiPo) | 15%     | 5%       |
+| MKR WiFi (1S LiPo)| 20%     | 5%       |
 
 **Important:** Do NOT publish online/offline status. The server computes
 online/offline from the timestamp of the last received message:
@@ -145,11 +153,20 @@ by the dispatcher.
 ### Implementation notes
 
 - **Continuous mode** (no `HAS_DEEP_SLEEP`): subscribe at startup, process
-  commands in `loop()` via `network.loop()`.
-- **One-shot mode** (`HAS_DEEP_SLEEP`): subscribe after MQTT connect, wait
-  up to 2 seconds for retained commands (the server publishes user commands
-  with `retain=True`), process, then deep sleep.
-- Unknown actions are silently ignored (no matching handler).
+  commands in `loop()` via `network.loop()`. Always connected, no special
+  handling needed.
+- **One-shot mode** (`HAS_DEEP_SLEEP`) and **duty-cycle mode** (MKR WiFi):
+  1. Subscribe to command topic
+  2. Publish sensor data (triggers server-side command flush)
+  3. Wait 5 seconds for pending commands (`MQTT_COMMAND_WAIT_MS`)
+  4. Process each command as it arrives (ack immediately)
+  5. Publish capabilities (reflects post-command state)
+  6. Disconnect and sleep / power down radio
+- Multiple commands may arrive per wake cycle — the firmware processes all
+  of them during the wait window.
+- `request_capabilities` is not acked — the capabilities response serves as
+  implicit acknowledgement.
+- Unknown actions are acked with `"status": "error"`.
 
 ## 4. Acknowledging commands (`ack`)
 
@@ -185,29 +202,10 @@ it reflects exactly which modules are enabled in the current firmware build.
 
 ```json
 {
-  "hardware_id": "ESP-00A1B2",
-  "publish_interval": 10,
-  "metrics": [
-    "temperature",
-    "humidity",
-    "pressure"
-  ],
-  "units": {
-    "temperature": "°C",
-    "humidity": "%",
-    "pressure": "hPa"
-  },
-  "commands": [
-    "set_interval"
-  ],
-  "command_params": {
-    "set_interval": [
-      {
-        "name": "value",
-        "type": "number"
-      }
-    ]
-  }
+  "id": "ESP-00A1B2",
+  "intrvl": 10,
+  "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa"},
+  "cmds": {"set_interval": [{"n": "value", "t": "number"}]}
 }
 ```
 
@@ -215,51 +213,25 @@ it reflects exactly which modules are enabled in the current firmware build.
 
 ```json
 {
-  "hardware_id": "ESP-00A1B2",
-  "publish_interval": 300,
-  "metrics": [
-    "temperature",
-    "humidity",
-    "pressure",
-    "battery_pct",
-    "battery_v"
-  ],
-  "units": {
-    "temperature": "°C",
-    "humidity": "%",
-    "pressure": "hPa",
-    "battery_pct": "%",
-    "battery_v": "V"
-  },
-  "commands": [
-    "set_interval"
-  ],
-  "command_params": {
-    "set_interval": [
-      {
-        "name": "value",
-        "type": "number"
-      }
-    ]
-  }
+  "id": "ESP-00A1B2",
+  "intrvl": 300,
+  "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa", "battery_pct": "%", "battery_v": "V"},
+  "cmds": {"set_interval": [{"n": "value", "t": "number"}]}
 }
 ```
 
-| Field              | Type     | Required | Description                                                              |
-|--------------------|----------|:--------:|--------------------------------------------------------------------------|
-| `hardware_id`      | string   |   Yes    | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256          |
-| `publish_interval` | number   |   Yes    | Current publish frequency in seconds (1-86400)                           |
-| `metrics`          | string[] |   Yes    | All metric names from `registry.metrics[]`                               |
-| `units`            | object   |    No    | Mapping of metric name to unit string (e.g. `"°C"`, `"%"`). Max 16 chars |
-| `commands`         | string[] |   Yes    | All command names from `registry.commands[]`                             |
-| `command_params`   | object   |    No    | Mapping of command name to array of `{name, type}` param definitions     |
+| Field     | Type   | Required | Description                                                          |
+|-----------|--------|:--------:|----------------------------------------------------------------------|
+| `id`      | string |   Yes    | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256     |
+| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                       |
+| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit   |
+| `cmds`    | object |   Yes    | Command name → array of `{n, t}` params (`[]` if no params)          |
 
-**Parameter definition format:** each entry is `{"name": "<param>", "type": "<number|string|boolean>"}`.
+**Parameter definition format:** each entry is `{"n": "<param>", "t": "<number|string|boolean>"}`.
 
-- Do NOT include `request_capabilities` in the `commands` list (implicit).
-- `publish_interval` reflects the current value (may have been changed
-  by a `set_interval` command or read from RTC memory).
-- `units` and `command_params` are omitted when no module provides them.
+- Do NOT include `request_capabilities` in `cmds` (implicit).
+- `intrvl` reflects the current value (may have been changed by a
+  `set_interval` command or read from RTC memory).
 - Publish with `retain = false`.
 
 ## 6. Timeout handling
@@ -308,12 +280,10 @@ thermo/thermo_1/command  -> {"action":"request_capabilities"}
 
 # 3. Device responds (metrics/commands from ModuleRegistry)
 thermo/thermo_1/capabilities <- {
-    "hardware_id":"ESP-00A1B2",
-    "publish_interval":300,
-    "metrics":["temperature","humidity","pressure","battery_pct","battery_v"],
-    "units":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
-    "commands":["set_interval"],
-    "command_params":{"set_interval":[{"name":"value","type":"number"}]}
+    "id":"ESP-00A1B2",
+    "intrvl":300,
+    "metrics":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
+    "cmds":{"set_interval":[{"name":"value","type":"number"}]}
 }
 
 # 4. Admin approves from web UI — data now stored
@@ -332,11 +302,9 @@ thermo/thermo_1/command -> {"action":"request_capabilities"}
 
 # 8. Device responds with updated interval
 thermo/thermo_1/capabilities <- {
-    "hardware_id":"ESP-00A1B2",
-    "publish_interval":120,
-    "metrics":["temperature","humidity","pressure","battery_pct","battery_v"],
-    "units":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
-    "commands":["set_interval"],
-    "command_params":{"set_interval":[{"name":"value","type":"number"}]}
+    "id":"ESP-00A1B2",
+    "intrvl":120,
+    "metrics":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
+    "cmds":{"set_interval":[{"name":"value","type":"number"}]}
 }
 ```

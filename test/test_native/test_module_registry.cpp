@@ -24,11 +24,11 @@ void test_registry_init(void) {
 void test_registry_add_metric(void) {
     ModuleRegistry reg;
     reg.init();
-    TEST_ASSERT_TRUE(reg.add_metric("temperature"));
-    TEST_ASSERT_TRUE(reg.add_metric("humidity"));
+    TEST_ASSERT_TRUE(reg.add_metric("temp"));
+    TEST_ASSERT_TRUE(reg.add_metric("humi"));
     TEST_ASSERT_EQUAL(2, reg.num_metrics);
-    TEST_ASSERT_EQUAL_STRING("temperature", reg.metrics[0]);
-    TEST_ASSERT_EQUAL_STRING("humidity", reg.metrics[1]);
+    TEST_ASSERT_EQUAL_STRING("temp", reg.metrics[0]);
+    TEST_ASSERT_EQUAL_STRING("humi", reg.metrics[1]);
 }
 
 void test_registry_add_metric_overflow(void) {

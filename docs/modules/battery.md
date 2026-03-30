@@ -12,17 +12,24 @@ enabled by the `-DHAS_BATTERY` build flag in `platformio.ini`.
 | `battery_pct` | %    | State of charge (0--100) |
 | `battery_v`   | V    | Measured battery voltage |
 
-**Low battery alert:** when SoC drops to 15% or below, the device publishes a status message on
-`thermo/{id}/status`:
+**Battery alerts:** Two levels of alert are published on `thermo/{id}/status`:
+
+| Level     | Message            | Condition                         |
+|-----------|--------------------|-----------------------------------|
+| `warning` | `low_battery`      | SoC <= `BATTERY_WARN_THRESHOLD`     |
+| `error`   | `critical_battery` | SoC <= `BATTERY_CRITICAL_THRESHOLD` |
 
 ```json
-{
-  "level": "warning",
-  "message": "low_battery"
-}
+{"level":"warning","message":"low_battery"}
+{"level":"error","message":"critical_battery"}
 ```
 
-The threshold is defined by `BATTERY_LOW_THRESHOLD` in `include/config.h`.
+Thresholds are platform-specific (defined in `include/config.h`):
+
+| Platform           | Warning | Critical | Rationale                              |
+|--------------------|---------|----------|----------------------------------------|
+| ESP8266 (2S LiPo)  | 15%     | 5%       | Wide voltage range (6.0--8.4V)        |
+| MKR WiFi (1S LiPo) | 20%     | 5%       | Narrow range (3.0--4.2V), PMIC cutoff |
 
 ## Hardware Configurations
 
@@ -83,10 +90,11 @@ SoC = (V_bat - V_empty) / (V_full - V_empty) x 100
 | 7.20        |      50 | Nominal           |
 | 6.96        |      40 |                   |
 | 6.72        |      30 |                   |
-| 6.48        |      20 |                   |
-| 6.36        |      15 | Low battery alert |
-| 6.24        |      10 |                   |
-| 6.00        |       0 | Empty / cutoff    |
+| 6.48        |      20 |                       |
+| 6.36        |      15 | Warning (low_battery) |
+| 6.24        |      10 |                       |
+| 6.12        |       5 | Error (critical_battery) |
+| 6.00        |       0 | Empty / cutoff        |
 
 ### 1S LiPo (MKR WiFi 1010)
 
@@ -100,9 +108,9 @@ SoC = (V_bat - V_empty) / (V_full - V_empty) x 100
 | 3.60        |      50 | Nominal           |
 | 3.48        |      40 |                   |
 | 3.36        |      30 |                   |
-| 3.24        |      20 |                   |
-| 3.18        |      15 | Low battery alert |
-| 3.12        |      10 |                   |
+| 3.24        |      20 | Warning (low_battery)    |
+| 3.12        |      10 |                          |
+| 3.06        |       5 | Error (critical_battery) |
 | 3.00        |       0 | Empty / cutoff    |
 
 > **Note:** Real LiPo discharge curves are non-linear. The linear mapping is a deliberate

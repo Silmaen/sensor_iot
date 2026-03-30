@@ -8,7 +8,7 @@
 #define DEBUG_PRINT(x)  Serial.print(x)
 #define DEBUG_PRINTLN(x) Serial.println(x)
 #define DEBUG_PRINTF(fmt, ...) do { \
-    char _dbg[128]; \
+    char _dbg[512]; \
     snprintf(_dbg, sizeof(_dbg), fmt, ##__VA_ARGS__); \
     Serial.print(_dbg); \
 } while(0)

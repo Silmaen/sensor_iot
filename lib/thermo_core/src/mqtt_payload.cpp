@@ -7,7 +7,7 @@
 
 int format_sensor_payload(const SensorData& data, char* buf, size_t buf_size) {
     return snprintf(buf, buf_size,
-        "{\"temperature\":%.1f,\"humidity\":%.1f,\"pressure\":%.1f}",
+        "{\"temp\":%.1f,\"humi\":%.1f,\"press\":%.1f}",
         data.temperature, data.humidity, data.pressure);
 }
 
@@ -15,8 +15,8 @@ int format_sensor_payload_with_battery(const SensorData& data,
                                        uint8_t battery_pct, float battery_v,
                                        char* buf, size_t buf_size) {
     return snprintf(buf, buf_size,
-        "{\"temperature\":%.1f,\"humidity\":%.1f,\"pressure\":%.1f,"
-        "\"battery_pct\":%u,\"battery_v\":%.2f}",
+        "{\"temp\":%.1f,\"humi\":%.1f,\"press\":%.1f,"
+        "\"bat\":%u,\"batv\":%.2f}",
         data.temperature, data.humidity, data.pressure,
         battery_pct, battery_v);
 }
@@ -45,68 +45,37 @@ int format_capabilities_payload(const char* hardware_id,
                                 uint32_t publish_interval,
                                 const ModuleRegistry& reg,
                                 char* buf, size_t buf_size) {
+    // Compact format: metrics and units merged, commands and params merged.
+    // Keys: id, intrvl, metrics (name→unit), cmds (name→params)
     int pos = snprintf(buf, buf_size,
-        "{\"hardware_id\":\"%s\",\"publish_interval\":%lu,\"metrics\":[",
+        "{\"id\":\"%s\",\"intrvl\":%lu,\"metrics\":{",
         hardware_id, (unsigned long)publish_interval);
     if (pos < 0 || (size_t)pos >= buf_size) return pos;
 
+    // metrics: {"name":"unit", ...} — empty string if no unit
     for (size_t i = 0; i < reg.num_metrics; i++) {
-        pos = buf_append(buf, buf_size, pos, "%s\"%s\"",
-                         i > 0 ? "," : "", reg.metrics[i]);
+        const char* unit = reg.metric_units[i] ? reg.metric_units[i] : "";
+        pos = buf_append(buf, buf_size, pos, "%s\"%s\":\"%s\"",
+                         i > 0 ? "," : "", reg.metrics[i], unit);
     }
 
-    // units (only if at least one metric has a unit)
-    bool has_units = false;
-    for (size_t i = 0; i < reg.num_metrics; i++) {
-        if (reg.metric_units[i]) { has_units = true; break; }
-    }
-    if (has_units) {
-        pos = buf_append(buf, buf_size, pos, "],\"units\":{");
-        bool first = true;
-        for (size_t i = 0; i < reg.num_metrics; i++) {
-            if (!reg.metric_units[i]) continue;
-            pos = buf_append(buf, buf_size, pos, "%s\"%s\":\"%s\"",
-                             first ? "" : ",", reg.metrics[i], reg.metric_units[i]);
-            first = false;
-        }
-        pos = buf_append(buf, buf_size, pos, "},\"commands\":[");
-    } else {
-        pos = buf_append(buf, buf_size, pos, "],\"commands\":[");
-    }
-
+    // cmds: {"name":[params], ...} — empty array if no params
+    pos = buf_append(buf, buf_size, pos, "},\"cmds\":{");
     for (size_t i = 0; i < reg.num_commands; i++) {
-        pos = buf_append(buf, buf_size, pos, "%s\"%s\"",
+        pos = buf_append(buf, buf_size, pos, "%s\"%s\":[",
                          i > 0 ? "," : "", reg.commands[i]);
-    }
-
-    // command_params (only if at least one command has params)
-    bool has_params = false;
-    for (size_t i = 0; i < reg.num_commands; i++) {
         if (reg.command_params[i] && reg.command_param_counts[i] > 0) {
-            has_params = true; break;
-        }
-    }
-    if (has_params) {
-        pos = buf_append(buf, buf_size, pos, "],\"command_params\":{");
-        bool first_cmd = true;
-        for (size_t i = 0; i < reg.num_commands; i++) {
-            if (!reg.command_params[i] || reg.command_param_counts[i] == 0) continue;
-            pos = buf_append(buf, buf_size, pos, "%s\"%s\":[",
-                             first_cmd ? "" : ",", reg.commands[i]);
-            first_cmd = false;
             for (size_t j = 0; j < reg.command_param_counts[i]; j++) {
                 pos = buf_append(buf, buf_size, pos,
-                    "%s{\"name\":\"%s\",\"type\":\"%s\"}",
+                    "%s{\"n\":\"%s\",\"t\":\"%s\"}",
                     j > 0 ? "," : "",
                     reg.command_params[i][j].name,
                     reg.command_params[i][j].type);
             }
-            pos = buf_append(buf, buf_size, pos, "]");
         }
-        pos = buf_append(buf, buf_size, pos, "}}");
-    } else {
-        pos = buf_append(buf, buf_size, pos, "]}");
+        pos = buf_append(buf, buf_size, pos, "]");
     }
+    pos = buf_append(buf, buf_size, pos, "}}");
 
     return pos;
 }

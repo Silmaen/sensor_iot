@@ -15,4 +15,5 @@ public:
     virtual bool subscribe(const char* topic) = 0;
     virtual void loop() = 0;
     virtual void disconnect() = 0;
+    virtual void power_down() { disconnect(); }  // Power down radio if supported
 };

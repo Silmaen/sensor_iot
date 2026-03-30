@@ -20,6 +20,7 @@ public:
     bool subscribe(const char* topic) override;
     void loop() override;
     void disconnect() override;
+    void power_down() override;
 
     void set_callback(MqttCallback cb);
 

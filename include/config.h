@@ -45,14 +45,27 @@
 #endif
 
 // --- Timing ---
-#define DEFAULT_PUBLISH_INTERVAL_S 10   // Default publish interval (seconds)
+#ifdef HAS_SERIAL_DEBUG
+  #define DEFAULT_PUBLISH_INTERVAL_S 10   // Fast feedback for debugging (seconds)
+#else
+  #define DEFAULT_PUBLISH_INTERVAL_S 300  // Production: 5 minutes to save power
+#endif
 #define BUTTON_DEBOUNCE_MS         50   // Button debounce time
 #define DEFAULT_SLEEP_INTERVAL_S   300  // Default deep sleep interval (seconds)
-#define MQTT_COMMAND_WAIT_MS       2000 // Wait time for retained commands
+#define MQTT_COMMAND_WAIT_MS       5000 // Wait window for server command flush after publish
 #define RECONNECT_INTERVAL_MS      5000 // Non-blocking reconnect retry interval
 
-// --- Battery ---
-#define BATTERY_LOW_THRESHOLD 15 // SoC percentage to trigger low_battery alert
+// --- Battery alerts ---
+// Two-level alerts: warning (plan to recharge) and critical (imminent shutdown)
+#if defined(ARDUINO_SAMD_MKRWIFI1010)
+  // 1S LiPo: 3.0–4.2V range, narrow margin before BQ24195L cutoff
+  #define BATTERY_WARN_THRESHOLD     20  // SoC% → warning "low_battery"
+  #define BATTERY_CRITICAL_THRESHOLD  5  // SoC% → error "critical_battery"
+#else
+  // 2S LiPo: 6.0–8.4V range, wider margin
+  #define BATTERY_WARN_THRESHOLD     15  // SoC% → warning "low_battery"
+  #define BATTERY_CRITICAL_THRESHOLD  5  // SoC% → error "critical_battery"
+#endif
 
 // --- RTC memory (ESP8266 only) ---
 #ifdef ESP8266

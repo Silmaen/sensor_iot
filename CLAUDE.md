@@ -17,12 +17,13 @@ Le projet s'articule autour de :
 |--------------------|-------------------------------|---------------------------------------|--------------------|
 | `HAS_BME280`       | Capteur BME/BMP280            | `temperature`, `humidity`, `pressure` | —                  |
 | `HAS_SHT30`        | Capteur SHT30 (shield Wemos)  | `temperature`, `humidity`             | —                  |
+| `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)     | `temperature`, `humidity`, `pressure`, `light_lux`, `uv_index` | — |
 | `HAS_BATTERY`      | Monitoring batterie           | `battery_pct`, `battery_v`            | —                  |
 | `HAS_DISPLAY`      | Afficheur 7-segments + bouton | —                                     | —                  |
 | `HAS_DEEP_SLEEP`   | Deep sleep entre lectures     | —                                     | —                  |
 | `HAS_SERIAL_DEBUG` | Logs debug verbose sur série  | —                                     | —                  |
 
-> **Note** : `HAS_BME280` et `HAS_SHT30` sont mutuellement exclusifs.
+> **Note** : `HAS_BME280`, `HAS_SHT30` et `HAS_MKR_ENV` sont mutuellement exclusifs.
 
 - **Identité device** définie par `-DDEVICE_ID` et `-DMQTT_DEVICE_TYPE` dans `platformio.ini`
 
@@ -30,25 +31,28 @@ Le projet s'articule autour de :
 
 ```bash
 # ESP8266 (D1 Mini)
-pio run -e thermo_display      # Build : BME280 + afficheur + USB
-pio run -e thermo_1            # Build : BME280 + batterie + deep sleep
-pio run -e thermo_sht30        # Build : SHT30 + batterie + deep sleep
-pio run -e thermo_display_sht30 # Build : SHT30 + afficheur + USB
-pio run -e thermo_display -t upload    # Upload ESP8266
+pio run -e sensor_8266_empty          # Build : BME280 + debug (dev)
+pio run -e sensor_8266_bmp80          # Build : BME280 + batterie + deep sleep
+pio run -e sensor_8266_sht30          # Build : SHT30 + batterie + deep sleep
+pio run -e sensor_8266_display_sht30  # Build : SHT30 + afficheur + debug
+pio run -e sensor_8266_bmp80 -t upload  # Upload ESP8266
 
 # SAMD21 (Arduino MKR WiFi 1010 + MKR ENV Shield)
-pio run -e thermo_mkr          # Build : BME280 + batterie LiPo 1S
-pio run -e thermo_mkr -t upload        # Upload MKR
+pio run -e sensor_mkr_env             # Build : MKR ENV Shield + batterie 1S (duty-cycle)
+pio run -e sensor_mkr_env -t upload   # Upload MKR
 
 # Utilitaires
-pio run -e cell_tester         # Build : testeur de cellules 18650 (MKR, série uniquement)
-pio run -e cell_tester -t upload       # Upload testeur
+pio run -e cell_tester_mkr            # Build : testeur de cellules 18650 (MKR, série)
+pio run -e cell_tester_mkr -t upload  # Upload testeur
 
 # Tests & monitoring
 pio run -e native              # Build natif (tests)
-pio test -e native             # Exécuter les tests unitaires (60 tests)
+pio test -e native             # Exécuter les tests unitaires (63 tests)
 pio device monitor             # Moniteur série (115200 baud)
 ```
+
+**Note :** L'intervalle de publication par défaut est 10s avec `HAS_SERIAL_DEBUG` (dev), 300s (5 min)
+sans (production). Configurable à distance via la commande MQTT `set_interval`.
 
 ## Structure
 
@@ -69,6 +73,7 @@ lib/thermo_core/        - Bibliothèque portable et testable
     modules/
       bme280_module.h/cpp    - Module BME280 (register + contribute)
       sht30_module.h/cpp     - Module SHT30 (register + contribute)
+      mkr_env_module.h/cpp   - Module MKR ENV Shield (register + contribute)
       battery_module.h/cpp   - Module batterie (register + contribute)
     sensor_data.h, battery.h/cpp, display_encoding.h/cpp
 test/test_native/       - Tests unitaires (Unity)
@@ -118,7 +123,7 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
 | Topic                      | Direction       | Exemple                                                  |
 |----------------------------|-----------------|----------------------------------------------------------|
 | `thermo/{id}/sensors`      | Device → Server | `{"temperature":22.5,"humidity":45.2,"pressure":1013.1}` |
-| `thermo/{id}/status`       | Device → Server | `{"level":"warning","message":"low_battery"}`            |
+| `thermo/{id}/status`       | Device → Server | `{"level":"warning","message":"low_battery"}` ou `{"level":"error","message":"critical_battery"}` |
 | `thermo/{id}/command`      | Server → Device | `{"action":"set_interval","value":30}`                   |
 | `thermo/{id}/capabilities` | Device → Server | construit dynamiquement depuis le ModuleRegistry         |
 

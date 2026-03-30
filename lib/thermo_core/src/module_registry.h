@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static constexpr size_t MAX_METRICS = 8;
+static constexpr size_t MAX_METRICS = 12;
 static constexpr size_t MAX_COMMANDS = 4;
 static constexpr size_t MAX_COMMAND_PARAMS = 4;
 

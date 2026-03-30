@@ -6,22 +6,22 @@
 // --- Sensor payload tests ---
 
 void test_format_sensor_payload(void) {
-    SensorData data = {23.5f, 65.2f, 1013.1f, true};
+    SensorData data = {23.5f, 65.2f, 1013.1f, 0.0f, 0.0f, true};
     char buf[128];
     int len = format_sensor_payload(data, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"temperature\":23.5"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humidity\":65.2"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"pressure\":1013.1"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"temp\":23.5"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humi\":65.2"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"press\":1013.1"));
 }
 
 void test_format_sensor_payload_with_battery(void) {
-    SensorData data = {22.0f, 50.0f, 1000.0f, true};
+    SensorData data = {22.0f, 50.0f, 1000.0f, 0.0f, 0.0f, true};
     char buf[192];
     int len = format_sensor_payload_with_battery(data, 75, 7.8f, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_pct\":75"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_v\":7.80"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"bat\":75"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"batv\":7.80"));
 }
 
 // --- Status payload tests ---
@@ -57,57 +57,56 @@ void test_format_capabilities_payload(void) {
     static const CommandParamDef si_params[] = {{"value", "number"}};
     ModuleRegistry reg;
     reg.init();
-    reg.add_metric("temperature", "\xC2\xB0""C");
-    reg.add_metric("humidity", "%");
-    reg.add_metric("pressure", "hPa");
+    reg.add_metric("temp", "\xC2\xB0""C");
+    reg.add_metric("humi", "%");
+    reg.add_metric("press", "hPa");
     reg.add_command("set_interval", dummy_cmd_handler, si_params, 1);
 
     char buf[512];
     int len = format_capabilities_payload("ESP-ABC123", 60,
                                           reg, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"hardware_id\":\"ESP-ABC123\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"publish_interval\":60"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"metrics\":[\"temperature\",\"humidity\",\"pressure\"]"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"units\":{"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humidity\":\"%\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"pressure\":\"hPa\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"commands\":[\"set_interval\"]"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"command_params\":{\"set_interval\":[{\"name\":\"value\",\"type\":\"number\"}]}"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"id\":\"ESP-ABC123\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"intrvl\":60"));
+    // metrics merged with units
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humi\":\"%\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"press\":\"hPa\""));
+    // cmds merged with params
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cmds\":{\"set_interval\":[{\"n\":\"value\",\"t\":\"number\"}]}"));
 }
 
 void test_format_capabilities_payload_with_battery_metrics(void) {
     ModuleRegistry reg;
     reg.init();
-    reg.add_metric("temperature", "\xC2\xB0""C");
-    reg.add_metric("humidity", "%");
-    reg.add_metric("pressure", "hPa");
-    reg.add_metric("battery_pct", "%");
-    reg.add_metric("battery_v", "V");
+    reg.add_metric("temp", "\xC2\xB0""C");
+    reg.add_metric("humi", "%");
+    reg.add_metric("press", "hPa");
+    reg.add_metric("bat", "%");
+    reg.add_metric("batv", "V");
     reg.add_command("set_interval", dummy_cmd_handler);
 
     char buf[512];
     format_capabilities_payload("ESP-DEADBEEF", 300,
                                 reg, buf, sizeof(buf));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_pct\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_v\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"publish_interval\":300"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"battery_v\":\"V\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"bat\":\"%\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"batv\":\"V\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"intrvl\":300"));
 }
 
 void test_format_capabilities_no_units_no_params(void) {
     ModuleRegistry reg;
     reg.init();
-    reg.add_metric("wifi_rssi");
+    reg.add_metric("rssi");
     reg.add_command("set_interval", dummy_cmd_handler);
 
     char buf[256];
     int len = format_capabilities_payload("ESP-000000", 10,
                                           reg, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
-    TEST_ASSERT_NULL(strstr(buf, "\"units\""));
-    TEST_ASSERT_NULL(strstr(buf, "\"command_params\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"commands\":[\"set_interval\"]"));
+    // No unit → empty string
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"rssi\":\"\""));
+    // No params → empty array
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"set_interval\":[]"));
 }
 
 // --- Ack payload tests ---

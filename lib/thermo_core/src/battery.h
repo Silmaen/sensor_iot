@@ -5,8 +5,9 @@
 // Platform-specific battery constants
 #if defined(ARDUINO_SAMD_MKRWIFI1010)
   // MKR WiFi 1010: built-in 1S LiPo, 12-bit ADC
-  // Internal voltage divider scales ~4.3V to ADC range
-  #define BATTERY_DIVIDER_RATIO 2.0f   // approximate — calibrate on real hardware
+  // BQ24195L PMIC routes battery voltage through an internal divider
+  // to ADC_BATTERY. Empirical ratio ~1.27 (calibrate with multimeter).
+  #define BATTERY_DIVIDER_RATIO 1.27f
   #define ADC_MAX_VALUE         4095
   #define ADC_REF_VOLTAGE       3.3f
   #define BATTERY_VOLTAGE_FULL  4.20f  // 1S LiPo full
