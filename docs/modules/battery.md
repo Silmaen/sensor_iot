@@ -43,12 +43,13 @@ scales the 2S pack voltage down to the ADC input range.
 | Battery         | 2S 18650 LiPo (6.0--8.4 V)       |
 | ADC resolution  | 10-bit (0--1023)                 |
 | ADC ref voltage | 3.3 V                            |
-| Divider R1      | 150 k-ohm (top, to V_bat)        |
-| Divider R2      | 100 k-ohm (bottom, to GND)       |
-| Divider ratio   | (R1+R2)/R2 = 2.5                 |
-| V_adc formula   | V_bat x R2/(R1+R2) = V_bat x 0.4 |
-| V_adc at 8.4 V  | 3.36 V (ADC ~1023)               |
-| V_adc at 6.0 V  | 2.40 V (ADC ~744)                |
+| Divider R1      | 22 k-ohm (top, to V_bat)         |
+| Divider R2      | 12 k-ohm (bottom, to GND)        |
+| Divider ratio   | (R1+R2)/R2 = 2.833               |
+| Source impedance | R1//R2 = 7.76 k-ohm (ADC-friendly)|
+| V_adc formula   | V_bat x R2/(R1+R2) = V_bat x 0.353 |
+| V_adc at 8.4 V  | 2.96 V (ADC ~919)                |
+| V_adc at 6.0 V  | 2.12 V (ADC ~657)                |
 | ADC pin         | `A0` (`PIN_BATTERY_ADC`)         |
 
 ![ESP8266 battery wiring diagram](../img/battery-wiring.svg)

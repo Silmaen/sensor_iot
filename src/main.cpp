@@ -98,6 +98,12 @@ static bool handle_set_interval(const char* payload) {
     return true;
 }
 
+#if defined(HAS_BATTERY) && defined(HAS_DEEP_SLEEP) && !defined(NATIVE)
+static void on_battery_calibrated(float new_ratio) {
+    sleeper.write_rtc_battery_ratio(new_ratio);
+}
+#endif
+
 static const CommandParamDef set_interval_params[] = {
     {"value", "number"},
 };
@@ -292,6 +298,20 @@ void setup() {
     if (!sleeper.read_rtc_interval(publish_interval_s)) {
         publish_interval_s = DEFAULT_SLEEP_INTERVAL_S;
     }
+#ifdef HAS_BATTERY
+    {
+        float saved_ratio = 0.0f;
+        if (sleeper.read_rtc_battery_ratio(saved_ratio)) {
+            battery_calibrate_set_ratio(saved_ratio);
+            DEBUG_PRINTF("[INIT] restored battery ratio=%.3f from RTC\n", saved_ratio);
+        }
+        battery_module_set_calibration_callback(on_battery_calibrated);
+    }
+#endif
+#endif
+
+#if defined(HAS_BATTERY)
+    battery_module_set_adc_reader(read_battery_adc);
 #endif
 
 #ifdef HAS_BME280

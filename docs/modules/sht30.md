@@ -125,9 +125,9 @@ Combined with [battery](battery.md), [power-2s](power-2s.md), and [deep-sleep](d
 |-----------------|---------|------------|
 | ESP8266         | 80mA    | 20µA       |
 | SHT30           | 0.6mA   | 0.2µA      |
-| Voltage divider | 34µA    | 34µA       |
+| Voltage divider | 247µA   | 247µA      |
 | MP1584 quiesc.  | ~0.5mA  | ~0.5mA     |
-| **Total**       | ~81mA   | ~55µA      |
+| **Total**       | ~82mA   | ~0.77mA    |
 
 With 2× 3000mAh 18650 (usable ~4000mAh at 5V after buck efficiency):
 

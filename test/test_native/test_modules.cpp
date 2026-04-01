@@ -39,6 +39,8 @@ void test_battery_module_register(void) {
     TEST_ASSERT_EQUAL_STRING("batv", reg.metrics[1]);
     TEST_ASSERT_EQUAL_STRING("%", reg.metric_units[0]);
     TEST_ASSERT_EQUAL_STRING("V", reg.metric_units[1]);
+    TEST_ASSERT_EQUAL(1, reg.num_commands);
+    TEST_ASSERT_EQUAL_STRING("calibrate_battery", reg.commands[0]);
 }
 
 void test_battery_module_contribute(void) {

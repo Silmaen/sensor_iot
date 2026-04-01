@@ -10,6 +10,9 @@ void test_voltage_to_soc_empty(void);
 void test_voltage_to_soc_below_empty(void);
 void test_voltage_to_soc_midpoint(void);
 void test_voltage_to_soc_quarter(void);
+void test_battery_calibrate_set_ratio(void);
+void test_battery_calibrate(void);
+void test_battery_calibrate_zero_adc(void);
 
 // Display encoding tests
 void test_encode_display_zeros(void);
@@ -45,6 +48,11 @@ void test_parse_command_value_missing(void);
 void test_parse_command_value_zero_rejected(void);
 void test_parse_command_value_too_large(void);
 void test_parse_command_value_max_valid(void);
+void test_parse_command_float_value_valid(void);
+void test_parse_command_float_value_integer(void);
+void test_parse_command_float_value_missing(void);
+void test_parse_command_float_value_zero_rejected(void);
+void test_parse_command_float_value_negative_rejected(void);
 
 // Module registry tests
 void test_registry_init(void);
@@ -94,6 +102,9 @@ int main(int argc, char** argv) {
     RUN_TEST(test_voltage_to_soc_below_empty);
     RUN_TEST(test_voltage_to_soc_midpoint);
     RUN_TEST(test_voltage_to_soc_quarter);
+    RUN_TEST(test_battery_calibrate_set_ratio);
+    RUN_TEST(test_battery_calibrate);
+    RUN_TEST(test_battery_calibrate_zero_adc);
 
     // Display encoding
     RUN_TEST(test_encode_display_zeros);
@@ -129,6 +140,11 @@ int main(int argc, char** argv) {
     RUN_TEST(test_parse_command_value_zero_rejected);
     RUN_TEST(test_parse_command_value_too_large);
     RUN_TEST(test_parse_command_value_max_valid);
+    RUN_TEST(test_parse_command_float_value_valid);
+    RUN_TEST(test_parse_command_float_value_integer);
+    RUN_TEST(test_parse_command_float_value_missing);
+    RUN_TEST(test_parse_command_float_value_zero_rejected);
+    RUN_TEST(test_parse_command_float_value_negative_rejected);
 
     // Module registry
     RUN_TEST(test_registry_init);

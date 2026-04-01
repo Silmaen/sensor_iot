@@ -33,7 +33,7 @@ the BME280 version since the sensor stacks directly, but no pressure measurement
 |-------------|-------------------------------------------------|
 | D1 (GPIO5)  | I2C SCL (SHT30 Shield, stacked)                 |
 | D2 (GPIO4)  | I2C SDA (SHT30 Shield, stacked)                 |
-| A0          | Battery voltage via divider (R1=150k / R2=100k) |
+| A0          | Battery voltage via divider (R1=22k / R2=12k)   |
 | D0 (GPIO16) | Wired to RST for deep sleep wake                |
 
 ### Power Path
@@ -45,8 +45,9 @@ See [power-2s](../modules/power-2s.md) for buck converter details.
 
 ### Battery Monitoring
 
-Same divider as the BME280 config: R1=150k (top), R2=100k (bottom) from pack voltage
-to A0. See [battery](../modules/battery.md) for details.
+Same divider as the BME280 config: R1=22k (top), R2=12k (bottom) from pack voltage
+to A0. Low-value resistors for ADC source impedance compatibility. See
+[battery](../modules/battery.md) for details.
 
 ## Power Budget
 
@@ -55,7 +56,7 @@ to A0. See [battery](../modules/battery.md) for details.
 | ESP8266 + WiFi   | ~70 mA  | ~20 uA     |
 | SHT30            | < 1 mA  | < 1 uA     |
 | MP1584 quiescent | ~0.1 mA | ~0.1 mA    |
-| Voltage divider  | ~33 uA  | ~33 uA     |
+| Voltage divider  | ~247 uA | ~247 uA    |
 
 The MP1584's lower quiescent current (~0.1 mA vs ~5 mA for H78M05BT) gives better
 autonomy: ~119 days vs ~89 days. See [deep-sleep](../modules/deep-sleep.md) for the

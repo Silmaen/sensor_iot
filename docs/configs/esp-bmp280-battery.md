@@ -33,7 +33,7 @@ autonomy.
 |-------------|-------------------------------------------------|
 | D1 (GPIO5)  | I2C SCL to BME/BMP280                           |
 | D2 (GPIO4)  | I2C SDA to BME/BMP280                           |
-| A0          | Battery voltage via divider (R1=150k / R2=100k) |
+| A0          | Battery voltage via divider (R1=22k / R2=12k)   |
 | D0 (GPIO16) | Wired to RST for deep sleep wake                |
 
 ### Power Path
@@ -46,8 +46,9 @@ wiring.
 
 ### Battery Monitoring
 
-Voltage divider: R1=150k (top), R2=100k (bottom) from pack voltage to A0. This maps
-the 2S range (6.0-8.4V) to the ESP8266 ADC range (0-1.0V).
+Voltage divider: R1=22k (top), R2=12k (bottom) from pack voltage to A0. Low-value
+resistors keep source impedance (7.76k) within ESP8266 ADC spec. This maps the 2S
+range (6.0-8.4V) to the ESP8266 ADC range (0-3.0V).
 
 See [battery](../modules/battery.md) for divider calculations and SoC curve.
 
@@ -58,7 +59,7 @@ See [battery](../modules/battery.md) for divider calculations and SoC curve.
 | ESP8266 + WiFi           | ~70 mA | ~20 uA     |
 | BME/BMP280               | < 1 mA | < 1 uA     |
 | Buck converter quiescent | ~5 mA  | ~5 mA      |
-| Voltage divider          | ~33 uA | ~33 uA     |
+| Voltage divider          | ~247 uA | ~247 uA   |
 
 See [deep-sleep](../modules/deep-sleep.md) for the full autonomy calculation.
 

@@ -112,9 +112,9 @@
   <!-- Voltage divider -->
   <rect class="box" x="280" y="260" width="170" height="80" rx="4"/>
   <text class="text" x="365" y="280" text-anchor="middle" font-weight="bold">Voltage Divider</text>
-  <text class="text-dim" x="365" y="298" text-anchor="middle" font-size="10">R1=150k / R2=100k</text>
-  <text class="text-dim" x="365" y="316" text-anchor="middle" font-size="10">8.4V -> 3.36V (A0 range)</text>
-  <text class="text-dim" x="365" y="330" text-anchor="middle" font-size="10">Iq = 34uA</text>
+  <text class="text-dim" x="365" y="298" text-anchor="middle" font-size="10">R1=22k / R2=12k (Zsrc=7.76k)</text>
+  <text class="text-dim" x="365" y="316" text-anchor="middle" font-size="10">8.4V -> 2.96V (A0 range)</text>
+  <text class="text-dim" x="365" y="330" text-anchor="middle" font-size="10">Iq = 247uA</text>
 
   <!-- BMS to voltage divider -->
   <line class="wire-sig" x1="215" y1="110" x2="215" y2="300"/>

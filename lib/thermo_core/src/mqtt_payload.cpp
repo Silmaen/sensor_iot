@@ -136,3 +136,21 @@ bool parse_command_value(const char* json, uint32_t& out_value) {
     out_value = static_cast<uint32_t>(val);
     return true;
 }
+
+bool parse_command_float_value(const char* json, float& out_value) {
+    const char* key = "\"value\":";
+    const char* pos = strstr(json, key);
+    if (!pos) return false;
+
+    pos += strlen(key);
+    while (*pos == ' ' || *pos == '\t') pos++;
+
+    if ((*pos < '0' || *pos > '9') && *pos != '.') return false;
+
+    char* end = nullptr;
+    float val = strtof(pos, &end);
+    if (end == pos || val <= 0.0f) return false;
+
+    out_value = val;
+    return true;
+}

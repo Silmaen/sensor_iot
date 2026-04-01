@@ -187,3 +187,35 @@ void test_parse_command_value_max_valid(void) {
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_UINT32(86400, value);
 }
+
+void test_parse_command_float_value_valid(void) {
+    float value = 0.0f;
+    bool ok = parse_command_float_value("{\"action\":\"calibrate_battery\",\"value\":8.19}", value);
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 8.19f, value);
+}
+
+void test_parse_command_float_value_integer(void) {
+    float value = 0.0f;
+    bool ok = parse_command_float_value("{\"value\":7}", value);
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 7.0f, value);
+}
+
+void test_parse_command_float_value_missing(void) {
+    float value = 0.0f;
+    bool ok = parse_command_float_value("{\"action\":\"calibrate_battery\"}", value);
+    TEST_ASSERT_FALSE(ok);
+}
+
+void test_parse_command_float_value_zero_rejected(void) {
+    float value = 0.0f;
+    bool ok = parse_command_float_value("{\"value\":0}", value);
+    TEST_ASSERT_FALSE(ok);
+}
+
+void test_parse_command_float_value_negative_rejected(void) {
+    float value = 0.0f;
+    bool ok = parse_command_float_value("{\"value\":-5.0}", value);
+    TEST_ASSERT_FALSE(ok);
+}

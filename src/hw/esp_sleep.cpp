@@ -25,8 +25,34 @@ bool EspSleep::read_rtc_interval(uint32_t& interval_s) {
 
 void EspSleep::write_rtc_interval(uint32_t interval_s) {
     RtcData data;
+    // Read existing data to preserve battery_divider_ratio
+    if (!system_rtc_mem_read(RTC_SLOT, &data, sizeof(data)) || data.magic != RTC_MAGIC) {
+        data.battery_divider_ratio = 0.0f;
+    }
     data.magic = RTC_MAGIC;
     data.sleep_interval_s = interval_s;
+    system_rtc_mem_write(RTC_SLOT, &data, sizeof(data));
+}
+
+bool EspSleep::read_rtc_battery_ratio(float& ratio) {
+    RtcData data;
+    if (system_rtc_mem_read(RTC_SLOT, &data, sizeof(data))) {
+        if (data.magic == RTC_MAGIC && data.battery_divider_ratio > 0.0f) {
+            ratio = data.battery_divider_ratio;
+            return true;
+        }
+    }
+    return false;
+}
+
+void EspSleep::write_rtc_battery_ratio(float ratio) {
+    RtcData data;
+    // Read existing data to preserve sleep_interval_s
+    if (!system_rtc_mem_read(RTC_SLOT, &data, sizeof(data)) || data.magic != RTC_MAGIC) {
+        data.sleep_interval_s = DEFAULT_SLEEP_INTERVAL_S;
+    }
+    data.magic = RTC_MAGIC;
+    data.battery_divider_ratio = ratio;
     system_rtc_mem_write(RTC_SLOT, &data, sizeof(data));
 }
 

@@ -38,3 +38,7 @@ bool parse_command_action(const char* json, char* action_buf, size_t action_buf_
 // Parse the numeric "value" field from a command payload.
 // Returns true if found and valid.
 bool parse_command_value(const char* json, uint32_t& out_value);
+
+// Parse the numeric "value" field as a float from a command payload.
+// Returns true if found and valid (positive, finite).
+bool parse_command_float_value(const char* json, float& out_value);
