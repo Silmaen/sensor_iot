@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 750" width="800" height="750">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a2e; }
+      .text { fill: #e0e0e0; }
+      .text-dim { fill: #999; }
+      .text-title { fill: #e0e0e0; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #55efc4; stroke-width: 1.5; fill: none; }
+      .box { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #2e1e4e; stroke: #6e4eae; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #22223a; stroke: #444; rx: 4; }
+      .arrow { fill: #ccc; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #ffffff; }
+      .text { fill: #333; }
+      .text-dim { fill: #777; }
+      .text-title { fill: #222; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #00b894; stroke-width: 1.5; fill: none; }
+      .box { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #e8daef; stroke: #8e44ad; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #f8f9fa; stroke: #ddd; rx: 4; }
+      .arrow { fill: #333; }
+    }
+    text { font-family: monospace; font-size: 12px; }
+  </style>
+
+  <!-- Background -->
+  <rect class="bg" width="800" height="750" rx="4"/>
+
+  <!-- Title -->
+  <text class="text-title" x="400" y="25" text-anchor="middle">Sensor Publish Data Flow</text>
+
+  <!-- Step 1: read hardware -->
+  <rect class="box-sensor" x="250" y="42" width="300" height="36" rx="4"/>
+  <text class="text" x="400" y="65" text-anchor="middle" font-weight="bold">read hardware</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="400" y1="78" x2="400" y2="100"/>
+  <polygon class="arrow" points="400,106 394,98 406,98"/>
+
+  <!-- Step 2: PayloadBuilder -->
+  <rect class="box-lib" x="250" y="108" width="300" height="36" rx="4"/>
+  <text class="text" x="400" y="131" text-anchor="middle" font-weight="bold">PayloadBuilder pb</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="400" y1="144" x2="400" y2="166"/>
+  <polygon class="arrow" points="400,172 394,164 406,164"/>
+
+  <!-- Module contributions block -->
+  <rect class="box" x="80" y="174" width="640" height="370" rx="4"/>
+  <text class="text" x="100" y="196" font-weight="bold">Module contributions (conditional)</text>
+
+  <!-- BME280 module -->
+  <rect class="box-sensor" x="110" y="210" width="580" height="70" rx="4"/>
+  <text class="text" x="130" y="232" font-weight="bold">bme280_module_contribute(pb, sensor_data)</text>
+  <text class="text-dim" x="170" y="252" font-size="11">if HAS_BME280</text>
+  <text class="text-dim" x="130" y="270" font-size="11">adds: temperature, humidity, pressure</text>
+
+  <!-- SHT30 module -->
+  <rect class="box-sensor" x="110" y="292" width="580" height="70" rx="4"/>
+  <text class="text" x="130" y="314" font-weight="bold">sht30_module_contribute(pb, sensor_data)</text>
+  <text class="text-dim" x="170" y="334" font-size="11">if HAS_SHT30</text>
+  <text class="text-dim" x="130" y="352" font-size="11">adds: temperature, humidity</text>
+
+  <!-- MKR ENV module -->
+  <rect class="box-sensor" x="110" y="374" width="580" height="70" rx="4"/>
+  <text class="text" x="130" y="396" font-weight="bold">mkr_env_module_contribute(pb, sensor_data)</text>
+  <text class="text-dim" x="170" y="416" font-size="11">if HAS_MKR_ENV</text>
+  <text class="text-dim" x="130" y="434" font-size="11">adds: temperature, humidity, pressure, light_lux, uv_index</text>
+
+  <!-- Battery module -->
+  <rect class="box-sensor" x="110" y="456" width="580" height="70" rx="4"/>
+  <text class="text" x="130" y="478" font-weight="bold">battery_module_contribute(pb, soc, voltage)</text>
+  <text class="text-dim" x="170" y="498" font-size="11">if HAS_BATTERY</text>
+  <text class="text-dim" x="130" y="516" font-size="11">adds: battery_pct, battery_v</text>
+
+  <!-- Pipeline arrows between modules -->
+  <line class="wire" x1="400" y1="280" x2="400" y2="292"/>
+  <line class="wire" x1="400" y1="362" x2="400" y2="374"/>
+  <line class="wire" x1="400" y1="444" x2="400" y2="456"/>
+
+  <!-- Mutual exclusion indicator for sensor modules -->
+  <text class="text-dim" x="710" y="330" text-anchor="middle" font-size="10" transform="rotate(90,710,330)">mutually exclusive</text>
+  <line class="wire-sig" x1="698" y1="210" x2="698" y2="444"/>
+  <line class="wire-sig" x1="694" y1="210" x2="702" y2="210"/>
+  <line class="wire-sig" x1="694" y1="444" x2="702" y2="444"/>
+
+  <!-- Arrow down from modules block -->
+  <line class="wire" x1="400" y1="544" x2="400" y2="566"/>
+  <polygon class="arrow" points="400,572 394,564 406,564"/>
+
+  <!-- Step 3: network.publish sensors -->
+  <rect class="box-mcu" x="150" y="574" width="500" height="36" rx="4"/>
+  <text class="text" x="400" y="597" text-anchor="middle" font-weight="bold">network.publish(MQTT_TOPIC_SENSORS, buf)</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="400" y1="610" x2="400" y2="632"/>
+  <polygon class="arrow" points="400,638 394,630 406,630"/>
+
+  <!-- Step 4: battery alert check -->
+  <rect class="box-mcu" x="150" y="640" width="500" height="56" rx="4"/>
+  <text class="text" x="400" y="663" text-anchor="middle" font-weight="bold">battery alert check</text>
+  <text class="text-dim" x="400" y="683" text-anchor="middle">if HAS_BATTERY &amp;&amp; soc &lt;= threshold</text>
+
+  <!-- Arrow to status publish -->
+  <line class="wire" x1="650" y1="668" x2="685" y2="668"/>
+  <polygon class="arrow" points="690,668 682,662 682,674"/>
+  <text class="text-dim" x="725" y="663" text-anchor="middle" font-size="10">publish</text>
+  <text class="text-dim" x="725" y="676" text-anchor="middle" font-size="10">MQTT_TOPIC_STATUS</text>
+
+  <!-- Legend -->
+  <rect class="legend-bg" x="80" y="710" width="640" height="30" rx="4"/>
+  <rect class="box-sensor" x="95" y="718" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="112" y="729" font-size="10">Hardware / Modules</text>
+  <rect class="box-lib" x="250" y="718" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="267" y="729" font-size="10">Payload Builder</text>
+  <rect class="box-mcu" x="395" y="718" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="412" y="729" font-size="10">Network / MQTT</text>
+  <rect class="box" x="540" y="718" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="557" y="729" font-size="10">Pipeline</text>
+</svg>

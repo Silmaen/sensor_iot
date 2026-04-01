@@ -38,23 +38,11 @@ cycle.
 
 Without deep sleep (normal mode), the device stays awake and publishes periodically:
 
-```
-boot -> connect WiFi -> connect MQTT -> loop { read -> publish -> wait }
-```
+![Continuous mode](../img/deep-sleep-continuous.svg)
 
 With deep sleep, each cycle is a complete boot-to-sleep sequence:
 
-```
-wake (RST)
-  |-> connect WiFi
-  |-> connect MQTT
-  |-> wait for retained commands (2s)
-  |-> read sensors
-  |-> publish to sensors topic
-  |-> enter deep sleep (N seconds)
-  |-> [RTC timer expires, GPIO16 pulls RST low]
-  |-> wake (RST) ...
-```
+![Deep sleep cycle](../img/deep-sleep-cycle.svg)
 
 Each wake cycle takes approximately 2-5 seconds depending on WiFi/MQTT connection time. The device is asleep for the
 remaining duration of the interval.
@@ -67,7 +55,7 @@ query the server every wake.
 
 ### RTC Data Structure
 
-```cpp
+```c++
 struct RtcData {
     uint32_t magic;           // 0xDEADBEEF = valid data
     uint32_t sleep_interval_s;
@@ -80,7 +68,7 @@ struct RtcData {
 
 ### Interface
 
-```cpp
+```c++
 class ISleep {
 public:
     virtual void deep_sleep(uint32_t seconds) = 0;
@@ -105,7 +93,7 @@ The concrete implementation `EspSleep` (in `src/hw/esp_sleep.cpp`) uses the ESP8
 With a 2S pack of 2x 3000mAh 18650 cells and the [2S power supply module](power-2s.md), expected runtime at 300s
 intervals:
 
-```
+```c++
 3000 mAh / 0.5 mA ~ 6000 hours ~ 250 days
 ```
 

@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 720" width="800" height="720">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a2e; }
+      .text { fill: #e0e0e0; }
+      .text-dim { fill: #999; }
+      .text-title { fill: #e0e0e0; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #55efc4; stroke-width: 1.5; fill: none; }
+      .box { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #2e1e4e; stroke: #6e4eae; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #22223a; stroke: #444; rx: 4; }
+      .arrow { fill: #ccc; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #ffffff; }
+      .text { fill: #333; }
+      .text-dim { fill: #777; }
+      .text-title { fill: #222; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #00b894; stroke-width: 1.5; fill: none; }
+      .box { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #e8daef; stroke: #8e44ad; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #f8f9fa; stroke: #ddd; rx: 4; }
+      .arrow { fill: #333; }
+    }
+    text { font-family: monospace; font-size: 12px; }
+  </style>
+
+  <!-- Background -->
+  <rect class="bg" width="800" height="720" rx="4"/>
+
+  <!-- Title -->
+  <text class="text-title" x="400" y="25" text-anchor="middle">Continuous Execution Mode</text>
+
+  <!-- ===== setup() block ===== -->
+  <rect class="box-mcu" x="100" y="42" width="600" height="230" rx="4"/>
+  <text class="text" x="120" y="64" font-weight="bold">setup()</text>
+
+  <!-- Step 1: register_modules() -->
+  <line class="wire" x1="160" y1="78" x2="160" y2="92"/>
+  <rect class="box" x="170" y="78" width="500" height="32" rx="4"/>
+  <text class="text" x="420" y="99" text-anchor="middle">register_modules()</text>
+
+  <!-- Step 2: init hardware -->
+  <line class="wire" x1="160" y1="118" x2="160" y2="132"/>
+  <rect class="box-sensor" x="170" y="118" width="500" height="32" rx="4"/>
+  <text class="text" x="420" y="139" text-anchor="middle">init hardware (sensor, display, ...)</text>
+
+  <!-- Step 3: connect WiFi + MQTT -->
+  <line class="wire" x1="160" y1="158" x2="160" y2="172"/>
+  <rect class="box" x="170" y="158" width="500" height="32" rx="4"/>
+  <text class="text" x="420" y="179" text-anchor="middle">connect WiFi + MQTT</text>
+
+  <!-- Step 4: subscribe -->
+  <line class="wire" x1="160" y1="198" x2="160" y2="212"/>
+  <rect class="box" x="170" y="198" width="500" height="32" rx="4"/>
+  <text class="text" x="420" y="219" text-anchor="middle">subscribe to command topic</text>
+
+  <!-- Tree lines for setup -->
+  <line class="wire" x1="140" y1="78" x2="140" y2="228"/>
+  <line class="wire" x1="140" y1="94" x2="160" y2="94"/>
+  <line class="wire" x1="140" y1="134" x2="160" y2="134"/>
+  <line class="wire" x1="140" y1="174" x2="160" y2="174"/>
+  <line class="wire" x1="140" y1="214" x2="160" y2="214"/>
+
+  <!-- Arrow from setup to loop -->
+  <line class="wire" x1="400" y1="272" x2="400" y2="298"/>
+  <polygon class="arrow" points="400,304 394,296 406,296"/>
+
+  <!-- ===== loop() block ===== -->
+  <rect class="box-mcu" x="100" y="306" width="600" height="360" rx="4"/>
+  <text class="text" x="120" y="328" font-weight="bold">loop()</text>
+  <text class="text-dim" x="250" y="328">(runs repeatedly)</text>
+
+  <!-- Step 1: network.loop() -->
+  <line class="wire" x1="160" y1="342" x2="160" y2="356"/>
+  <rect class="box" x="170" y="342" width="500" height="32" rx="4"/>
+  <text class="text" x="420" y="363" text-anchor="middle">network.loop()  (process incoming MQTT)</text>
+
+  <!-- Step 2: handle_button() -->
+  <line class="wire" x1="160" y1="382" x2="160" y2="396"/>
+  <rect class="box-sensor" x="170" y="382" width="500" height="32" rx="4"/>
+  <text class="text" x="420" y="403" text-anchor="middle">handle_button()  (if HAS_DISPLAY)</text>
+
+  <!-- Step 3: every publish_interval_s -->
+  <line class="wire" x1="160" y1="422" x2="160" y2="436"/>
+  <rect class="box-lib" x="170" y="422" width="500" height="210" rx="4"/>
+  <text class="text" x="190" y="443" font-weight="bold">every publish_interval_s:</text>
+
+  <!-- Sub-step 3a: read sensors -->
+  <line class="wire" x1="215" y1="458" x2="215" y2="472"/>
+  <rect class="box-sensor" x="225" y="458" width="420" height="32" rx="4"/>
+  <text class="text" x="435" y="479" text-anchor="middle">read sensors</text>
+
+  <!-- Sub-step 3b: update display -->
+  <line class="wire" x1="215" y1="498" x2="215" y2="512"/>
+  <rect class="box-sensor" x="225" y="498" width="420" height="32" rx="4"/>
+  <text class="text" x="435" y="519" text-anchor="middle">update display  (if HAS_DISPLAY)</text>
+
+  <!-- Sub-step 3c: publish -->
+  <line class="wire" x1="215" y1="538" x2="215" y2="552"/>
+  <rect class="box" x="225" y="538" width="420" height="32" rx="4"/>
+  <text class="text" x="435" y="559" text-anchor="middle">publish_sensor_data()</text>
+
+  <!-- Sub-step 3d: publish battery alert -->
+  <line class="wire" x1="215" y1="578" x2="215" y2="592"/>
+  <rect class="box" x="225" y="578" width="420" height="32" rx="4"/>
+  <text class="text" x="435" y="599" text-anchor="middle">publish battery alert  (if HAS_BATTERY)</text>
+
+  <!-- Tree lines for publish_interval sub-steps -->
+  <line class="wire" x1="200" y1="458" x2="200" y2="608"/>
+  <line class="wire" x1="200" y1="474" x2="215" y2="474"/>
+  <line class="wire" x1="200" y1="514" x2="215" y2="514"/>
+  <line class="wire" x1="200" y1="554" x2="215" y2="554"/>
+  <line class="wire" x1="200" y1="594" x2="215" y2="594"/>
+
+  <!-- Tree lines for loop -->
+  <line class="wire" x1="140" y1="342" x2="140" y2="534"/>
+  <line class="wire" x1="140" y1="358" x2="160" y2="358"/>
+  <line class="wire" x1="140" y1="398" x2="160" y2="398"/>
+  <line class="wire" x1="140" y1="534" x2="160" y2="534"/>
+
+  <!-- Curved loop-back arrow -->
+  <path class="wire" d="M 700,486 Q 750,486 750,340 Q 750,306 720,306"/>
+  <polygon class="arrow" points="700,486 708,482 708,490"/>
+  <text class="text-dim" x="760" y="400" text-anchor="middle" font-size="10" transform="rotate(90,760,400)">repeats</text>
+
+  <!-- Legend -->
+  <rect class="legend-bg" x="100" y="680" width="600" height="30" rx="4"/>
+  <rect class="box-mcu" x="115" y="688" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="132" y="699" font-size="10">Phase (setup/loop)</text>
+  <rect class="box-sensor" x="270" y="688" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="287" y="699" font-size="10">Hardware</text>
+  <rect class="box" x="370" y="688" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="387" y="699" font-size="10">MQTT / Core</text>
+  <rect class="box-lib" x="490" y="688" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="507" y="699" font-size="10">Timed block</text>
+</svg>

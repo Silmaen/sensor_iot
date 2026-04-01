@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 150" width="700" height="150">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a2e; }
+      .text { fill: #e0e0e0; }
+      .text-dim { fill: #999; }
+      .text-title { fill: #e0e0e0; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #55efc4; stroke-width: 1.5; fill: none; }
+      .box { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #2e1e4e; stroke: #6e4eae; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #22223a; stroke: #444; rx: 4; }
+      .arrow { fill: #ccc; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #ffffff; }
+      .text { fill: #333; }
+      .text-dim { fill: #777; }
+      .text-title { fill: #222; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #00b894; stroke-width: 1.5; fill: none; }
+      .box { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #e8daef; stroke: #8e44ad; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #f8f9fa; stroke: #ddd; rx: 4; }
+      .arrow { fill: #333; }
+    }
+    text { font-family: monospace; font-size: 12px; }
+  </style>
+
+  <!-- Background -->
+  <rect class="bg" width="700" height="150" rx="4"/>
+
+  <!-- Title -->
+  <text class="text-title" x="350" y="22" text-anchor="middle">2S Battery Power Chain (ESP8266)</text>
+
+  <!-- Cell A -->
+  <rect class="box" x="15" y="40" width="90" height="50" rx="4"/>
+  <text class="text" x="60" y="62" text-anchor="middle">Cell A</text>
+  <text class="text-dim" x="60" y="80" text-anchor="middle">18650</text>
+
+  <!-- Cell B -->
+  <rect class="box" x="115" y="40" width="90" height="50" rx="4"/>
+  <text class="text" x="160" y="62" text-anchor="middle">Cell B</text>
+  <text class="text-dim" x="160" y="80" text-anchor="middle">18650</text>
+
+  <!-- Series label -->
+  <text class="text-dim" x="108" y="120" text-anchor="middle">in series</text>
+  <text class="text-dim" x="108" y="136" text-anchor="middle">~7.4V</text>
+
+  <!-- Wire: Cell A+ to Cell B- (series connection top) -->
+  <line class="wire-pwr" x1="105" y1="55" x2="115" y2="55"/>
+
+  <!-- Wire: Cells to BMS -->
+  <line class="wire-pwr" x1="205" y1="55" x2="250" y2="55"/>
+  <line class="wire-gnd" x1="205" y1="75" x2="225" y2="75"/>
+  <line class="wire-gnd" x1="225" y1="75" x2="225" y2="55"/>
+  <line class="wire-gnd" x1="225" y1="55" x2="250" y2="55"/>
+
+  <!-- Arrow to BMS -->
+  <polygon class="arrow" points="250,55 244,50 244,60"/>
+
+  <!-- 2S BMS -->
+  <rect class="box-sensor" x="252" y="40" width="120" height="50" rx="4"/>
+  <text class="text" x="312" y="62" text-anchor="middle">2S BMS</text>
+  <text class="text-dim" x="312" y="80" text-anchor="middle">balance+protect</text>
+
+  <!-- Wire: BMS to regulator -->
+  <line class="wire-pwr" x1="372" y1="55" x2="420" y2="55"/>
+  <polygon class="arrow" points="420,55 414,50 414,60"/>
+
+  <!-- Voltage regulator -->
+  <rect class="box-lib" x="422" y="40" width="120" height="50" rx="4"/>
+  <text class="text" x="482" y="62" text-anchor="middle">H78M05BT</text>
+  <text class="text-dim" x="482" y="80" text-anchor="middle">7.4V -&gt; 5V</text>
+
+  <!-- Wire: regulator to MCU -->
+  <line class="wire-pwr" x1="542" y1="55" x2="590" y2="55"/>
+  <polygon class="arrow" points="590,55 584,50 584,60"/>
+
+  <!-- MCU -->
+  <rect class="box-mcu" x="592" y="40" width="95" height="50" rx="4"/>
+  <text class="text" x="640" y="62" text-anchor="middle">Wemos D1</text>
+  <text class="text-dim" x="640" y="80" text-anchor="middle">5V pin</text>
+</svg>

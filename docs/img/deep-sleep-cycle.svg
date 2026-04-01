@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a2e; }
+      .text { fill: #e0e0e0; }
+      .text-dim { fill: #999; }
+      .text-title { fill: #e0e0e0; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #55efc4; stroke-width: 1.5; fill: none; }
+      .box { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #2e1e4e; stroke: #6e4eae; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #22223a; stroke: #444; rx: 4; }
+      .arrow { fill: #ccc; }
+      .arrow-pwr { fill: #ff6b6b; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #ffffff; }
+      .text { fill: #333; }
+      .text-dim { fill: #777; }
+      .text-title { fill: #222; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #00b894; stroke-width: 1.5; fill: none; }
+      .box { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #e8daef; stroke: #8e44ad; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #f8f9fa; stroke: #ddd; rx: 4; }
+      .arrow { fill: #333; }
+      .arrow-pwr { fill: #c0392b; }
+    }
+    text { font-family: monospace; font-size: 12px; }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon class="arrow" points="0,0 8,3 0,6"/>
+    </marker>
+    <marker id="arrowhead-pwr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon class="arrow-pwr" points="0,0 8,3 0,6"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect class="bg" width="500" height="500" rx="4"/>
+
+  <!-- Title -->
+  <text class="text-title" x="250" y="22" text-anchor="middle">Deep Sleep Cycle (one-shot)</text>
+
+  <!-- Step 1: Wake (RST) -->
+  <rect class="box-mcu" x="140" y="36" width="200" height="34" rx="4"/>
+  <text class="text" x="240" y="58" text-anchor="middle">wake (RST)</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="240" y1="70" x2="240" y2="84"/>
+  <polygon class="arrow" points="240,90 234,82 246,82"/>
+
+  <!-- Step 2: Connect WiFi -->
+  <rect class="box" x="140" y="92" width="200" height="34" rx="4"/>
+  <text class="text" x="240" y="114" text-anchor="middle">connect WiFi</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="240" y1="126" x2="240" y2="140"/>
+  <polygon class="arrow" points="240,146 234,138 246,138"/>
+
+  <!-- Step 3: Connect MQTT -->
+  <rect class="box" x="140" y="148" width="200" height="34" rx="4"/>
+  <text class="text" x="240" y="170" text-anchor="middle">connect MQTT</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="240" y1="182" x2="240" y2="196"/>
+  <polygon class="arrow" points="240,202 234,194 246,194"/>
+
+  <!-- Step 4: Wait for retained commands -->
+  <rect class="box" x="140" y="204" width="200" height="34" rx="4"/>
+  <text class="text" x="240" y="226" text-anchor="middle">wait commands (2s)</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="240" y1="238" x2="240" y2="252"/>
+  <polygon class="arrow" points="240,258 234,250 246,250"/>
+
+  <!-- Step 5: Read sensors -->
+  <rect class="box-sensor" x="140" y="260" width="200" height="34" rx="4"/>
+  <text class="text" x="240" y="282" text-anchor="middle">read sensors</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="240" y1="294" x2="240" y2="308"/>
+  <polygon class="arrow" points="240,314 234,306 246,306"/>
+
+  <!-- Step 6: Publish -->
+  <rect class="box-sensor" x="140" y="316" width="200" height="34" rx="4"/>
+  <text class="text" x="240" y="338" text-anchor="middle">publish sensors</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="240" y1="350" x2="240" y2="364"/>
+  <polygon class="arrow" points="240,370 234,362 246,362"/>
+
+  <!-- Step 7: Enter deep sleep -->
+  <rect class="box-mcu" x="140" y="372" width="200" height="34" rx="4"/>
+  <text class="text" x="240" y="394" text-anchor="middle">deep sleep (Ns)</text>
+
+  <!-- Arrow down -->
+  <line class="wire" x1="240" y1="406" x2="240" y2="420"/>
+  <polygon class="arrow" points="240,426 234,418 246,418"/>
+
+  <!-- Step 8: RTC timer expires -->
+  <rect class="box-mcu" x="110" y="428" width="260" height="34" rx="4"/>
+  <text class="text" x="240" y="450" text-anchor="middle">RTC expires, GPIO16 -> RST</text>
+
+  <!-- Loop-back arrow (wire-pwr / red): from bottom, go right, up, and back to top -->
+  <path class="wire-pwr" d="M 370,445 L 420,445 L 420,53 L 340,53" marker-end="url(#arrowhead-pwr)"/>
+
+  <!-- Label on the loop-back -->
+  <text class="text-dim" x="430" y="250" text-anchor="start" font-size="10">RST</text>
+</svg>

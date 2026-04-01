@@ -8,7 +8,7 @@ the server's `docs/mqtt-protocol.md` (in `../sensor_server/`).
 
 All topics follow:
 
-```
+```text
 {device_type}/{device_id}/{message_type}
 ```
 
@@ -84,8 +84,8 @@ Publish structured alerts when the device detects a problem or recovers.
 
 | Field     | Type   | Required | Values                               |
 |-----------|--------|:--------:|--------------------------------------|
-| `level`   | string |   Yes    | `"warning"`, `"error"`, or `"ok"`    |
-| `message` | string |    No    | Human-readable detail, max 256 chars |
+| `level`   | string | Yes      | `"warning"`, `"error"`, or `"ok"`    |
+| `message` | string | No       | Human-readable detail, max 256 chars |
 
 - `"ok"` (or `""`) **clears** any existing alert on the server.
 - `"warning"`: degraded state (e.g. low battery, sensor drift).
@@ -93,22 +93,22 @@ Publish structured alerts when the device detects a problem or recovers.
 
 ### Automatic alerts
 
-| Condition                    | Level     | Message            | Module        |
-|------------------------------|-----------|--------------------|---------------|
+| Condition                     | Level     | Message            | Module        |
+|-------------------------------|-----------|--------------------|---------------|
 | Battery SoC <= warn threshold | `warning` | `low_battery`      | `HAS_BATTERY` |
 | Battery SoC <= crit threshold | `error`   | `critical_battery` | `HAS_BATTERY` |
 
 Thresholds are platform-specific (defined in `config.h`):
 
-| Platform          | Warning | Critical |
-|-------------------|---------|----------|
-| ESP8266 (2S LiPo) | 15%     | 5%       |
-| MKR WiFi (1S LiPo)| 20%     | 5%       |
+| Platform           | Warning | Critical |
+|--------------------|---------|----------|
+| ESP8266 (2S LiPo)  | 15%     | 5%       |
+| MKR WiFi (1S LiPo) | 20%     | 5%       |
 
 **Important:** Do NOT publish online/offline status. The server computes
 online/offline from the timestamp of the last received message:
 
-```
+```json
 is_online = (now - last_seen) < 3 * publish_interval
 ```
 
@@ -183,8 +183,8 @@ its own response via the `capabilities` topic).
 
 | Field    | Type   | Required | Description                                     |
 |----------|--------|:--------:|-------------------------------------------------|
-| `action` | string |   Yes    | The command action being acknowledged           |
-| `status` | string |   Yes    | `"ok"` (command executed) or `"error"` (failed) |
+| `action` | string | Yes      | The command action being acknowledged           |
+| `status` | string | Yes      | `"ok"` (command executed) or `"error"` (failed) |
 
 - Acks are sent immediately after command processing.
 - The `action` field must exactly match the `action` in the original command.
@@ -220,12 +220,12 @@ it reflects exactly which modules are enabled in the current firmware build.
 }
 ```
 
-| Field     | Type   | Required | Description                                                          |
-|-----------|--------|:--------:|----------------------------------------------------------------------|
-| `id`      | string |   Yes    | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256     |
-| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                       |
-| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit   |
-| `cmds`    | object |   Yes    | Command name → array of `{n, t}` params (`[]` if no params)          |
+| Field     | Type   | Required | Description                                                        |
+|-----------|--------|:--------:|--------------------------------------------------------------------|
+| `id`      | string | Yes      | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256    |
+| `intrvl`  | number | Yes      | Current publish frequency in seconds (1-86400)                     |
+| `metrics` | object | Yes      | Metric name → unit string (`""` if no unit). Max 16 chars per unit |
+| `cmds`    | object | Yes      | Command name → array of `{n, t}` params (`[]` if no params)        |
 
 **Parameter definition format:** each entry is `{"n": "<param>", "t": "<number|string|boolean>"}`.
 
@@ -254,7 +254,7 @@ Anonymous access is disabled.
 
 ## 8. Device lifecycle (from server perspective)
 
-```
+```json
 Unknown
   |  First sensors message
   v
@@ -271,7 +271,7 @@ Approved (active) --> data stored, commands enabled
 
 ## 9. Example session
 
-```
+```text
 # 1. Device powers on (HAS_BME280 + HAS_BATTERY), publishes first reading
 thermo/thermo_1/sensors  <- {"temperature":22.5,"humidity":45,"pressure":1013.2,"battery_pct":85,"battery_v":7.92}
 

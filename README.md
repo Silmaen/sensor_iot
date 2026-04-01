@@ -53,13 +53,13 @@ extends = common_samd
 build_flags = ... -DHAS_BME280 -DHAS_BATTERY -DHAS_SERIAL_DEBUG
 ```
 
-See [COMPONENTS.md](COMPONENTS.md) for hardware details, wiring, and power budgets.
+See [docs/components.md](docs/components.md) for hardware details, wiring, and power budgets.
 
 ## MQTT communication
 
 Devices communicate with the server via MQTT topics:
 
-```
+```text
 {type}/{id}/sensors        Device -> Server   Sensor readings (JSON)
 {type}/{id}/status         Device -> Server   Alerts: warning/error/ok (JSON)
 {type}/{id}/command        Server -> Device   Commands (JSON)
@@ -128,7 +128,7 @@ pio test -e native              # Run all unit tests (57 tests)
 
 ## Project structure
 
-```
+```text
 src/
   main.cpp                        Modular orchestrator (#ifdef HAS_xxx)
   cell_tester.cpp                 Standalone 18650 cell tester firmware (MKR)
@@ -200,7 +200,7 @@ docs/
 | [docs/configs/](docs/configs/)                   | Per-configuration assembly guides with wiring diagrams           |
 | [docs/mqtt-protocol.md](docs/mqtt-protocol.md)   | MQTT protocol spec (topics, payloads, capabilities, lifecycle)   |
 | [docs/battery-cells.md](docs/battery-cells.md)   | Reclaimed 18650 cell testing, grading, cell tester firmware      |
-| [COMPONENTS.md](COMPONENTS.md)                   | Electronic component inventory                                   |
+| [docs/components.md](docs/components.md)         | Electronic component inventory                                   |
 | [CLAUDE.md](CLAUDE.md)                           | Development conventions, build commands, protocol rules          |
 
 ## License

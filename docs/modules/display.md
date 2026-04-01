@@ -52,27 +52,7 @@ Pressing the button cycles: Temperature -> Humidity -> Pressure -> Temperature -
 
 ## Architecture
 
-The display chain works as follows:
-
-```
-D1 Mini GPIO13 (SER) ──> HC595 #1 ──QH'──> HC595 #2
-                          │                   │
-                          Q0-Q3               Q0-Q3
-                          │                   │
-                       LS04 #1             (direct)
-                       (invert)               │
-                          │                   v
-                          v               LS247 #3 ──> Digit 2 (CA)
-                       LS247 #1 ──> Digit 0 (CC)
-
-                          Q4-Q7               Q4-Q6
-                          │                   │
-                       LS04 #2             Decimal points
-                       (invert)            (DP0, DP1, DP2)
-                          │
-                          v
-                       LS247 #2 ──> Digit 1 (CC)
-```
+![Display shift register chain architecture](../img/display-architecture.svg)
 
 ### Why inverters on digits 0 and 1?
 
@@ -93,11 +73,7 @@ The firmware shifts 16 bits MSB-first. The first 8 bits go to HC595 #2, the seco
 
 ### Bit layout (as composed by `encode_display()`)
 
-```
-Bit:  15   14   13   12   11   10    9    8    7    6    5    4    3    2    1    0
-      free DP2  DP1  DP0  dig2[3:0]       dig1[3:0]       dig0[3:0]
-      ──── HC595 #2 (high byte) ────  ──── HC595 #1 (low byte) ────
-```
+![Display 16-bit data format](../img/display-data-format.svg)
 
 | Bits   | HC595 | Outputs | Destination                         |
 |--------|-------|---------|-------------------------------------|

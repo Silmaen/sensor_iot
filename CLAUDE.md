@@ -13,15 +13,15 @@ Le projet s'articule autour de :
 - **Noyau MQTT** (`src/main.cpp`) : connexion, publication, commandes, capabilities — toujours présent
 - **Modules optionnels** activés par feature flags dans `platformio.ini` :
 
-| Flag               | Module                        | Metrics ajoutées                      | Commandes ajoutées |
-|--------------------|-------------------------------|---------------------------------------|--------------------|
-| `HAS_BME280`       | Capteur BME/BMP280            | `temperature`, `humidity`, `pressure` | —                  |
-| `HAS_SHT30`        | Capteur SHT30 (shield Wemos)  | `temperature`, `humidity`             | —                  |
-| `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)     | `temperature`, `humidity`, `pressure`, `light_lux`, `uv_index` | — |
-| `HAS_BATTERY`      | Monitoring batterie           | `battery_pct`, `battery_v`            | —                  |
-| `HAS_DISPLAY`      | Afficheur 7-segments + bouton | —                                     | —                  |
-| `HAS_DEEP_SLEEP`   | Deep sleep entre lectures     | —                                     | —                  |
-| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série  | —                                     | —                  |
+| Flag               | Module                        | Metrics ajoutées                                               | Commandes ajoutées |
+|--------------------|-------------------------------|----------------------------------------------------------------|--------------------|
+| `HAS_BME280`       | Capteur BME/BMP280            | `temperature`, `humidity`, `pressure`                          | —                  |
+| `HAS_SHT30`        | Capteur SHT30 (shield Wemos)  | `temperature`, `humidity`                                      | —                  |
+| `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)   | `temperature`, `humidity`, `pressure`, `light_lux`, `uv_index` | —                  |
+| `HAS_BATTERY`      | Monitoring batterie           | `battery_pct`, `battery_v`                                     | —                  |
+| `HAS_DISPLAY`      | Afficheur 7-segments + bouton | —                                                              | —                  |
+| `HAS_DEEP_SLEEP`   | Deep sleep entre lectures     | —                                                              | —                  |
+| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série  | —                                                              | —                  |
 
 > **Note** : `HAS_BME280`, `HAS_SHT30` et `HAS_MKR_ENV` sont mutuellement exclusifs.
 
@@ -56,7 +56,7 @@ sans (production). Configurable à distance via la commande MQTT `set_interval`.
 
 ## Structure
 
-```
+```bash
 src/
   main.cpp              - Orchestrateur modulaire (#ifdef HAS_xxx)
   cell_tester.cpp       - Firmware testeur de cellules 18650 (MKR, standalone)
@@ -110,6 +110,7 @@ docs/
 - Tests unitaires : framework Unity dans `test/test_native/`
 - Langue du code et commentaires : anglais
 - Build flags : `-Wall -Wextra` activés sur toutes les cibles
+- Tableaux Markdown : colonnes parfaitement alignées, séparateurs pleine largeur sans espaces (`|---|` et non `| --- |`)
 
 ## Protocole MQTT (sensor_server)
 
@@ -120,12 +121,12 @@ Le serveur récepteur est dans `../sensor_server/`. La spécification complète 
 
 Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
 
-| Topic                      | Direction       | Exemple                                                  |
-|----------------------------|-----------------|----------------------------------------------------------|
-| `thermo/{id}/sensors`      | Device → Server | `{"temperature":22.5,"humidity":45.2,"pressure":1013.1}` |
+| Topic                      | Direction       | Exemple                                                                                           |
+|----------------------------|-----------------|---------------------------------------------------------------------------------------------------|
+| `thermo/{id}/sensors`      | Device → Server | `{"temperature":22.5,"humidity":45.2,"pressure":1013.1}`                                          |
 | `thermo/{id}/status`       | Device → Server | `{"level":"warning","message":"low_battery"}` ou `{"level":"error","message":"critical_battery"}` |
-| `thermo/{id}/command`      | Server → Device | `{"action":"set_interval","value":30}`                   |
-| `thermo/{id}/capabilities` | Device → Server | construit dynamiquement depuis le ModuleRegistry         |
+| `thermo/{id}/command`      | Server → Device | `{"action":"set_interval","value":30}`                                                            |
+| `thermo/{id}/capabilities` | Device → Server | construit dynamiquement depuis le ModuleRegistry                                                  |
 
 ### Règles critiques
 

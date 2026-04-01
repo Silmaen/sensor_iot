@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" width="860" height="340">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a2e; }
+      .text { fill: #e0e0e0; }
+      .text-dim { fill: #999; }
+      .text-title { fill: #e0e0e0; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #55efc4; stroke-width: 1.5; fill: none; }
+      .box { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #2e1e4e; stroke: #6e4eae; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #22223a; stroke: #444; rx: 4; }
+      .arrow { fill: #ccc; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #ffffff; }
+      .text { fill: #333; }
+      .text-dim { fill: #777; }
+      .text-title { fill: #222; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #00b894; stroke-width: 1.5; fill: none; }
+      .box { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #e8daef; stroke: #8e44ad; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #f8f9fa; stroke: #ddd; rx: 4; }
+      .arrow { fill: #333; }
+    }
+    text { font-family: monospace; font-size: 12px; }
+  </style>
+
+  <!-- Background -->
+  <rect class="bg" width="860" height="340" rx="4"/>
+
+  <!-- Title -->
+  <text class="text-title" x="430" y="25" text-anchor="middle">16-Bit Display Data Format (MSB-first shift)</text>
+
+  <!-- Bit number row -->
+  <text class="text-dim" x="60" y="55" text-anchor="middle" font-size="10">Bit</text>
+  <!-- Bit cells: 16 bits, each 48px wide, starting at x=90 -->
+  <text class="text" x="114" y="55" text-anchor="middle" font-size="11">15</text>
+  <text class="text" x="162" y="55" text-anchor="middle" font-size="11">14</text>
+  <text class="text" x="210" y="55" text-anchor="middle" font-size="11">13</text>
+  <text class="text" x="258" y="55" text-anchor="middle" font-size="11">12</text>
+  <text class="text" x="306" y="55" text-anchor="middle" font-size="11">11</text>
+  <text class="text" x="354" y="55" text-anchor="middle" font-size="11">10</text>
+  <text class="text" x="402" y="55" text-anchor="middle" font-size="11">9</text>
+  <text class="text" x="450" y="55" text-anchor="middle" font-size="11">8</text>
+  <text class="text" x="498" y="55" text-anchor="middle" font-size="11">7</text>
+  <text class="text" x="546" y="55" text-anchor="middle" font-size="11">6</text>
+  <text class="text" x="594" y="55" text-anchor="middle" font-size="11">5</text>
+  <text class="text" x="642" y="55" text-anchor="middle" font-size="11">4</text>
+  <text class="text" x="690" y="55" text-anchor="middle" font-size="11">3</text>
+  <text class="text" x="738" y="55" text-anchor="middle" font-size="11">2</text>
+  <text class="text" x="786" y="55" text-anchor="middle" font-size="11">1</text>
+  <text class="text" x="834" y="55" text-anchor="middle" font-size="11">0</text>
+
+  <!-- Bit field boxes row (y=62 to y=98, height=36) -->
+
+  <!-- Bit 15: free (box style) -->
+  <rect class="box" x="90" y="62" width="48" height="36" rx="2"/>
+  <text class="text-dim" x="114" y="84" text-anchor="middle" font-size="10">free</text>
+
+  <!-- Bits 14-12: DP2, DP1, DP0 (box-lib style for decimal points) -->
+  <rect class="box-lib" x="138" y="62" width="48" height="36" rx="2"/>
+  <text class="text" x="162" y="84" text-anchor="middle" font-size="10">DP2</text>
+  <rect class="box-lib" x="186" y="62" width="48" height="36" rx="2"/>
+  <text class="text" x="210" y="84" text-anchor="middle" font-size="10">DP1</text>
+  <rect class="box-lib" x="234" y="62" width="48" height="36" rx="2"/>
+  <text class="text" x="258" y="84" text-anchor="middle" font-size="10">DP0</text>
+
+  <!-- Bits 11-8: dig2[3:0] (box-sensor style) -->
+  <rect class="box-sensor" x="282" y="62" width="192" height="36" rx="2"/>
+  <text class="text" x="378" y="84" text-anchor="middle" font-size="11">dig2 [3:0]</text>
+
+  <!-- Bits 7-4: dig1[3:0] (box-mcu style) -->
+  <rect class="box-mcu" x="474" y="62" width="192" height="36" rx="2"/>
+  <text class="text" x="570" y="84" text-anchor="middle" font-size="11">dig1 [3:0]</text>
+
+  <!-- Bits 3-0: dig0[3:0] (box style, different shade) -->
+  <rect class="box" x="666" y="62" width="192" height="36" rx="2"/>
+  <text class="text" x="762" y="84" text-anchor="middle" font-size="11">dig0 [3:0]</text>
+
+  <!-- HC595 register spans -->
+  <!-- HC595 #2 bracket: bits 15-8 (x=90 to x=474) -->
+  <line class="wire-sig" x1="90" y1="108" x2="90" y2="118"/>
+  <line class="wire-sig" x1="90" y1="118" x2="474" y2="118"/>
+  <line class="wire-sig" x1="474" y1="108" x2="474" y2="118"/>
+  <text class="text" x="282" y="134" text-anchor="middle" font-size="11">HC595 #2 (high byte, shifted first)</text>
+
+  <!-- HC595 #1 bracket: bits 7-0 (x=474 to x=858) -->
+  <line class="wire-i2c" x1="474" y1="108" x2="474" y2="118"/>
+  <line class="wire-i2c" x1="474" y1="118" x2="858" y2="118"/>
+  <line class="wire-i2c" x1="858" y1="108" x2="858" y2="118"/>
+  <text class="text" x="666" y="134" text-anchor="middle" font-size="11">HC595 #1 (low byte, shifted second)</text>
+
+  <!-- Destination labels -->
+  <text class="text-dim" x="60" y="170" text-anchor="middle" font-size="10">Route</text>
+
+  <!-- Bit 15 destination -->
+  <text class="text-dim" x="114" y="170" text-anchor="middle" font-size="9">Q7</text>
+  <text class="text-dim" x="114" y="182" text-anchor="middle" font-size="9">unused</text>
+
+  <!-- DP destinations -->
+  <text class="text-dim" x="162" y="170" text-anchor="middle" font-size="9">Q6</text>
+  <text class="text-dim" x="210" y="170" text-anchor="middle" font-size="9">Q5</text>
+  <text class="text-dim" x="258" y="170" text-anchor="middle" font-size="9">Q4</text>
+
+  <!-- dig2 destination -->
+  <text class="text-dim" x="378" y="170" text-anchor="middle" font-size="9">Q0-Q3 -> LS247 #3</text>
+  <text class="text-dim" x="378" y="182" text-anchor="middle" font-size="9">-> Digit 2 (CA, direct)</text>
+
+  <!-- dig1 destination -->
+  <text class="text-dim" x="570" y="170" text-anchor="middle" font-size="9">Q4-Q7 -> LS04 #2 -> LS247 #2</text>
+  <text class="text-dim" x="570" y="182" text-anchor="middle" font-size="9">-> Digit 1 (CC, inverted)</text>
+
+  <!-- dig0 destination -->
+  <text class="text-dim" x="762" y="170" text-anchor="middle" font-size="9">Q0-Q3 -> LS04 #1 -> LS247 #1</text>
+  <text class="text-dim" x="762" y="182" text-anchor="middle" font-size="9">-> Digit 0 (CC, inverted)</text>
+
+  <!-- Example: temperature 23.5 -->
+  <rect class="legend-bg" x="30" y="205" width="800" height="80" rx="4"/>
+  <text class="text" x="430" y="225" text-anchor="middle" font-weight="bold" font-size="12">Example: Temperature 23.5 C (display shows "23.5" with DP1)</text>
+
+  <text class="text-dim" x="60" y="248" font-size="10">Bit</text>
+  <text class="text-dim" x="114" y="248" text-anchor="middle" font-size="10">15</text>
+  <text class="text-dim" x="162" y="248" text-anchor="middle" font-size="10">14</text>
+  <text class="text-dim" x="210" y="248" text-anchor="middle" font-size="10">13</text>
+  <text class="text-dim" x="258" y="248" text-anchor="middle" font-size="10">12</text>
+  <text class="text-dim" x="306" y="248" text-anchor="middle" font-size="10">11</text>
+  <text class="text-dim" x="354" y="248" text-anchor="middle" font-size="10">10</text>
+  <text class="text-dim" x="402" y="248" text-anchor="middle" font-size="10">9</text>
+  <text class="text-dim" x="450" y="248" text-anchor="middle" font-size="10">8</text>
+  <text class="text-dim" x="498" y="248" text-anchor="middle" font-size="10">7</text>
+  <text class="text-dim" x="546" y="248" text-anchor="middle" font-size="10">6</text>
+  <text class="text-dim" x="594" y="248" text-anchor="middle" font-size="10">5</text>
+  <text class="text-dim" x="642" y="248" text-anchor="middle" font-size="10">4</text>
+  <text class="text-dim" x="690" y="248" text-anchor="middle" font-size="10">3</text>
+  <text class="text-dim" x="738" y="248" text-anchor="middle" font-size="10">2</text>
+  <text class="text-dim" x="786" y="248" text-anchor="middle" font-size="10">1</text>
+  <text class="text-dim" x="834" y="248" text-anchor="middle" font-size="10">0</text>
+
+  <text class="text" x="60" y="278" font-size="10">Value</text>
+  <text class="text" x="114" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="162" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="210" y="278" text-anchor="middle" font-size="11">1</text>
+  <text class="text" x="258" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="306" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="354" y="278" text-anchor="middle" font-size="11">1</text>
+  <text class="text" x="402" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="450" y="278" text-anchor="middle" font-size="11">1</text>
+  <text class="text" x="498" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="546" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="594" y="278" text-anchor="middle" font-size="11">1</text>
+  <text class="text" x="642" y="278" text-anchor="middle" font-size="11">1</text>
+  <text class="text" x="690" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="738" y="278" text-anchor="middle" font-size="11">0</text>
+  <text class="text" x="786" y="278" text-anchor="middle" font-size="11">1</text>
+  <text class="text" x="834" y="278" text-anchor="middle" font-size="11">0</text>
+
+  <!-- Legend row for example -->
+  <text class="text-dim" x="210" y="275" text-anchor="middle" font-size="0">.</text>
+  <!-- Annotation under example -->
+  <text class="text-dim" x="114" y="278" text-anchor="middle" font-size="0">.</text>
+
+  <!-- Legend -->
+  <rect class="legend-bg" x="30" y="298" width="800" height="30" rx="4"/>
+  <rect class="box" x="45" y="306" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="62" y="317" font-size="10">dig0 / unused</text>
+  <rect class="box-mcu" x="180" y="306" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="197" y="317" font-size="10">dig1</text>
+  <rect class="box-sensor" x="260" y="306" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="277" y="317" font-size="10">dig2</text>
+  <rect class="box-lib" x="340" y="306" width="12" height="12" rx="2"/>
+  <text class="text-dim" x="357" y="317" font-size="10">Decimal points</text>
+  <text class="text-dim" x="550" y="317" font-size="10">Example: 0=free | DP1=1 | dig2=5(0101) | dig1=3(0011) | dig0=2(0010)</text>
+</svg>

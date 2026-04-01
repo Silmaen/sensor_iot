@@ -24,7 +24,7 @@ void test_encode_display_all_dp(void) {
 }
 
 void test_encode_display_example_from_spec(void) {
-    // COMPONENTS.md: "23.5" => 0x2532
+    // docs/components.md: "23.5" => 0x2532
     uint16_t val = encode_display(2, 3, 5, false, true, false);
     TEST_ASSERT_EQUAL_HEX16(0x2532, val);
 }

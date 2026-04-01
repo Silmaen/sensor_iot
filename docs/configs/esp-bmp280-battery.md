@@ -29,12 +29,12 @@ autonomy.
 
 ### GPIO Assignment
 
-| Pin         | Function                                        |
-|-------------|-------------------------------------------------|
-| D1 (GPIO5)  | I2C SCL to BME/BMP280                           |
-| D2 (GPIO4)  | I2C SDA to BME/BMP280                           |
-| A0          | Battery voltage via divider (R1=22k / R2=12k)   |
-| D0 (GPIO16) | Wired to RST for deep sleep wake                |
+| Pin         | Function                                      |
+|-------------|-----------------------------------------------|
+| D1 (GPIO5)  | I2C SCL to BME/BMP280                         |
+| D2 (GPIO4)  | I2C SDA to BME/BMP280                         |
+| A0          | Battery voltage via divider (R1=22k / R2=12k) |
+| D0 (GPIO16) | Wired to RST for deep sleep wake              |
 
 ### Power Path
 
@@ -54,12 +54,12 @@ See [battery](../modules/battery.md) for divider calculations and SoC curve.
 
 ## Power Budget
 
-| Subsystem                | Active | Deep sleep |
-|--------------------------|--------|------------|
-| ESP8266 + WiFi           | ~70 mA | ~20 uA     |
-| BME/BMP280               | < 1 mA | < 1 uA     |
-| Buck converter quiescent | ~5 mA  | ~5 mA      |
-| Voltage divider          | ~247 uA | ~247 uA   |
+| Subsystem                | Active  | Deep sleep |
+|--------------------------|---------|------------|
+| ESP8266 + WiFi           | ~70 mA  | ~20 uA     |
+| BME/BMP280               | < 1 mA  | < 1 uA     |
+| Buck converter quiescent | ~5 mA   | ~5 mA      |
+| Voltage divider          | ~247 uA | ~247 uA    |
 
 See [deep-sleep](../modules/deep-sleep.md) for the full autonomy calculation.
 

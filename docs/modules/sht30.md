@@ -16,21 +16,21 @@ This module is **mutually exclusive** with `HAS_BME280` — only one temperature
 
 ## Shield Specifications
 
-| Parameter            | Value                           |
-|----------------------|---------------------------------|
-| Sensor IC            | Sensirion SHT30-DIS             |
-| Shield version       | v2.1.0                          |
-| Supply voltage       | 2.15–5.5 V                      |
-| Powered from         | D1 Mini 3.3 V rail (via shield) |
-| I2C address          | 0x44 (default) or 0x45          |
-| Temperature range    | -40 to 125°C                    |
-| Humidity range       | 0 – 100% RH                     |
-| Idle current         | 0.2µA                           |
-| Measuring current    | 600µA (typ.)                    |
-| Response time (T)    | >2s                             |
-| Response time (RH)   | 8s                              |
-| Decoupling           | 100 nF cap on shield PCB        |
-| Form factor          | Wemos D1 Mini shield, stacking  |
+| Parameter          | Value                           |
+|--------------------|---------------------------------|
+| Sensor IC          | Sensirion SHT30-DIS             |
+| Shield version     | v2.1.0                          |
+| Supply voltage     | 2.15–5.5 V                      |
+| Powered from       | D1 Mini 3.3 V rail (via shield) |
+| I2C address        | 0x44 (default) or 0x45          |
+| Temperature range  | -40 to 125°C                    |
+| Humidity range     | 0 – 100% RH                     |
+| Idle current       | 0.2µA                           |
+| Measuring current  | 600µA (typ.)                    |
+| Response time (T)  | >2s                             |
+| Response time (RH) | 8s                              |
+| Decoupling         | 100 nF cap on shield PCB        |
+| Form factor        | Wemos D1 Mini shield, stacking  |
 
 ## Wiring
 
@@ -102,7 +102,7 @@ build_flags =
 
 ### Module API
 
-```cpp
+```c++
 void sht30_module_register(ModuleRegistry& reg);
 void sht30_module_contribute(PayloadBuilder& pb, const SensorData& data);
 ```
@@ -121,13 +121,13 @@ No `pressure` field — the SHT30 does not measure pressure.
 
 Combined with [battery](battery.md), [power-2s](power-2s.md), and [deep-sleep](deep-sleep.md) modules:
 
-| Subsystem       | Active  | Deep sleep |
-|-----------------|---------|------------|
-| ESP8266         | 80mA    | 20µA       |
-| SHT30           | 0.6mA   | 0.2µA      |
-| Voltage divider | 247µA   | 247µA      |
-| MP1584 quiesc.  | ~0.5mA  | ~0.5mA     |
-| **Total**       | ~82mA   | ~0.77mA    |
+| Subsystem       | Active | Deep sleep |
+|-----------------|--------|------------|
+| ESP8266         | 80mA   | 20µA       |
+| SHT30           | 0.6mA  | 0.2µA      |
+| Voltage divider | 247µA  | 247µA      |
+| MP1584 quiesc.  | ~0.5mA | ~0.5mA     |
+| **Total**       | ~82mA  | ~0.77mA    |
 
 With 2× 3000mAh 18650 (usable ~4000mAh at 5V after buck efficiency):
 
@@ -139,8 +139,8 @@ With 2× 3000mAh 18650 (usable ~4000mAh at 5V after buck efficiency):
 
 ## Troubleshooting
 
-| Symptom                   | Cause                         | Fix                                       |
-|---------------------------|-------------------------------|-------------------------------------------|
-| SHT30 init failed         | Wrong I2C address             | Check solder jumper on shield (0x44/0x45) |
-| Humidity reads 0%         | CRC check failing             | Check I2C wiring / try soft reset         |
-| Self-heating              | Measuring too frequently      | Increase publish interval (≥10s)          |
+| Symptom           | Cause                    | Fix                                       |
+|-------------------|--------------------------|-------------------------------------------|
+| SHT30 init failed | Wrong I2C address        | Check solder jumper on shield (0x44/0x45) |
+| Humidity reads 0% | CRC check failing        | Check I2C wiring / try soft reset         |
+| Self-heating      | Measuring too frequently | Increase publish interval (≥10s)          |

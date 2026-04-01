@@ -119,10 +119,7 @@ For this IoT project:
 
 Two matched cells in series (7.4V nominal) through a 2S BMS module:
 
-```
-[Cell A+]──[Cell B+]──► 2S BMS ──► H78M05BT ──► Wemos 5V pin
-[Cell A-]──[Cell B-]──┘  (balance + protection)
-```
+![2S power chain](img/battery-2s-power-chain.svg)
 
 **Important:** Always use a BMS with:
 
@@ -135,10 +132,7 @@ Two matched cells in series (7.4V nominal) through a 2S BMS module:
 
 Single cell directly into the JST connector:
 
-```
-[Cell +] ──► JST PH 2-pin ──► MKR WiFi 1010
-[Cell -] ──┘                   (built-in charge circuit via USB)
-```
+![1S power chain](img/battery-1s-power-chain.svg)
 
 The MKR board handles charging when USB is connected. No external BMS
 needed for 1S, but verify that the cell has a built-in protection circuit
@@ -199,7 +193,7 @@ pio device monitor
 
 ### Typical workflow
 
-```
+```text
 1. Flash firmware:     pio run -e cell_tester -t upload
 2. Open serial:        pio device monitor
 3. Insert cell into JST connector
@@ -221,7 +215,7 @@ pio device monitor
 During charging, the firmware displays a status line every 2 seconds with
 elapsed time and voltage gain since the start:
 
-```
+```text
   1.598V | 0m    | +0mV    | pre-charge (<3V)
   1.601V | 2m    | +3mV    | pre-charge (<3V)
   1.635V | 10m   | +37mV   | pre-charge (<3V)
@@ -294,7 +288,7 @@ test.
 
 **Example: dead cell detected**
 
-```
+```text
   1.598V | 0m   | +0mV  | pre-charge (<3V)
   1.601V | 2m   | +3mV  | pre-charge (<3V)
   1.595V | 10m  | -3mV  | pre-charge (<3V)
@@ -311,7 +305,7 @@ When this happens, remove the cell and send `N` to proceed to the next one.
 
 ### Discharge test output example
 
-```
+```text
 >>> DISCHARGE TEST STARTED (charging disabled) <<<
 Make sure 10.0 ohm resistor is connected!
 Starting voltage: 4.182V
@@ -356,15 +350,7 @@ especially in fast charge mode (512mA). **Not all USB ports are equal:**
 **Recommended setup: dual USB** — one for serial, one for power. This gives
 reliable charging current while keeping the serial monitor active.
 
-```
-PC (laptop/desktop)              USB wall charger (≥1A)
-    │                                    │
-    │ USB (data + limited power)         │ +5V / GND wires
-    │                                    │
-    ▼                                    ▼
-MKR WiFi 1010 USB-C             MKR pin 5V ←── +5V
-    (serial monitor)             MKR pin GND ←── GND
-```
+![Cell tester power supply](img/cell-tester-power-supply.svg)
 
 To get 5V from a USB wall charger: cut a USB cable and use the **red** (+5V)
 and **black** (GND) wires. Connect to the MKR's **5V** and **GND** pins.
@@ -380,14 +366,7 @@ The recommended setup uses a **switch in series with the load resistor**,
 wired in parallel across the cell. This allows charging and discharging
 without unplugging anything.
 
-```
-MKR WiFi 1010
-  JST + ─────────┬──────────────────────────────────┐
-                 │                                  │
-              cellule          [switch]───[7.3Ω 10W]
-                 │                                  │
-  JST - ─────────┴──────────────────────────────────┘
-```
+![Cell tester discharge circuit](img/cell-tester-discharge-circuit.svg)
 
 - **Switch OFF** → resistor disconnected, USB charges the cell normally
 - **Switch ON** → resistor drains the cell for the discharge test

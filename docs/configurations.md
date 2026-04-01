@@ -19,11 +19,11 @@ Shows which `HAS_xxx` flags each configuration uses.
 
 | Config                | `HAS_BME280` | `HAS_SHT30` | `HAS_BATTERY` | `HAS_DEEP_SLEEP` | `HAS_DISPLAY` | `HAS_SERIAL_DEBUG` |
 |-----------------------|:------------:|:-----------:|:-------------:|:----------------:|:-------------:|:------------------:|
-| Cell Tester           |      --      |     --      |      --       |        --        |      --       |         --         |
-| MKR + ENV + Battery   |      x       |     --      |       x       |        --        |      --       |         x          |
-| ESP + BMP280 + 2S     |      x       |     --      |       x       |        x         |      --       |         --         |
-| ESP + SHT30 + 2S      |      --      |      x      |       x       |        x         |      --       |         --         |
-| ESP + SHT30 + Display |      --      |      x      |      --       |        --        |       x       |         x          |
+| Cell Tester           | --           | --          | --            | --               | --            | --                 |
+| MKR + ENV + Battery   | x            | --          | x             | --               | --            | x                  |
+| ESP + BMP280 + 2S     | x            | --          | x             | x                | --            | --                 |
+| ESP + SHT30 + 2S      | --           | x           | x             | x                | --            | --                 |
+| ESP + SHT30 + Display | --           | x           | --            | --               | x             | x                  |
 
 **Notes:**
 

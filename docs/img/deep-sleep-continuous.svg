@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 120" width="750" height="120">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a2e; }
+      .text { fill: #e0e0e0; }
+      .text-dim { fill: #999; }
+      .text-title { fill: #e0e0e0; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #ccc; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #ff6b6b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #74b9ff; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #a29bfe; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #55efc4; stroke-width: 1.5; fill: none; }
+      .box { fill: #2a3a4e; stroke: #5a7a9e; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #1e3a5e; stroke: #4e7aae; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #2e1e4e; stroke: #6e4eae; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #2a4a3e; stroke: #4a8a6e; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #22223a; stroke: #444; rx: 4; }
+      .arrow { fill: #ccc; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #ffffff; }
+      .text { fill: #333; }
+      .text-dim { fill: #777; }
+      .text-title { fill: #222; font-size: 15px; font-weight: bold; }
+      .wire { stroke: #333; stroke-width: 1.5; fill: none; }
+      .wire-pwr { stroke: #c0392b; stroke-width: 2; fill: none; }
+      .wire-gnd { stroke: #2c3e50; stroke-width: 2; fill: none; }
+      .wire-sig { stroke: #2980b9; stroke-width: 1.5; fill: none; }
+      .wire-i2c { stroke: #00b894; stroke-width: 1.5; fill: none; }
+      .box { fill: #ecf0f1; stroke: #7f8c8d; stroke-width: 1.5; rx: 4; }
+      .box-mcu { fill: #d6eaf8; stroke: #2980b9; stroke-width: 1.5; rx: 4; }
+      .box-sensor { fill: #e8daef; stroke: #8e44ad; stroke-width: 1.5; rx: 4; }
+      .box-lib { fill: #d5f5e3; stroke: #27ae60; stroke-width: 1.5; rx: 4; }
+      .legend-bg { fill: #f8f9fa; stroke: #ddd; rx: 4; }
+      .arrow { fill: #333; }
+    }
+    text { font-family: monospace; font-size: 12px; }
+  </style>
+
+  <!-- Background -->
+  <rect class="bg" width="750" height="120" rx="4"/>
+
+  <!-- Title -->
+  <text class="text-title" x="375" y="20" text-anchor="middle">Continuous Mode (no deep sleep)</text>
+
+  <!-- Boot box -->
+  <rect class="box-mcu" x="10" y="38" width="60" height="34" rx="4"/>
+  <text class="text" x="40" y="60" text-anchor="middle">boot</text>
+
+  <!-- Arrow -->
+  <line class="wire" x1="70" y1="55" x2="90" y2="55"/>
+  <polygon class="arrow" points="92,55 86,51 86,59"/>
+
+  <!-- WiFi box -->
+  <rect class="box" x="94" y="38" width="110" height="34" rx="4"/>
+  <text class="text" x="149" y="60" text-anchor="middle">connect WiFi</text>
+
+  <!-- Arrow -->
+  <line class="wire" x1="204" y1="55" x2="224" y2="55"/>
+  <polygon class="arrow" points="226,55 220,51 220,59"/>
+
+  <!-- MQTT box -->
+  <rect class="box" x="228" y="38" width="118" height="34" rx="4"/>
+  <text class="text" x="287" y="60" text-anchor="middle">connect MQTT</text>
+
+  <!-- Arrow -->
+  <line class="wire" x1="346" y1="55" x2="366" y2="55"/>
+  <polygon class="arrow" points="368,55 362,51 362,59"/>
+
+  <!-- Loop group outline -->
+  <rect class="legend-bg" x="370" y="30" width="370" height="82" rx="4"/>
+  <text class="text-dim" x="555" y="46" text-anchor="middle">loop</text>
+
+  <!-- Read box -->
+  <rect class="box-sensor" x="385" y="54" width="68" height="34" rx="4"/>
+  <text class="text" x="419" y="76" text-anchor="middle">read</text>
+
+  <!-- Arrow -->
+  <line class="wire" x1="453" y1="71" x2="473" y2="71"/>
+  <polygon class="arrow" points="475,71 469,67 469,75"/>
+
+  <!-- Publish box -->
+  <rect class="box" x="477" y="54" width="80" height="34" rx="4"/>
+  <text class="text" x="517" y="76" text-anchor="middle">publish</text>
+
+  <!-- Arrow -->
+  <line class="wire" x1="557" y1="71" x2="577" y2="71"/>
+  <polygon class="arrow" points="579,71 573,67 573,75"/>
+
+  <!-- Wait box -->
+  <rect class="box-mcu" x="581" y="54" width="68" height="34" rx="4"/>
+  <text class="text" x="615" y="76" text-anchor="middle">wait</text>
+
+  <!-- Loop-back arrow: from wait right edge, curve up and back to read left edge -->
+  <path class="wire" d="M 649,71 Q 670,71 670,100 Q 670,108 555,108 Q 375,108 375,85 Q 375,71 385,71" marker-end="url(#arrowhead)"/>
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon class="arrow" points="0,0 8,3 0,6"/>
+    </marker>
+  </defs>
+</svg>

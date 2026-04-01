@@ -5,14 +5,14 @@ on, intended as an indoor display station.
 
 ## Overview
 
-| Parameter      | Value                                                 |
-|----------------|-------------------------------------------------------|
-| MCU            | Wemos D1 Mini v3 (ESP8266)                            |
-| Sensor         | SHT30 Shield v2.1.0 (stacked, I2C 0x44)               |
-| Display        | 3-digit 7-segment, shift registers                    |
-| Power          | USB 5V (always connected)                             |
-| Sleep mode     | None (continuous)                                     |
-| PlatformIO env | `thermo_display_sht30`                                |
+| Parameter      | Value                                   |
+|----------------|-----------------------------------------|
+| MCU            | Wemos D1 Mini v3 (ESP8266)              |
+| Sensor         | SHT30 Shield v2.1.0 (stacked, I2C 0x44) |
+| Display        | 3-digit 7-segment, shift registers      |
+| Power          | USB 5V (always connected)               |
+| Sleep mode     | None (continuous)                       |
+| PlatformIO env | `thermo_display_sht30`                  |
 
 ## Modules Used
 

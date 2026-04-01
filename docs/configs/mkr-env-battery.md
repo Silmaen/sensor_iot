@@ -49,23 +49,23 @@ analog pin A2 (TEMT6000) using the default Wire pins.
 The firmware uses a **duty-cycle** strategy: WiFi is powered down between publications
 and brought up only to transmit. This drastically reduces average consumption.
 
-| Phase              | Duration | Current | Notes                        |
-|--------------------|----------|---------|------------------------------|
-| WiFi off (idle)    | ~297s    | ~18 mA  | SAMD21 + ENV Shield, no radio |
-| WiFi on (publish)  | ~3s      | ~80 mA  | Connect, publish, disconnect  |
+| Phase             | Duration | Current | Notes                         |
+|-------------------|----------|---------|-------------------------------|
+| WiFi off (idle)   | ~297s    | ~18 mA  | SAMD21 + ENV Shield, no radio |
+| WiFi on (publish) | ~3s      | ~80 mA  | Connect, publish, disconnect  |
 
 Average current at 5-min interval:
 
-```
+```ini
 I_avg = (297 × 18 + 3 × 80) / 300 ≈ 18.6 mA
 ```
 
 ### Autonomy Estimates
 
-| Cell                        | Capacity | Autonomy (5 min) | Autonomy (10 min) |
-|-----------------------------|----------|-------------------|--------------------|
-| Samsung ICR18650-22HU       | 2150 mAh | ~4.8 days         | ~5.5 days          |
-| Generic 18650 3000 mAh      | 3000 mAh | ~6.7 days         | ~7.5 days          |
+| Cell                   | Capacity | Autonomy (5 min) | Autonomy (10 min) |
+|------------------------|----------|------------------|-------------------|
+| Samsung ICR18650-22HU  | 2150 mAh | ~4.8 days        | ~5.5 days         |
+| Generic 18650 3000 mAh | 3000 mAh | ~6.7 days        | ~7.5 days         |
 
 With `HAS_SERIAL_DEBUG` enabled, the default interval is 10s (for testing), which
 keeps WiFi active most of the time (~75 mA average, ~28h with 2150 mAh).

@@ -39,39 +39,39 @@ active at a time.
 
 ### LPS22HB (Pressure)
 
-| Parameter            | Value                    |
-|----------------------|--------------------------|
-| Sensor IC            | ST LPS22HB               |
-| I2C address          | 0x5C (fixed on shield)   |
-| Pressure range       | 260--1260 hPa            |
-| Pressure accuracy    | ±0.025 hPa               |
-| Supply voltage       | 1.7--3.6 V               |
-| Current (active)     | 12µA @ 1 Hz ODR          |
-| Resolution           | 1/4096 hPa               |
+| Parameter         | Value                  |
+|-------------------|------------------------|
+| Sensor IC         | ST LPS22HB             |
+| I2C address       | 0x5C (fixed on shield) |
+| Pressure range    | 260--1260 hPa          |
+| Pressure accuracy | ±0.025 hPa             |
+| Supply voltage    | 1.7--3.6 V             |
+| Current (active)  | 12µA @ 1 Hz ODR        |
+| Resolution        | 1/4096 hPa             |
 
 ### TEMT6000 (Ambient Light)
 
-| Parameter            | Value                        |
-|----------------------|------------------------------|
-| Sensor IC            | Vishay TEMT6000              |
-| Interface            | Analog (pin A2)              |
-| Spectral range       | 440--800 nm (peak 570 nm)    |
-| Sensitivity          | ~10µA per lux                |
-| Load resistor        | 10 kΩ (on shield PCB)        |
-| Range                | 0--330 lux (with 12-bit ADC) |
-| Response time        | 10µs (rise/fall)             |
+| Parameter      | Value                        |
+|----------------|------------------------------|
+| Sensor IC      | Vishay TEMT6000              |
+| Interface      | Analog (pin A2)              |
+| Spectral range | 440--800 nm (peak 570 nm)    |
+| Sensitivity    | ~10µA per lux                |
+| Load resistor  | 10 kΩ (on shield PCB)        |
+| Range          | 0--330 lux (with 12-bit ADC) |
+| Response time  | 10µs (rise/fall)             |
 
 ### VEML6075 (UV Index)
 
-| Parameter            | Value                             |
-|----------------------|-----------------------------------|
-| Sensor IC            | Vishay VEML6075                   |
-| I2C address          | 0x10 (fixed)                      |
-| Channels             | UVA (365 nm), UVB (330 nm)        |
-| Integration time     | 100 ms (default)                  |
-| Supply voltage       | 1.7--3.6 V                        |
-| Current (active)     | 480µA (typ.)                      |
-| UV index output      | Computed from compensated UVA/UVB |
+| Parameter        | Value                             |
+|------------------|-----------------------------------|
+| Sensor IC        | Vishay VEML6075                   |
+| I2C address      | 0x10 (fixed)                      |
+| Channels         | UVA (365 nm), UVB (330 nm)        |
+| Integration time | 100 ms (default)                  |
+| Supply voltage   | 1.7--3.6 V                        |
+| Current (active) | 480µA (typ.)                      |
+| UV index output  | Computed from compensated UVA/UVB |
 
 ## Wiring
 
@@ -79,13 +79,13 @@ The MKR ENV Shield stacks directly onto the MKR WiFi 1010 headers -- no external
 
 ### Pin Usage
 
-| MKR Pin       | Function            | Notes                     |
-|---------------|---------------------|---------------------------|
-| `SDA`         | I2C data            | HTS221, LPS22HB, VEML6075 |
-| `SCL`         | I2C clock           | HTS221, LPS22HB, VEML6075 |
-| `A2`          | TEMT6000 analog out | Ambient light             |
-| VCC           | VDD                 | 3.3 V from regulator      |
-| GND           | GND                 | Ground                    |
+| MKR Pin | Function            | Notes                     |
+|---------|---------------------|---------------------------|
+| `SDA`   | I2C data            | HTS221, LPS22HB, VEML6075 |
+| `SCL`   | I2C clock           | HTS221, LPS22HB, VEML6075 |
+| `A2`    | TEMT6000 analog out | Ambient light             |
+| VCC     | VDD                 | 3.3 V from regulator      |
+| GND     | GND                 | Ground                    |
 
 ## I2C Bus
 
@@ -146,7 +146,7 @@ build_flags =
 
 ### Module API
 
-```cpp
+```c++
 void mkr_env_module_register(ModuleRegistry& reg);
 void mkr_env_module_contribute(PayloadBuilder& pb, const SensorData& data);
 ```
@@ -161,14 +161,14 @@ When active with battery monitoring, the device publishes on `thermo/{device_id}
 
 ## Troubleshooting
 
-| Symptom                    | Cause                            | Fix                                              |
-|----------------------------|----------------------------------|--------------------------------------------------|
-| MKR ENV init failed        | Shield not seated properly       | Reseat the shield on MKR headers                 |
-| HTS221 not found (0x5F)    | I2C bus issue                    | Check shield connection, try Wire scanner sketch |
-| LPS22HB not found (0x5C)   | I2C bus issue                    | Check shield connection, try Wire scanner sketch |
-| VEML6075 not found (0x10)  | I2C bus issue                    | Check shield connection, try Wire scanner sketch |
-| Temperature offset         | HTS221 self-heating              | Increase publish interval (>=10s)                |
-| Humidity reads 0% or 100%  | Calibration data corrupt         | Power cycle the shield                           |
-| Light reads 0 indoors      | TEMT6000 range limited           | Sensor maxes at ~330 lux (bright indoor)         |
-| UV index always 0          | Indoors / no UV source           | VEML6075 needs direct UV exposure                |
-| Previously used HAS_BME280 | Wrong build flag for ENV Shield  | Change to `-DHAS_MKR_ENV` in platformio.ini      |
+| Symptom                    | Cause                           | Fix                                              |
+|----------------------------|---------------------------------|--------------------------------------------------|
+| MKR ENV init failed        | Shield not seated properly      | Reseat the shield on MKR headers                 |
+| HTS221 not found (0x5F)    | I2C bus issue                   | Check shield connection, try Wire scanner sketch |
+| LPS22HB not found (0x5C)   | I2C bus issue                   | Check shield connection, try Wire scanner sketch |
+| VEML6075 not found (0x10)  | I2C bus issue                   | Check shield connection, try Wire scanner sketch |
+| Temperature offset         | HTS221 self-heating             | Increase publish interval (>=10s)                |
+| Humidity reads 0% or 100%  | Calibration data corrupt        | Power cycle the shield                           |
+| Light reads 0 indoors      | TEMT6000 range limited          | Sensor maxes at ~330 lux (bright indoor)         |
+| UV index always 0          | Indoors / no UV source          | VEML6075 needs direct UV exposure                |
+| Previously used HAS_BME280 | Wrong build flag for ENV Shield | Change to `-DHAS_MKR_ENV` in platformio.ini      |

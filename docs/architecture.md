@@ -48,7 +48,7 @@ Platform-specific code is selected at compile time using compiler-defined macros
 
 In `main.cpp` and `config.h`, platform selection follows this pattern:
 
-```cpp
+```c++
 #if defined(ARDUINO_SAMD_MKRWIFI1010)
     // MKR WiFi 1010 specific
 #elif defined(ESP8266)
@@ -65,7 +65,7 @@ In `main.cpp` and `config.h`, platform selection follows this pattern:
 
 These are used by the MQTT topic macros in `config.h`:
 
-```
+```text
 thermo/thermo_1/sensors
 thermo/thermo_1/status
 thermo/thermo_1/command
@@ -79,39 +79,11 @@ receives a string literal (`'"thermo_1"'` → `"thermo_1"`).
 
 ### Continuous mode (no `HAS_DEEP_SLEEP`)
 
-```
-setup()
-  ├── register_modules()
-  ├── init hardware (sensor, display, ...)
-  ├── connect WiFi + MQTT
-  └── subscribe to command topic
-
-loop()  (runs repeatedly)
-  ├── network.loop()  (process incoming MQTT)
-  ├── handle_button()  (if HAS_DISPLAY)
-  └── every publish_interval_s:
-      ├── read sensors
-      ├── update display  (if HAS_DISPLAY)
-      └── publish_sensor_data()
-```
+![Continuous execution mode](img/architecture-continuous.svg)
 
 ### One-shot mode (`HAS_DEEP_SLEEP`)
 
-```
-setup()  (runs once per wake cycle)
-  ├── register_modules()
-  ├── read RTC-stored interval
-  ├── init + read sensor
-  ├── connect WiFi + MQTT
-  ├── subscribe to command topic
-  ├── wait ≤2s for retained commands
-  ├── publish_sensor_data()
-  ├── publish battery alert (if low)
-  ├── disconnect
-  └── deep_sleep(interval)  → RST → setup() again
-
-loop()  (never reached)
-```
+![One-shot execution mode](img/architecture-one-shot.svg)
 
 ## Module system
 
@@ -119,7 +91,7 @@ loop()  (never reached)
 
 The `ModuleRegistry` is a simple struct with fixed-size arrays:
 
-```cpp
+```c++
 struct ModuleRegistry {
     const char* metrics[MAX_METRICS];   // up to 8
     const char* commands[MAX_COMMANDS]; // up to 4
@@ -148,7 +120,7 @@ pairs to the JSON payload.
 
 Example for a hypothetical DHT22 module:
 
-```cpp
+```c++
 // lib/thermo_core/src/modules/dht22_module.h
 void dht22_module_register(ModuleRegistry& reg);
 void dht22_module_contribute(PayloadBuilder& pb, float temp, float humidity);
@@ -169,7 +141,7 @@ void dht22_module_contribute(PayloadBuilder& pb, float temp, float humidity) {
 
 Builds JSON incrementally into a caller-provided buffer:
 
-```cpp
+```c++
 char buf[256];
 PayloadBuilder pb{buf, sizeof(buf), 0, true};
 pb.begin();                              // writes {
@@ -186,19 +158,12 @@ but composable across modules.
 
 When an MQTT command arrives:
 
-```
-on_mqtt_message()
-  ├── parse action from JSON
-  ├── if "request_capabilities" → publish_capabilities()
-  └── else → registry.dispatch(action, payload)
-               ├── iterate handlers[]
-               └── call first matching handler
-```
+![Command dispatch](img/architecture-command-dispatch.svg)
 
 Modules can register their own commands. The core always registers
 `set_interval`. A module adding a custom command:
 
-```cpp
+```c++
 static bool handle_calibrate(const char* payload) {
     // parse payload, apply calibration...
     return true;
@@ -217,7 +182,7 @@ the device will handle `{"action":"calibrate","value":...}` from the server.
 
 Built dynamically at runtime from `ModuleRegistry`:
 
-```cpp
+```c++
 format_capabilities_payload(
     hw_id,                     // ESP.getChipId() as hex
     publish_interval_s,        // current interval
@@ -250,34 +215,13 @@ Example output with `HAS_BME280` + `HAS_BATTERY`:
 
 ## Data flow: sensor publish cycle
 
-```
-read hardware
-    │
-    ▼
-PayloadBuilder pb
-    │
-    ├── bme280_module_contribute(pb, sensor_data)  [if HAS_BME280]
-    │     → adds temperature, humidity, pressure
-    │
-    ├── sht30_module_contribute(pb, sensor_data)   [if HAS_SHT30]
-    │     → adds temperature, humidity
-    │
-    ├── battery_module_contribute(pb, soc, voltage)  [if HAS_BATTERY]
-    │     → adds battery_pct, battery_v
-    │
-    ▼
-network.publish(MQTT_TOPIC_SENSORS, buf)
-    │
-    ▼
-battery alert check  [if HAS_BATTERY && soc <= threshold]
-    → network.publish(MQTT_TOPIC_STATUS, {"level":"warning","message":"low_battery"})
-```
+![Sensor publish data flow](img/architecture-data-flow.svg)
 
 ## Adding a new module: step by step
 
 ### 1. Create the module in thermo_core
 
-```
+```text
 lib/thermo_core/src/modules/<name>_module.h
 lib/thermo_core/src/modules/<name>_module.cpp
 ```
@@ -290,7 +234,7 @@ register it with `reg.add_command()`.
 
 If the module needs new hardware, add a driver in `src/hw/`:
 
-```
+```c++
 src/hw/<name>_driver.h
 src/hw/<name>_driver.cpp
 ```
@@ -301,7 +245,7 @@ Guard with `#ifndef NATIVE`.
 
 Add `#ifdef HAS_<NAME>` blocks in the following locations:
 
-```cpp
+```c++
 // Top: includes
 #ifdef HAS_<NAME>
 #include "modules/<name>_module.h"

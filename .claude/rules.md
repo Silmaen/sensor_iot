@@ -17,6 +17,8 @@
 - Build with `-Wall -Wextra`, fix all warnings before committing.
 - Prefer `constexpr` and `const` over `#define` for constants.
 - Use `snake_case` for functions and variables, `PascalCase` for classes/structs, `UPPER_SNAKE_CASE` for compile-time constants.
+- Markdown tables: perfectly aligned columns, full-width separators with no spaces (`|---|` not `| --- |`). Preserve alignment markers (`:---:`, `:---`, `---:`).
+- Markdown code fences: always specify a language. Use ` ```c++ ` for C++ (not `cpp` — CLion requires `c++` for syntax highlighting). Other languages: `bash`, `json`, `ini`, `text`.
 
 ## Architecture
 - Keep business logic platform-independent in `src/` and `include/`.
@@ -25,7 +27,7 @@
 - Prefer stack allocation and fixed-size buffers.
 
 ## Components
-- Consult [COMPONENTS.md](../COMPONENTS.md) for available electronic components.
+- Consult [docs/components.md](../docs/components.md) for available electronic components.
 - Prioritize components from that list when proposing hardware designs or library choices.
 
 ## Testing
@@ -42,7 +44,7 @@
 - **`CLAUDE.md`**: Claude-facing project overview. Keep lean, ASCII diagrams are fine here (efficient for LLM context).
 - **`docs/modules/*.md`**: User-facing per-module documentation. One file per optional module (`HAS_xxx`).
 - **`docs/img/*.svg`**: SVG diagrams referenced from module docs. Two types per module: wiring (realistic components) and schematic (standard electronic symbols).
-- **`COMPONENTS.md`**: Hardware inventory and device configurations. ASCII diagrams kept for Claude, SVG images added for users.
+- **`docs/components.md`**: Hardware inventory and device configurations. ASCII diagrams kept for Claude, SVG images added for users.
 
 ## SVG Diagrams
 - All SVGs must support light and dark themes via `@media (prefers-color-scheme: dark/light)` CSS.
@@ -55,4 +57,4 @@
 1. Create firmware: driver in `src/hw/`, module in `lib/thermo_core/src/modules/`, tests in `test/test_native/`.
 2. Integrate: `#ifdef HAS_xxx` blocks in `main.cpp`, flag in `platformio.ini`, environment.
 3. Document: `docs/modules/<name>.md` with datasheet link, wiring SVG, schematic SVG.
-4. Update: `CLAUDE.md` flag table, `docs/architecture.md` file reference, `COMPONENTS.md` component list.
+4. Update: `CLAUDE.md` flag table, `docs/architecture.md` file reference, `docs/components.md` component list.

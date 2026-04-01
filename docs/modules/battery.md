@@ -14,8 +14,8 @@ enabled by the `-DHAS_BATTERY` build flag in `platformio.ini`.
 
 **Battery alerts:** Two levels of alert are published on `thermo/{id}/status`:
 
-| Level     | Message            | Condition                         |
-|-----------|--------------------|-----------------------------------|
+| Level     | Message            | Condition                           |
+|-----------|--------------------|-------------------------------------|
 | `warning` | `low_battery`      | SoC <= `BATTERY_WARN_THRESHOLD`     |
 | `error`   | `critical_battery` | SoC <= `BATTERY_CRITICAL_THRESHOLD` |
 
@@ -26,8 +26,8 @@ enabled by the `-DHAS_BATTERY` build flag in `platformio.ini`.
 
 Thresholds are platform-specific (defined in `include/config.h`):
 
-| Platform           | Warning | Critical | Rationale                              |
-|--------------------|---------|----------|----------------------------------------|
+| Platform           | Warning | Critical | Rationale                             |
+|--------------------|---------|----------|---------------------------------------|
 | ESP8266 (2S LiPo)  | 15%     | 5%       | Wide voltage range (6.0--8.4V)        |
 | MKR WiFi (1S LiPo) | 20%     | 5%       | Narrow range (3.0--4.2V), PMIC cutoff |
 
@@ -38,19 +38,19 @@ Thresholds are platform-specific (defined in `include/config.h`):
 The ESP8266 has a single 10-bit ADC (0--3.3 V range) on pin `A0`. An **external voltage divider**
 scales the 2S pack voltage down to the ADC input range.
 
-| Parameter       | Value                            |
-|-----------------|----------------------------------|
-| Battery         | 2S 18650 LiPo (6.0--8.4 V)       |
-| ADC resolution  | 10-bit (0--1023)                 |
-| ADC ref voltage | 3.3 V                            |
-| Divider R1      | 22 k-ohm (top, to V_bat)         |
-| Divider R2      | 12 k-ohm (bottom, to GND)        |
-| Divider ratio   | (R1+R2)/R2 = 2.833               |
-| Source impedance | R1//R2 = 7.76 k-ohm (ADC-friendly)|
-| V_adc formula   | V_bat x R2/(R1+R2) = V_bat x 0.353 |
-| V_adc at 8.4 V  | 2.96 V (ADC ~919)                |
-| V_adc at 6.0 V  | 2.12 V (ADC ~657)                |
-| ADC pin         | `A0` (`PIN_BATTERY_ADC`)         |
+| Parameter        | Value                              |
+|------------------|------------------------------------|
+| Battery          | 2S 18650 LiPo (6.0--8.4 V)         |
+| ADC resolution   | 10-bit (0--1023)                   |
+| ADC ref voltage  | 3.3 V                              |
+| Divider R1       | 22 k-ohm (top, to V_bat)           |
+| Divider R2       | 12 k-ohm (bottom, to GND)          |
+| Divider ratio    | (R1+R2)/R2 = 2.833                 |
+| Source impedance | R1//R2 = 7.76 k-ohm (ADC-friendly) |
+| V_adc formula    | V_bat x R2/(R1+R2) = V_bat x 0.353 |
+| V_adc at 8.4 V   | 2.96 V (ADC ~919)                  |
+| V_adc at 6.0 V   | 2.12 V (ADC ~657)                  |
+| ADC pin          | `A0` (`PIN_BATTERY_ADC`)           |
 
 ![ESP8266 battery wiring diagram](../img/battery-wiring.svg)
 
@@ -75,44 +75,44 @@ The SAMD21 driver calls `analogReadResolution(12)` before each read to ensure 12
 The firmware uses a **linear interpolation** between `BATTERY_VOLTAGE_EMPTY` (0%) and
 `BATTERY_VOLTAGE_FULL` (100%), clamped at both ends.
 
-```
+```text
 SoC = (V_bat - V_empty) / (V_full - V_empty) x 100
 ```
 
 ### 2S LiPo (ESP8266)
 
-| Voltage (V) | SoC (%) | Notes             |
-|-------------|--------:|-------------------|
-| 8.40        |     100 | Fully charged     |
-| 8.16        |      90 |                   |
-| 7.92        |      80 |                   |
-| 7.68        |      70 |                   |
-| 7.44        |      60 |                   |
-| 7.20        |      50 | Nominal           |
-| 6.96        |      40 |                   |
-| 6.72        |      30 |                   |
-| 6.48        |      20 |                       |
-| 6.36        |      15 | Warning (low_battery) |
-| 6.24        |      10 |                       |
-| 6.12        |       5 | Error (critical_battery) |
-| 6.00        |       0 | Empty / cutoff        |
+| Voltage (V) | SoC (%) | Notes                    |
+|-------------|--------:|--------------------------|
+| 8.40        | 100     | Fully charged            |
+| 8.16        | 90      |                          |
+| 7.92        | 80      |                          |
+| 7.68        | 70      |                          |
+| 7.44        | 60      |                          |
+| 7.20        | 50      | Nominal                  |
+| 6.96        | 40      |                          |
+| 6.72        | 30      |                          |
+| 6.48        | 20      |                          |
+| 6.36        | 15      | Warning (low_battery)    |
+| 6.24        | 10      |                          |
+| 6.12        | 5       | Error (critical_battery) |
+| 6.00        | 0       | Empty / cutoff           |
 
 ### 1S LiPo (MKR WiFi 1010)
 
-| Voltage (V) | SoC (%) | Notes             |
-|-------------|--------:|-------------------|
-| 4.20        |     100 | Fully charged     |
-| 4.08        |      90 |                   |
-| 3.96        |      80 |                   |
-| 3.84        |      70 |                   |
-| 3.72        |      60 |                   |
-| 3.60        |      50 | Nominal           |
-| 3.48        |      40 |                   |
-| 3.36        |      30 |                   |
-| 3.24        |      20 | Warning (low_battery)    |
-| 3.12        |      10 |                          |
-| 3.06        |       5 | Error (critical_battery) |
-| 3.00        |       0 | Empty / cutoff    |
+| Voltage (V) | SoC (%) | Notes                    |
+|-------------|--------:|--------------------------|
+| 4.20        | 100     | Fully charged            |
+| 4.08        | 90      |                          |
+| 3.96        | 80      |                          |
+| 3.84        | 70      |                          |
+| 3.72        | 60      |                          |
+| 3.60        | 50      | Nominal                  |
+| 3.48        | 40      |                          |
+| 3.36        | 30      |                          |
+| 3.24        | 20      | Warning (low_battery)    |
+| 3.12        | 10      |                          |
+| 3.06        | 5       | Error (critical_battery) |
+| 3.00        | 0       | Empty / cutoff           |
 
 > **Note:** Real LiPo discharge curves are non-linear. The linear mapping is a deliberate
 > simplification. For higher accuracy, a lookup table or polynomial fit could replace the linear

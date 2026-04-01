@@ -29,12 +29,12 @@ the BME280 version since the sensor stacks directly, but no pressure measurement
 
 ### GPIO Assignment
 
-| Pin         | Function                                        |
-|-------------|-------------------------------------------------|
-| D1 (GPIO5)  | I2C SCL (SHT30 Shield, stacked)                 |
-| D2 (GPIO4)  | I2C SDA (SHT30 Shield, stacked)                 |
-| A0          | Battery voltage via divider (R1=22k / R2=12k)   |
-| D0 (GPIO16) | Wired to RST for deep sleep wake                |
+| Pin         | Function                                      |
+|-------------|-----------------------------------------------|
+| D1 (GPIO5)  | I2C SCL (SHT30 Shield, stacked)               |
+| D2 (GPIO4)  | I2C SDA (SHT30 Shield, stacked)               |
+| A0          | Battery voltage via divider (R1=22k / R2=12k) |
+| D0 (GPIO16) | Wired to RST for deep sleep wake              |
 
 ### Power Path
 
