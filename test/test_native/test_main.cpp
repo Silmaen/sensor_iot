@@ -82,6 +82,33 @@ void test_mkr_env_module_with_battery(void);
 void test_battery_module_register(void);
 void test_battery_module_contribute(void);
 void test_combined_modules_contribute(void);
+void test_calibration_module_register(void);
+void test_calibration_apply_zero_offsets(void);
+void test_calibration_apply_temp_offset(void);
+void test_calibration_apply_all_offsets(void);
+void test_calibration_clamp_humidity(void);
+void test_calibration_set_offset_command_temp(void);
+void test_calibration_set_offset_command_humi(void);
+void test_calibration_set_offset_command_press(void);
+void test_calibration_set_offset_invalid_metric(void);
+void test_calibration_set_offset_extreme_rejected(void);
+void test_calibration_set_offset_zero(void);
+void test_light_module_register(void);
+void test_light_module_contribute(void);
+void test_adc_to_light_pct_zero(void);
+void test_adc_to_light_pct_max(void);
+void test_adc_to_light_pct_above_max(void);
+void test_adc_to_light_pct_midpoint(void);
+void test_adc_to_light_pct_12bit(void);
+void test_adc_to_light_pct_zero_max(void);
+void test_relay_module_register(void);
+void test_relay_module_contribute_initial(void);
+void test_relay_toggle_on(void);
+void test_relay_toggle_off(void);
+void test_relay_toggle_invalid_relay(void);
+void test_relay_contact_activates_and_reverts(void);
+void test_relay_contact_invalid_delay(void);
+void test_relay_toggle_cancels_contact(void);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -174,6 +201,39 @@ int main(int argc, char** argv) {
     RUN_TEST(test_battery_module_register);
     RUN_TEST(test_battery_module_contribute);
     RUN_TEST(test_combined_modules_contribute);
+
+    // Calibration module
+    RUN_TEST(test_calibration_module_register);
+    RUN_TEST(test_calibration_apply_zero_offsets);
+    RUN_TEST(test_calibration_apply_temp_offset);
+    RUN_TEST(test_calibration_apply_all_offsets);
+    RUN_TEST(test_calibration_clamp_humidity);
+    RUN_TEST(test_calibration_set_offset_command_temp);
+    RUN_TEST(test_calibration_set_offset_command_humi);
+    RUN_TEST(test_calibration_set_offset_command_press);
+    RUN_TEST(test_calibration_set_offset_invalid_metric);
+    RUN_TEST(test_calibration_set_offset_extreme_rejected);
+    RUN_TEST(test_calibration_set_offset_zero);
+
+    // Light module
+    RUN_TEST(test_light_module_register);
+    RUN_TEST(test_light_module_contribute);
+    RUN_TEST(test_adc_to_light_pct_zero);
+    RUN_TEST(test_adc_to_light_pct_max);
+    RUN_TEST(test_adc_to_light_pct_above_max);
+    RUN_TEST(test_adc_to_light_pct_midpoint);
+    RUN_TEST(test_adc_to_light_pct_12bit);
+    RUN_TEST(test_adc_to_light_pct_zero_max);
+
+    // Relay module
+    RUN_TEST(test_relay_module_register);
+    RUN_TEST(test_relay_module_contribute_initial);
+    RUN_TEST(test_relay_toggle_on);
+    RUN_TEST(test_relay_toggle_off);
+    RUN_TEST(test_relay_toggle_invalid_relay);
+    RUN_TEST(test_relay_contact_activates_and_reverts);
+    RUN_TEST(test_relay_contact_invalid_delay);
+    RUN_TEST(test_relay_toggle_cancels_contact);
 
     return UNITY_END();
 }

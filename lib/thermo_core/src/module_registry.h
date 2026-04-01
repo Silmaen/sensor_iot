@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 static constexpr size_t MAX_METRICS = 12;
-static constexpr size_t MAX_COMMANDS = 4;
+static constexpr size_t MAX_COMMANDS = 8;
 static constexpr size_t MAX_COMMAND_PARAMS = 4;
 
 // Command handler: receives the full JSON payload, returns true if handled

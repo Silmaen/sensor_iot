@@ -67,6 +67,9 @@ its fields (see [architecture.md](architecture.md)).
 | `pressure`    | `HAS_BME280`  | float (1 decimal)  | hPa     | Atmospheric pressure                                 |
 | `battery_pct` | `HAS_BATTERY` | uint               | %       | Battery state of charge (0-100)                      |
 | `battery_v`   | `HAS_BATTERY` | float (2 decimals) | V       | Battery voltage (ESP: 2S 6.0-8.4V, MKR: 1S 3.0-4.2V) |
+| `light`       | `HAS_LIGHT`   | uint               | %       | Relative light level (0 = dark, 100 = bright)        |
+| `relay1`      | `HAS_RELAY`   | uint               | —       | Relay 1 state (0 = off, 1 = energized)               |
+| `relay2`      | `HAS_RELAY`   | uint               | —       | Relay 2 state (0 = off, 1 = energized)               |
 
 New modules can add additional metrics. The server auto-discovers metric
 names from the sensor readings and capabilities message.
@@ -141,10 +144,13 @@ Commands are routed through the `ModuleRegistry`:
 
 ### Built-in commands
 
-| Action                 | Value             | Handler | Behavior                               |
-|------------------------|-------------------|---------|----------------------------------------|
-| `set_interval`         | seconds (1-86400) | Core    | Updates publish/sleep interval         |
-| `request_capabilities` | _(none)_          | Core    | Responds with capabilities (section 4) |
+| Action                 | Value                                 | Handler     | Behavior                                |
+|------------------------|---------------------------------------|-------------|-----------------------------------------|
+| `set_interval`         | seconds (1-86400)                     | Core        | Updates publish/sleep interval          |
+| `request_capabilities` | _(none)_                              | Core        | Responds with capabilities (section 4)  |
+| `set_offset`           | `{"metric":"<name>","value":<float>}` | Calibration | Set sensor offset (temp/humi/press)     |
+| `relay_toggle`         | `{"value":<1\|2>}`                    | Relay       | Toggle relay on/off                     |
+| `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`       | Relay       | Activate relay, auto-revert after delay |
 
 Modules can register additional commands via `reg.add_command()`. These
 commands automatically appear in the capabilities message and are routed
@@ -183,8 +189,8 @@ its own response via the `capabilities` topic).
 
 | Field    | Type   | Required | Description                                     |
 |----------|--------|:--------:|-------------------------------------------------|
-| `action` | string | Yes      | The command action being acknowledged           |
-| `status` | string | Yes      | `"ok"` (command executed) or `"error"` (failed) |
+| `action` | string |   Yes    | The command action being acknowledged           |
+| `status` | string |   Yes    | `"ok"` (command executed) or `"error"` (failed) |
 
 - Acks are sent immediately after command processing.
 - The `action` field must exactly match the `action` in the original command.
@@ -222,10 +228,10 @@ it reflects exactly which modules are enabled in the current firmware build.
 
 | Field     | Type   | Required | Description                                                        |
 |-----------|--------|:--------:|--------------------------------------------------------------------|
-| `id`      | string | Yes      | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256    |
-| `intrvl`  | number | Yes      | Current publish frequency in seconds (1-86400)                     |
-| `metrics` | object | Yes      | Metric name → unit string (`""` if no unit). Max 16 chars per unit |
-| `cmds`    | object | Yes      | Command name → array of `{n, t}` params (`[]` if no params)        |
+| `id`      | string |   Yes    | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256    |
+| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                     |
+| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit |
+| `cmds`    | object |   Yes    | Command name → array of `{n, t}` params (`[]` if no params)        |
 
 **Parameter definition format:** each entry is `{"n": "<param>", "t": "<number|string|boolean>"}`.
 
