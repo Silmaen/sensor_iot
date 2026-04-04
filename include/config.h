@@ -48,11 +48,11 @@
 #ifdef HAS_SERIAL_DEBUG
   #define DEFAULT_PUBLISH_INTERVAL_S 10   // Fast feedback for debugging (seconds)
 #else
-  #define DEFAULT_PUBLISH_INTERVAL_S 300  // Production: 5 minutes to save power
+  #define DEFAULT_PUBLISH_INTERVAL_S 300  // Production: 5 minutes
 #endif
 #define BUTTON_DEBOUNCE_MS         50   // Button debounce time
 #define DEFAULT_SLEEP_INTERVAL_S   300  // Default deep sleep interval (seconds)
-#define MQTT_COMMAND_WAIT_MS       5000 // Wait window for server command flush after publish
+#define MQTT_COMMAND_WAIT_MS       2000 // Wait window for server command flush after publish
 #define RECONNECT_INTERVAL_MS      5000 // Non-blocking reconnect retry interval
 
 // --- Battery alerts ---

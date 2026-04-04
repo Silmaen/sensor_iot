@@ -79,6 +79,11 @@ static bool last_button_state           = true;
 static EspSleep sleeper;
 #endif
 
+#if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
+#include "hw/samd_sleep.h"
+static SamdSleep samd_sleeper;
+#endif
+
 #endif // NATIVE
 
 // --- Shared state ---
@@ -313,6 +318,11 @@ void setup() {
     DEBUG_PRINTF("[INIT] device=%s type=%s\n", DEVICE_ID, MQTT_DEVICE_TYPE);
     DEBUG_PRINTF("[INIT] publish_interval=%lus\n", (unsigned long)publish_interval_s);
 
+#if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
+    samd_sleeper.begin();
+    DEBUG_PRINTLN("[INIT] SAMD standby sleep enabled");
+#endif
+
 #ifdef HAS_DEEP_SLEEP
     if (!sleeper.read_rtc_interval(publish_interval_s)) {
         publish_interval_s = DEFAULT_SLEEP_INTERVAL_S;
@@ -408,7 +418,8 @@ void setup() {
 
 #ifdef HAS_DEEP_SLEEP
     // One-shot mode: publish sensors (triggers server command flush),
-    // wait for commands, send capabilities, then sleep.
+    // wait for commands, then sleep. Capabilities are only sent when
+    // the server requests them (request_capabilities command).
 
 #if defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)
     last_data = sensor.read();
@@ -419,15 +430,13 @@ void setup() {
     publish_sensor_data();
 #endif
 
-    // Wait for server to flush pending commands (may be multiple)
+    // Wait for server to flush pending commands (may be multiple).
+    // If request_capabilities arrives, it is handled in on_mqtt_message.
     unsigned long start = millis();
     while (millis() - start < MQTT_COMMAND_WAIT_MS) {
         network.loop();
         delay(10);
     }
-
-    // Capabilities sent last — reflects state after all commands applied
-    publish_capabilities();
 
     network.disconnect();
     sleeper.deep_sleep(publish_interval_s);
@@ -486,15 +495,13 @@ static void duty_cycle_publish() {
     // Publish sensors first — triggers server-side command flush
     publish_sensor_data();
 
-    // Wait for server to flush pending commands (may be multiple)
+    // Wait for server to flush pending commands (may be multiple).
+    // If request_capabilities arrives, it is handled in on_mqtt_message.
     unsigned long cmd_start = millis();
     while (millis() - cmd_start < MQTT_COMMAND_WAIT_MS) {
         network.loop();
         delay(10);
     }
-
-    // Capabilities sent last — reflects state after all commands applied
-    publish_capabilities();
 
     network.power_down();
     DEBUG_PRINTLN("[NET] radio powered down");
@@ -510,19 +517,18 @@ void loop() {
 #ifndef NATIVE
 
 #if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
-    // --- SAMD duty-cycle mode ---
-    // WiFi is off between publications to save power.
-    // Sensors are read first, then WiFi is brought up only to publish.
-    if (unsigned long const now = millis();
-        now - last_sensor_read >= static_cast<unsigned long>(publish_interval_s) * 1000UL) {
-        last_sensor_read = now;
+    // --- SAMD standby duty-cycle mode ---
+    // Read sensors, publish over WiFi, then enter SAMD21 standby (~5µA)
+    // until the next cycle. Standby resumes execution here — no reboot.
 
 #if defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)
-        if (!read_sensors()) return;
-#endif
-        duty_cycle_publish();
+    if (!read_sensors()) {
+        samd_sleeper.standby(publish_interval_s);
+        return;
     }
-    delay(100); // Low-power idle between checks
+#endif
+    duty_cycle_publish();
+    samd_sleeper.standby(publish_interval_s);
 
 #else
     // --- Continuous mode (ESP8266, or any config with display) ---
