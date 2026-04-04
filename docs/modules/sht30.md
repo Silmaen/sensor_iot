@@ -144,3 +144,13 @@ With 2× 3000mAh 18650 (usable ~4000mAh at 5V after buck efficiency):
 | SHT30 init failed | Wrong I2C address        | Check solder jumper on shield (0x44/0x45) |
 | Humidity reads 0% | CRC check failing        | Check I2C wiring / try soft reset         |
 | Self-heating      | Measuring too frequently | Increase publish interval (≥10s)          |
+
+## See Also
+
+- [Calibration](calibration.md) — per-device offset correction (recommended for cross-sensor consistency)
+- [BME280](bme280.md), [MKR ENV](mkr-env.md) — mutually exclusive alternative sensor modules
+- [MQTT protocol](../mqtt-protocol.md) — metric names and payload format
+- [Components inventory](../components.md) — SHT30 Shield hardware specs
+- [Architecture](../architecture.md) — module system and feature flags
+- Configs using this module: [ESP+SHT30+Battery](../configs/esp-sht30-battery.md),
+  [ESP+SHT30+Display](../configs/esp-display-sht30.md)

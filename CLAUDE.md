@@ -13,18 +13,18 @@ Le projet s'articule autour de :
 - **Noyau MQTT** (`src/main.cpp`) : connexion, publication, commandes, capabilities — toujours présent
 - **Modules optionnels** activés par feature flags dans `platformio.ini` :
 
-| Flag               | Module                          | Metrics ajoutées                                               | Commandes ajoutées              |
-|--------------------|---------------------------------|----------------------------------------------------------------|---------------------------------|
-| `HAS_BME280`       | Capteur BME/BMP280              | `temperature`, `humidity`, `pressure`                          | —                               |
-| `HAS_SHT30`        | Capteur SHT30 (shield Wemos)    | `temperature`, `humidity`                                      | —                               |
-| `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)     | `temperature`, `humidity`, `pressure`, `light_lux`, `uv_index` | —                               |
-| `HAS_BATTERY`      | Monitoring batterie             | `battery_pct`, `battery_v`                                     | —                               |
-| `HAS_LIGHT`        | Capteur luminosité (analog)     | `light`                                                        | —                               |
-| `HAS_CALIBRATION`  | Offsets capteurs (cross-module) | —                                                              | `set_offset`                    |
-| `HAS_RELAY`        | Dual relay board (2 ch.)        | `relay1`, `relay2`                                             | `relay_toggle`, `relay_contact` |
-| `HAS_DISPLAY`      | Afficheur 7-segments + bouton   | —                                                              | —                               |
-| `HAS_DEEP_SLEEP`   | Deep sleep entre lectures       | —                                                              | —                               |
-| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série    | —                                                              | —                               |
+| Flag               | Module                          | Metrics ajoutées                                               | Commandes ajoutées                    |
+|--------------------|---------------------------------|----------------------------------------------------------------|---------------------------------------|
+| `HAS_BME280`       | Capteur BME/BMP280              | `temperature`, `humidity`, `pressure`                          | —                                     |
+| `HAS_SHT30`        | Capteur SHT30 (shield Wemos)    | `temperature`, `humidity`                                      | —                                     |
+| `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)     | `temperature`, `humidity`, `pressure`, `light_lux`, `uv_index` | —                                     |
+| `HAS_BATTERY`      | Monitoring batterie             | `battery_pct`, `battery_v`                                     | —                                     |
+| `HAS_LIGHT`        | Capteur luminosité (analog)     | `light`                                                        | —                                     |
+| `HAS_CALIBRATION`  | Offsets capteurs (cross-module) | —                                                              | `set_offset`, `request_calibration`   |
+| `HAS_RELAY`        | Dual relay board (2 ch.)        | `relay1`, `relay2`                                             | `relay_toggle`, `relay_contact`       |
+| `HAS_DISPLAY`      | Afficheur 7-segments + bouton   | —                                                              | —                                     |
+| `HAS_DEEP_SLEEP`   | Deep sleep entre lectures       | —                                                              | —                                     |
+| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série    | —                                                              | —                                     |
 
 > **Note** : `HAS_BME280`, `HAS_SHT30` et `HAS_MKR_ENV` sont mutuellement exclusifs.
 
@@ -83,6 +83,7 @@ test/test_native/       - Tests unitaires (Unity)
 docs/
   architecture.md       - Architecture logicielle
   configurations.md     - Index des configurations hardware
+  components.md         - Inventaire composants disponibles
   mqtt-protocol.md      - Protocole MQTT device-side
   battery-cells.md      - Guide test/récup cellules 18650
   modules/              - Doc par module optionnel (user-facing, SVG)

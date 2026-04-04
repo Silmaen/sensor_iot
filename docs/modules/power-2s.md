@@ -123,6 +123,9 @@ Use matched 18650 cells -- same brand, capacity, and internal resistance. The ce
 
 ## Related Documentation
 
-- [BMS 2S Battery Wiring (existing diagram)](../img/bms-2s-wiring.svg)
-- [Power Supply Chain (existing diagram)](../img/power-supply-chain.svg)
 - [Battery module (firmware)](battery.md) -- `HAS_BATTERY` flag for voltage monitoring
+- [Deep sleep module](deep-sleep.md) -- one-shot mode for battery life extension
+- [Battery cells guide](../battery-cells.md) -- testing and grading reclaimed 18650 cells
+- [Components inventory](../components.md) -- BMS, buck module, regulator specs
+- Configs using 2S power: [ESP+BMP280](../configs/esp-bmp280-battery.md),
+  [ESP+SHT30](../configs/esp-sht30-battery.md)

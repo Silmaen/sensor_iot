@@ -1,6 +1,8 @@
 # Architecture
 
-This document describes the modular architecture of the thermo firmware.
+This document describes the modular architecture of the thermo firmware. For the MQTT
+protocol details, see [mqtt-protocol.md](mqtt-protocol.md). For available hardware, see
+[components.md](components.md).
 
 ## Design goals
 
@@ -23,14 +25,19 @@ This document describes the modular architecture of the thermo firmware.
 
 Feature flags are defined as `-DHAS_xxx` in `platformio.ini` build flags.
 They control which code is compiled into the firmware via `#ifdef` guards.
+See [configurations](configurations.md) for which flags each device assembly uses.
 
-| Flag             | What it enables                                                 |
-|------------------|-----------------------------------------------------------------|
-| `HAS_BME280`     | BME/BMP280 I2C sensor initialization, reading, metrics          |
-| `HAS_SHT30`      | SHT30 I2C sensor initialization, reading, metrics (no pressure) |
-| `HAS_BATTERY`    | Battery ADC reading, SoC calculation, low-battery alert         |
-| `HAS_DISPLAY`    | 7-segment display, push button, display mode cycling            |
-| `HAS_DEEP_SLEEP` | One-shot execution mode with ESP8266 deep sleep (ESP8266 only)  |
+| Flag              | What it enables                                                 | Module doc                            |
+|-------------------|-----------------------------------------------------------------|---------------------------------------|
+| `HAS_BME280`      | BME/BMP280 I2C sensor initialization, reading, metrics          | [bme280](modules/bme280.md)           |
+| `HAS_SHT30`       | SHT30 I2C sensor initialization, reading, metrics (no pressure) | [sht30](modules/sht30.md)             |
+| `HAS_MKR_ENV`     | MKR ENV Shield sensors (HTS221 + LPS22HB + TEMT6000 + VEML6075) | [mkr-env](modules/mkr-env.md)         |
+| `HAS_BATTERY`     | Battery ADC reading, SoC calculation, low-battery alert         | [battery](modules/battery.md)         |
+| `HAS_LIGHT`       | Analog light sensor reading                                     | [light](modules/light.md)             |
+| `HAS_CALIBRATION` | Per-device sensor offsets (temperature, humidity, pressure)     | [calibration](modules/calibration.md) |
+| `HAS_RELAY`       | Dual relay board control (toggle + timed contact)               | [relay](modules/relay.md)             |
+| `HAS_DISPLAY`     | 7-segment display, push button, display mode cycling            | [display](modules/display.md)         |
+| `HAS_DEEP_SLEEP`  | One-shot execution mode with ESP8266 deep sleep (ESP8266 only)  | [deep-sleep](modules/deep-sleep.md)   |
 
 The `NATIVE` flag is set automatically for the native test build. Code
 inside `#ifndef NATIVE` is excluded from tests (hardware drivers, Arduino
@@ -217,6 +224,23 @@ Example output with `HAS_BME280` + `HAS_BATTERY`:
 
 ![Sensor publish data flow](img/architecture-data-flow.svg)
 
+### Calibration step
+
+When `HAS_CALIBRATION` is enabled, `calibration_apply(data)` is called between the sensor
+read and the module contribute step. This adjusts temperature, humidity, and pressure values
+in-place before they are serialized into the JSON payload. See [calibration module](modules/calibration.md).
+
+```c++
+SensorData data = sensor.read();
+#ifdef HAS_CALIBRATION
+calibration_apply(data);  // offsets applied in-place
+#endif
+bme280_module_contribute(pb, data);
+```
+
+Offsets can be set at build time (`-DCALIBRATION_TEMP_OFFSET=-1.5f`) or at runtime via the
+`set_offset` MQTT command.
+
 ## Adding a new module: step by step
 
 ### 1. Create the module in thermo_core
@@ -299,25 +323,29 @@ Add declarations and `RUN_TEST` calls to `test/test_native/test_main.cpp`.
 
 ## File reference
 
-| File                                             | Layer  | Purpose                                             |
-|--------------------------------------------------|--------|-----------------------------------------------------|
-| `platformio.ini`                                 | Config | Environments, feature flags, device identity        |
-| `include/config.h`                               | Config | MQTT topics, pins, timing (identity via -D flags)   |
-| `include/credentials.h`                          | Config | WiFi & MQTT credentials (gitignored)                |
-| `src/main.cpp`                                   | Glue   | Core orchestrator with `#ifdef` composition         |
-| `src/hw/esp_network.cpp`                         | HW     | ESP8266 WiFi + MQTT via PubSubClient                |
-| `src/hw/nina_network.cpp`                        | HW     | MKR WiFiNINA + MQTT via PubSubClient                |
-| `src/hw/bme280_sensor.cpp`                       | HW     | BME/BMP280 I2C driver (shared, Bosch formulas)      |
-| `src/hw/sht30_sensor.cpp`                        | HW     | SHT30 I2C driver (Sensirion, CRC-8 verified)        |
-| `src/hw/shift_display.cpp`                       | HW     | 7-segment via shift registers (ESP8266 only)        |
-| `src/hw/battery_adc.cpp`                         | HW     | ESP8266 ADC reading (10-bit, A0)                    |
-| `src/hw/samd_battery_adc.cpp`                    | HW     | MKR ADC reading (12-bit, ADC_BATTERY)               |
-| `src/hw/esp_sleep.cpp`                           | HW     | Deep sleep + RTC memory (ESP8266 only)              |
-| `lib/thermo_core/src/module_registry.cpp`        | Core   | Module registration and command dispatch            |
-| `lib/thermo_core/src/payload_builder.cpp`        | Core   | Incremental JSON builder                            |
-| `lib/thermo_core/src/mqtt_payload.cpp`           | Core   | Capabilities format, command parsing, status format |
-| `lib/thermo_core/src/modules/bme280_module.cpp`  | Module | BME280 metrics registration and contribution        |
-| `lib/thermo_core/src/modules/sht30_module.cpp`   | Module | SHT30 metrics registration and contribution         |
-| `lib/thermo_core/src/modules/battery_module.cpp` | Module | Battery metrics registration and contribution       |
-| `lib/thermo_core/src/battery.cpp`                | Core   | ADC-to-voltage, voltage-to-SoC math                 |
-| `lib/thermo_core/src/display_encoding.cpp`       | Core   | BCD encoding for 7-segment display                  |
+| File                                                 | Layer  | Purpose                                              |
+|------------------------------------------------------|--------|------------------------------------------------------|
+| `platformio.ini`                                     | Config | Environments, feature flags, device identity         |
+| `include/config.h`                                   | Config | MQTT topics, pins, timing (identity via -D flags)    |
+| `include/credentials.h`                              | Config | WiFi & MQTT credentials (gitignored)                 |
+| `src/main.cpp`                                       | Glue   | Core orchestrator with `#ifdef` composition          |
+| `src/hw/esp_network.cpp`                             | HW     | ESP8266 WiFi + MQTT via PubSubClient                 |
+| `src/hw/nina_network.cpp`                            | HW     | MKR WiFiNINA + MQTT via PubSubClient                 |
+| `src/hw/bme280_sensor.cpp`                           | HW     | BME/BMP280 I2C driver (shared, Bosch formulas)       |
+| `src/hw/sht30_sensor.cpp`                            | HW     | SHT30 I2C driver (Sensirion, CRC-8 verified)         |
+| `src/hw/shift_display.cpp`                           | HW     | 7-segment via shift registers (ESP8266 only)         |
+| `src/hw/battery_adc.cpp`                             | HW     | ESP8266 ADC reading (10-bit, A0)                     |
+| `src/hw/samd_battery_adc.cpp`                        | HW     | MKR ADC reading (12-bit, ADC_BATTERY)                |
+| `src/hw/esp_sleep.cpp`                               | HW     | Deep sleep + RTC memory (ESP8266 only)               |
+| `lib/thermo_core/src/module_registry.cpp`            | Core   | Module registration and command dispatch             |
+| `lib/thermo_core/src/payload_builder.cpp`            | Core   | Incremental JSON builder                             |
+| `lib/thermo_core/src/mqtt_payload.cpp`               | Core   | Capabilities format, command parsing, status format  |
+| `lib/thermo_core/src/modules/bme280_module.cpp`      | Module | BME280 metrics registration and contribution         |
+| `lib/thermo_core/src/modules/sht30_module.cpp`       | Module | SHT30 metrics registration and contribution          |
+| `lib/thermo_core/src/modules/battery_module.cpp`     | Module | Battery metrics registration and contribution        |
+| `lib/thermo_core/src/modules/mkr_env_module.cpp`     | Module | MKR ENV Shield metrics registration and contribution |
+| `lib/thermo_core/src/modules/light_module.cpp`       | Module | Light sensor metrics registration and contribution   |
+| `lib/thermo_core/src/modules/calibration_module.cpp` | Module | Sensor offset calibration command handler            |
+| `lib/thermo_core/src/modules/relay_module.cpp`       | Module | Relay control, toggle/contact commands               |
+| `lib/thermo_core/src/battery.cpp`                    | Core   | ADC-to-voltage, voltage-to-SoC math                  |
+| `lib/thermo_core/src/display_encoding.cpp`           | Core   | BCD encoding for 7-segment display                   |

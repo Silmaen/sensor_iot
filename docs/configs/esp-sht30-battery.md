@@ -1,7 +1,8 @@
 # ESP8266 + SHT30 Shield + 2S Battery + Deep Sleep
 
 D1 Mini with stacked SHT30 Shield, 2S battery pack, and deep sleep. More compact than
-the BME280 version since the sensor stacks directly, but no pressure measurement.
+the [BME280 version](esp-bmp280-battery.md) since the sensor stacks directly, but no pressure
+measurement. See [components inventory](../components.md) and [architecture](../architecture.md).
 
 ## Overview
 

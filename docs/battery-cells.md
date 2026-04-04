@@ -4,6 +4,12 @@ This project uses reclaimed 18650 cells from old laptop battery packs.
 Not all cells are usable — some are degraded or dead. This document
 describes how to test, grade, and safely use them.
 
+**Related docs:**
+[Cell tester config](configs/cell-tester.md) |
+[Battery monitoring module](modules/battery.md) |
+[2S power supply](modules/power-2s.md) |
+[Components inventory](components.md)
+
 ## Safety first
 
 - **Never short-circuit** a lithium cell (risk of fire/explosion).

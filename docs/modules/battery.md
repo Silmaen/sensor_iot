@@ -83,36 +83,36 @@ SoC = (V_bat - V_empty) / (V_full - V_empty) x 100
 
 | Voltage (V) | SoC (%) | Notes                    |
 |-------------|--------:|--------------------------|
-| 8.40        | 100     | Fully charged            |
-| 8.16        | 90      |                          |
-| 7.92        | 80      |                          |
-| 7.68        | 70      |                          |
-| 7.44        | 60      |                          |
-| 7.20        | 50      | Nominal                  |
-| 6.96        | 40      |                          |
-| 6.72        | 30      |                          |
-| 6.48        | 20      |                          |
-| 6.36        | 15      | Warning (low_battery)    |
-| 6.24        | 10      |                          |
-| 6.12        | 5       | Error (critical_battery) |
-| 6.00        | 0       | Empty / cutoff           |
+| 8.40        |     100 | Fully charged            |
+| 8.16        |      90 |                          |
+| 7.92        |      80 |                          |
+| 7.68        |      70 |                          |
+| 7.44        |      60 |                          |
+| 7.20        |      50 | Nominal                  |
+| 6.96        |      40 |                          |
+| 6.72        |      30 |                          |
+| 6.48        |      20 |                          |
+| 6.36        |      15 | Warning (low_battery)    |
+| 6.24        |      10 |                          |
+| 6.12        |       5 | Error (critical_battery) |
+| 6.00        |       0 | Empty / cutoff           |
 
 ### 1S LiPo (MKR WiFi 1010)
 
 | Voltage (V) | SoC (%) | Notes                    |
 |-------------|--------:|--------------------------|
-| 4.20        | 100     | Fully charged            |
-| 4.08        | 90      |                          |
-| 3.96        | 80      |                          |
-| 3.84        | 70      |                          |
-| 3.72        | 60      |                          |
-| 3.60        | 50      | Nominal                  |
-| 3.48        | 40      |                          |
-| 3.36        | 30      |                          |
-| 3.24        | 20      | Warning (low_battery)    |
-| 3.12        | 10      |                          |
-| 3.06        | 5       | Error (critical_battery) |
-| 3.00        | 0       | Empty / cutoff           |
+| 4.20        |     100 | Fully charged            |
+| 4.08        |      90 |                          |
+| 3.96        |      80 |                          |
+| 3.84        |      70 |                          |
+| 3.72        |      60 |                          |
+| 3.60        |      50 | Nominal                  |
+| 3.48        |      40 |                          |
+| 3.36        |      30 |                          |
+| 3.24        |      20 | Warning (low_battery)    |
+| 3.12        |      10 |                          |
+| 3.06        |       5 | Error (critical_battery) |
+| 3.00        |       0 | Empty / cutoff           |
 
 > **Note:** Real LiPo discharge curves are non-linear. The linear mapping is a deliberate
 > simplification. For higher accuracy, a lookup table or polynomial fit could replace the linear
@@ -151,3 +151,14 @@ build_flags =
 | `src/hw/battery_adc.cpp`                         | ESP8266 ADC driver (`analogRead(A0)`)                |
 | `src/hw/samd_battery_adc.cpp`                    | MKR WiFi 1010 ADC driver (12-bit)                    |
 | `include/config.h`                               | Pin definitions and `BATTERY_LOW_THRESHOLD`          |
+
+## See Also
+
+- [2S power supply](power-2s.md) — hardware power chain for battery-powered nodes
+- [Deep sleep](deep-sleep.md) — one-shot mode for battery life extension
+- [Calibration](calibration.md) — per-device sensor offset correction
+- [Battery cells guide](../battery-cells.md) — testing and grading reclaimed 18650 cells
+- [MQTT protocol](../mqtt-protocol.md) — battery metrics and alert format
+- [Components inventory](../components.md) — battery hardware (BMS, cells, buck module)
+- Configs using this module: [ESP+BMP280](../configs/esp-bmp280-battery.md),
+  [ESP+SHT30](../configs/esp-sht30-battery.md), [MKR+ENV](../configs/mkr-env-battery.md)

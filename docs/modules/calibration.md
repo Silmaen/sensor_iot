@@ -12,9 +12,10 @@ It is enabled by the `-DHAS_CALIBRATION` build flag and works with **any** senso
 
 **Commands** (on `thermo/{id}/command`):
 
-| Action       | Payload                                                 | Effect                          |
-|--------------|---------------------------------------------------------|---------------------------------|
-| `set_offset` | `{"action":"set_offset","metric":"temp","value":-0.5}`  | Set calibration offset          |
+| Action                  | Payload                                                | Effect                            |
+|-------------------------|--------------------------------------------------------|-----------------------------------|
+| `set_offset`            | `{"action":"set_offset","metric":"temp","value":-0.5}` | Set calibration offset            |
+| `request_calibration`   | `{"action":"request_calibration"}`                     | Device publishes current offsets  |
 
 ## Why Calibrate?
 
@@ -105,6 +106,41 @@ To lower a reading that's too high, use a **negative** offset. Examples:
 3. Note the difference: `offset = reference - device_reading`
 4. Send the `set_offset` command via the server UI or MQTT
 
+## Command: `request_calibration`
+
+The server sends this command to query the current offsets. The device responds by publishing
+a JSON payload with the three current offsets on the `ack` topic:
+
+```json
+{"action":"request_calibration"}
+```
+
+**Response** (on `thermo/{id}/ack`):
+
+```json
+{"temp":-1.50,"humi":3.00,"press":-0.30}
+```
+
+This is useful after a device reboots (to verify which offsets are active) or to audit
+calibration across the fleet.
+
+### Integration pattern
+
+The module calls a response callback when the command is received. Platform code provides
+this callback to format and publish the response:
+
+```c++
+// In setup():
+calibration_module_set_response_callback(publish_calibration);
+
+// Callback:
+static void publish_calibration() {
+    char buf[96];
+    calibration_format_response(buf, sizeof(buf));
+    network.publish(MQTT_TOPIC_ACK, buf);
+}
+```
+
 ## Firmware Integration
 
 The `calibration_apply()` function is called in `main.cpp` between the sensor read and the module
@@ -184,4 +220,10 @@ void calibration_module_set_persist_callback(CalibrationPersistCallback cb);
 - Offsets are clamped to ±50 — extreme values are rejected.
 - Humidity is clamped to 0–100% after offset application.
 - Setting an offset to 0 effectively disables calibration for that metric.
-- On reboot without persistence, offsets default to 0 (raw readings).
+- On reboot without persistence, offsets default to build-time values (`CALIBRATION_*_OFFSET`).
+
+## See Also
+
+- [BME280](bme280.md), [SHT30](sht30.md), [MKR ENV](mkr-env.md) — sensor modules this calibration applies to
+- [MQTT protocol](../mqtt-protocol.md) — `set_offset` command format
+- [Architecture](../architecture.md) — module system and feature flags

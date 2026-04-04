@@ -179,3 +179,12 @@ build_flags =
 | `RTC_MAGIC`                | 0xDEADBEEF | `config.h`      | RTC memory validity marker |
 | `RTC_SLOT`                 | 64         | `esp_sleep.cpp` | RTC memory slot number     |
 | `MQTT_COMMAND_WAIT_MS`     | 2000       | `config.h`      | Retained command wait (ms) |
+
+## See Also
+
+- [Battery](battery.md) — required dependency for deep sleep mode
+- [2S power supply](power-2s.md) — hardware power chain for battery nodes
+- [MQTT protocol](../mqtt-protocol.md) — one-shot mode command handling
+- [Architecture](../architecture.md) — continuous vs one-shot execution modes
+- Configs using this module: [ESP+BMP280+Battery](../configs/esp-bmp280-battery.md),
+  [ESP+SHT30+Battery](../configs/esp-sht30-battery.md)

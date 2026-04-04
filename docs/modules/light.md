@@ -120,3 +120,10 @@ When active alongside other modules, the device publishes on `thermo/{device_id}
 | Always reads 100%  | VCC connected to signal pin  | Verify SIG goes to ADC, not VCC                |
 | Erratic readings   | Long wire or no decoupling   | Add 100nF cap near sensor, keep wires short    |
 | Conflicts with bat | A0 shared on ESP8266         | Use ESP32 or add analog multiplexer            |
+
+## See Also
+
+- [MKR ENV](mkr-env.md) — alternative with calibrated lux sensor (TEMT6000)
+- [MQTT protocol](../mqtt-protocol.md) — metric names and payload format
+- [Components inventory](../components.md) — Seeedstudio light sensor specs
+- [Architecture](../architecture.md) — module system and feature flags

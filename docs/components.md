@@ -1,6 +1,8 @@
 je vois 2 fichie# Available Electronic Components
 
 Components listed here should be used in priority when designing circuits and features for this project.
+See [configurations](configurations.md) for how these components are assembled into devices, and
+[architecture](architecture.md) for the firmware module system.
 
 ## MCU
 
@@ -13,14 +15,16 @@ Components listed here should be used in priority when designing circuits and fe
 
 ## Sensors
 
-| Component               | Quantity | Notes                                                                   |
-|-------------------------|----------|-------------------------------------------------------------------------|
-| bme/bmp280              | 1        | I2C temperature/humidity/pressure (standalone, for ESP8266 configs)     |
-| SHT30 Shield v2.1.0     | several  | Wemos D1 Mini stackable shield, I2C 0x44/0x45, ±0.2°C / ±2%RH           |
-| MKR ENV Shield BME280   | 1        | Same sensor, integrated on the shield (for MKR config)                  |
-| Seeedstudio Light Sens. | 1        | Analog light sensor (photoresistor), outputs 0–3.3V proportional to lux |
+| Component               | Quantity | Notes                                                                    |
+|-------------------------|----------|--------------------------------------------------------------------------|
+| bme/bmp280              | 1        | I2C temp/humi/pressure — see [module doc](modules/bme280.md)             |
+| SHT30 Shield v2.1.0     | several  | Wemos D1 Mini stackable shield, I2C — see [module doc](modules/sht30.md) |
+| MKR ENV Shield BME280   | 1        | HTS221+LPS22HB+TEMT6000+VEML6075 — see [module doc](modules/mkr-env.md)  |
+| Seeedstudio Light Sens. | 1        | Analog photoresistor, 0–3.3V — see [module doc](modules/light.md)        |
 
 ## Display
+
+See [display module](modules/display.md) for wiring and firmware details.
 
 | Component  | Quantity | Notes                                               |
 |------------|----------|-----------------------------------------------------|
@@ -119,9 +123,9 @@ Example for "23.5": send `0x2523` → dig0=2, dig1=3, dig2=5, DP1=ON (decimal be
 
 ## Actuators
 
-| Component              | Quantity | Notes                                                            |
-|------------------------|----------|------------------------------------------------------------------|
-| Dual Relay Board 10A   | 1        | 2-channel relay module, 5V coil, SPDT (NO+NC+COM), optocoupled  |
+| Component            | Quantity | Notes                                                                       |
+|----------------------|----------|-----------------------------------------------------------------------------|
+| Dual Relay Board 10A | 1        | 2-ch relay, 5V coil, SPDT, optocoupled — see [module doc](modules/relay.md) |
 
 ## Inputs
 
@@ -143,15 +147,18 @@ active LOW with 100nF debounce capacitor to GND.
 
 ## Power
 
-| Component          | Quantity | Notes                                                                                  |
-|--------------------|----------|----------------------------------------------------------------------------------------|
-| H78M05BT           | 9        | 5V linear regulator 500mA                                                              |
-| L78M09CV           | 10       | 9V linear regulator 500mA                                                              |
-| L78m33ACV          | 6        | 3.3V linear regulator 500mA                                                            |
-| 18650 cells        | several  | Reclaimed from laptop packs, 3.7V nominal (see [battery guide](docs/battery-cells.md)) |
-| BMS 2S (7.4V/8.4V) | 5        | JZK HX-2S, overcharge/overdischarge/short-circuit protection for 2S 18650              |
-| MP1584 buck module | -        | Adjustable step-down 4.5–28V → 0.8–20V, 3A max, set to 5V for D1 Mini                  |
-| 100µF electrolytic | -        | Bulk decoupling on buck output, filters ripple for ESP8266 WiFi + ADC                  |
+See [2S power module](modules/power-2s.md) for the battery power chain and
+[battery module](modules/battery.md) for voltage monitoring firmware.
+
+| Component          | Quantity | Notes                                                                             |
+|--------------------|----------|-----------------------------------------------------------------------------------|
+| H78M05BT           | 9        | 5V linear regulator 500mA                                                         |
+| L78M09CV           | 10       | 9V linear regulator 500mA                                                         |
+| L78m33ACV          | 6        | 3.3V linear regulator 500mA                                                       |
+| 18650 cells        | several  | Reclaimed from laptop packs, 3.7V nominal (see [battery guide](battery-cells.md)) |
+| BMS 2S (7.4V/8.4V) | 5        | JZK HX-2S, overcharge/overdischarge/short-circuit protection for 2S 18650         |
+| MP1584 buck module | -        | Adjustable step-down 4.5–28V → 0.8–20V, 3A max, set to 5V for D1 Mini             |
+| 100µF electrolytic | -        | Bulk decoupling on buck output, filters ripple for ESP8266 WiFi + ADC             |
 
 ### 18650 Cell References
 
@@ -165,7 +172,7 @@ active LOW with 100nF debounce capacitor to GND.
 
 ## Cell Tester
 
-Components for the 18650 cell tester (see [battery guide](docs/battery-cells.md)):
+Components for the 18650 cell tester (see [battery guide](battery-cells.md)):
 
 | Component                           | Quantity | Notes                                                   |
 |-------------------------------------|----------|---------------------------------------------------------|

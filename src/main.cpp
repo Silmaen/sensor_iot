@@ -20,6 +20,10 @@
 #include "modules/battery_module.h"
 #endif
 
+#ifdef HAS_CALIBRATION
+#include "modules/calibration_module.h"
+#endif
+
 #ifndef NATIVE
 #include <Arduino.h>
 
@@ -104,6 +108,15 @@ static void on_battery_calibrated(float new_ratio) {
 }
 #endif
 
+#if defined(HAS_CALIBRATION) && !defined(NATIVE)
+static void on_calibration_requested() {
+    char buf[96];
+    calibration_format_response(buf, sizeof(buf));
+    DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_ACK, buf);
+    network.publish(MQTT_TOPIC_ACK, buf);
+}
+#endif
+
 static const CommandParamDef set_interval_params[] = {
     {"value", "number"},
 };
@@ -126,6 +139,9 @@ static void register_modules() {
 #ifdef HAS_BATTERY
     battery_module_register(registry);
 #endif
+#ifdef HAS_CALIBRATION
+    calibration_module_register(registry);
+#endif
 }
 
 #ifndef NATIVE
@@ -135,6 +151,9 @@ static void publish_sensor_data() {
     char buf[256];
     PayloadBuilder pb{buf, sizeof(buf), 0, true};
     pb.begin();
+#if defined(HAS_CALIBRATION) && (defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV))
+    calibration_apply(last_data);
+#endif
 #ifdef HAS_BME280
     bme280_module_contribute(pb, last_data);
 #endif
@@ -312,6 +331,10 @@ void setup() {
 
 #if defined(HAS_BATTERY)
     battery_module_set_adc_reader(read_battery_adc);
+#endif
+
+#if defined(HAS_CALIBRATION)
+    calibration_module_set_response_callback(on_calibration_requested);
 #endif
 
 #ifdef HAS_BME280

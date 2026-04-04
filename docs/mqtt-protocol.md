@@ -4,6 +4,8 @@ This document describes the MQTT protocol that thermo devices must implement
 to communicate with the sensor_server. It is the client-side counterpart to
 the server's `docs/mqtt-protocol.md` (in `../sensor_server/`).
 
+**Related docs:** [architecture](architecture.md) | [configurations](configurations.md)
+
 ## Topic structure
 
 All topics follow:
@@ -87,8 +89,8 @@ Publish structured alerts when the device detects a problem or recovers.
 
 | Field     | Type   | Required | Values                               |
 |-----------|--------|:--------:|--------------------------------------|
-| `level`   | string | Yes      | `"warning"`, `"error"`, or `"ok"`    |
-| `message` | string | No       | Human-readable detail, max 256 chars |
+| `level`   | string |   Yes    | `"warning"`, `"error"`, or `"ok"`    |
+| `message` | string |    No    | Human-readable detail, max 256 chars |
 
 - `"ok"` (or `""`) **clears** any existing alert on the server.
 - `"warning"`: degraded state (e.g. low battery, sensor drift).
@@ -149,6 +151,7 @@ Commands are routed through the `ModuleRegistry`:
 | `set_interval`         | seconds (1-86400)                     | Core        | Updates publish/sleep interval          |
 | `request_capabilities` | _(none)_                              | Core        | Responds with capabilities (section 4)  |
 | `set_offset`           | `{"metric":"<name>","value":<float>}` | Calibration | Set sensor offset (temp/humi/press)     |
+| `request_calibration`  | _(none)_                              | Calibration | Device publishes current offsets on ack  |
 | `relay_toggle`         | `{"value":<1\|2>}`                    | Relay       | Toggle relay on/off                     |
 | `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`       | Relay       | Activate relay, auto-revert after delay |
 

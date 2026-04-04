@@ -107,3 +107,10 @@ The firmware shifts 16 bits MSB-first. The first 8 bits go to HC595 #2, the seco
 The display module is used in the `thermo_display` environment:
 
 - `thermo_display` -- ESP8266 D1 Mini with BME280 + 7-segment display + USB power
+
+## See Also
+
+- [BME280](bme280.md), [SHT30](sht30.md) — sensor modules whose readings the display shows
+- [Components inventory](../components.md) — display IC specs (HC595, LS247, LS04, 7-segment)
+- [Architecture](../architecture.md) — module system and feature flags
+- Config using this module: [ESP+SHT30+Display](../configs/esp-display-sht30.md)

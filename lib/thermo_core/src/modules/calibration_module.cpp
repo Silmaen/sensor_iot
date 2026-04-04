@@ -26,6 +26,7 @@ static float temp_offset  = CALIBRATION_TEMP_OFFSET;
 static float humi_offset  = CALIBRATION_HUMI_OFFSET;
 static float press_offset = CALIBRATION_PRESS_OFFSET;
 static CalibrationPersistCallback persist_cb = nullptr;
+static CalibrationResponseCallback response_cb = nullptr;
 
 // --- Local JSON helpers ---
 
@@ -99,6 +100,12 @@ static bool handle_set_offset(const char* payload) {
     return true;
 }
 
+static bool handle_request_calibration(const char* /*payload*/) {
+    if (response_cb)
+        response_cb();
+    return true;
+}
+
 static const CommandParamDef offset_params[] = {
     {"metric", "string"},
     {"value",  "number"},
@@ -108,6 +115,7 @@ static const CommandParamDef offset_params[] = {
 
 void calibration_module_register(ModuleRegistry& reg) {
     reg.add_command("set_offset", handle_set_offset, offset_params, 2);
+    reg.add_command("request_calibration", handle_request_calibration);
 }
 
 void calibration_apply(SensorData& data) {
@@ -129,13 +137,24 @@ void calibration_module_set_offsets(float temp, float humi, float press) {
     press_offset = press;
 }
 
+int calibration_format_response(char* buf, size_t buf_size) {
+    return snprintf(buf, buf_size,
+        "{\"temp\":%.2f,\"humi\":%.2f,\"press\":%.2f}",
+        temp_offset, humi_offset, press_offset);
+}
+
 void calibration_module_reset() {
     temp_offset  = default_temp_offset;
     humi_offset  = default_humi_offset;
     press_offset = default_press_offset;
     persist_cb   = nullptr;
+    response_cb  = nullptr;
 }
 
 void calibration_module_set_persist_callback(CalibrationPersistCallback cb) {
     persist_cb = cb;
+}
+
+void calibration_module_set_response_callback(CalibrationResponseCallback cb) {
+    response_cb = cb;
 }

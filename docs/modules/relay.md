@@ -179,3 +179,9 @@ When active, the device publishes relay state alongside other metrics on `thermo
   immediately (fail-safe). No persistent timer state is stored across reboots.
 - **Concurrent commands**: a `relay_toggle` cancels any pending `relay_contact` timer on
   the same relay. A new `relay_contact` replaces the previous timer.
+
+## See Also
+
+- [MQTT protocol](../mqtt-protocol.md) — command format and acknowledgement flow
+- [Components inventory](../components.md) — Dual Relay Board hardware specs
+- [Architecture](../architecture.md) — module system, command dispatch

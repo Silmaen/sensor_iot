@@ -1,6 +1,7 @@
 # MKR + ENV Shield + 1S Battery
 
 MKR WiFi 1010 with stacked ENV Shield and single 18650 cell. Compact indoor sensor.
+See [components inventory](../components.md) and [architecture](../architecture.md).
 
 ## Overview
 

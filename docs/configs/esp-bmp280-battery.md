@@ -1,7 +1,8 @@
 # ESP8266 + BMP/BME280 + 2S Battery + Deep Sleep
 
 D1 Mini with external BME/BMP280 breakout, 2S battery pack, and deep sleep for maximum
-autonomy.
+autonomy. See [components inventory](../components.md) for available hardware and
+[architecture](../architecture.md) for the module system.
 
 ## Overview
 

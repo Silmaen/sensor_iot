@@ -172,3 +172,13 @@ When active with battery monitoring, the device publishes on `thermo/{device_id}
 | Light reads 0 indoors      | TEMT6000 range limited          | Sensor maxes at ~330 lux (bright indoor)         |
 | UV index always 0          | Indoors / no UV source          | VEML6075 needs direct UV exposure                |
 | Previously used HAS_BME280 | Wrong build flag for ENV Shield | Change to `-DHAS_MKR_ENV` in platformio.ini      |
+
+## See Also
+
+- [Calibration](calibration.md) — per-device offset correction (recommended for cross-sensor consistency)
+- [BME280](bme280.md), [SHT30](sht30.md) — mutually exclusive alternative sensor modules
+- [Battery](battery.md) — battery monitoring (used together in MKR config)
+- [MQTT protocol](../mqtt-protocol.md) — metric names and payload format
+- [Components inventory](../components.md) — MKR ENV Shield hardware specs
+- [Architecture](../architecture.md) — module system and feature flags
+- Config using this module: [MKR+ENV+Battery](../configs/mkr-env-battery.md)

@@ -1,6 +1,7 @@
 # Cell Tester
 
 MKR WiFi 1010 as an 18650 cell tester and charger. Serial only, no WiFi/MQTT.
+See [battery cells guide](../battery-cells.md) and [components inventory](../components.md).
 
 ## Overview
 

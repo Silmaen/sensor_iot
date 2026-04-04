@@ -1,7 +1,8 @@
 # ESP8266 + SHT30 Shield + 7-Segment Display
 
 D1 Mini with stacked SHT30 Shield and 3-digit 7-segment display. USB powered, always
-on, intended as an indoor display station.
+on, intended as an indoor display station. See [components inventory](../components.md)
+and [architecture](../architecture.md).
 
 ## Overview
 

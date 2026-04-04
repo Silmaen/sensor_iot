@@ -1,7 +1,8 @@
 # Hardware Configurations
 
 Overview of all available device assemblies. Each configuration combines reusable
-[modules](modules/) into a specific hardware build.
+[modules](modules/) into a specific hardware build. See [architecture](architecture.md) for how the
+module system works and [components](components.md) for the available hardware inventory.
 
 ## Configurations
 
@@ -17,13 +18,13 @@ Overview of all available device assemblies. Each configuration combines reusabl
 
 Shows which `HAS_xxx` flags each configuration uses.
 
-| Config                | `HAS_BME280` | `HAS_SHT30` | `HAS_BATTERY` | `HAS_DEEP_SLEEP` | `HAS_DISPLAY` | `HAS_SERIAL_DEBUG` |
-|-----------------------|:------------:|:-----------:|:-------------:|:----------------:|:-------------:|:------------------:|
-| Cell Tester           | --           | --          | --            | --               | --            | --                 |
-| MKR + ENV + Battery   | x            | --          | x             | --               | --            | x                  |
-| ESP + BMP280 + 2S     | x            | --          | x             | x                | --            | --                 |
-| ESP + SHT30 + 2S      | --           | x           | x             | x                | --            | --                 |
-| ESP + SHT30 + Display | --           | x           | --            | --               | x             | x                  |
+| Config                | [`BME280`](modules/bme280.md) | [`SHT30`](modules/sht30.md) | [`BATTERY`](modules/battery.md) | [`DEEP_SLEEP`](modules/deep-sleep.md) | [`DISPLAY`](modules/display.md) | `SERIAL_DEBUG` |
+|-----------------------|:-----------------------------:|:---------------------------:|:-------------------------------:|:-------------------------------------:|:-------------------------------:|:--------------:|
+| Cell Tester           |              --               |             --              |               --                |                  --                   |               --                |       --       |
+| MKR + ENV + Battery   |               x               |             --              |                x                |                  --                   |               --                |       x        |
+| ESP + BMP280 + 2S     |               x               |             --              |                x                |                   x                   |               --                |       --       |
+| ESP + SHT30 + 2S      |              --               |              x              |                x                |                   x                   |               --                |       --       |
+| ESP + SHT30 + Display |              --               |              x              |               --                |                  --                   |                x                |       x        |
 
 **Notes:**
 

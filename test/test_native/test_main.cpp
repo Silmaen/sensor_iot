@@ -92,6 +92,8 @@ void test_calibration_set_offset_command_humi(void);
 void test_calibration_set_offset_command_press(void);
 void test_calibration_set_offset_invalid_metric(void);
 void test_calibration_set_offset_extreme_rejected(void);
+void test_calibration_request_calibration(void);
+void test_calibration_format_response(void);
 void test_calibration_set_offset_zero(void);
 void test_light_module_register(void);
 void test_light_module_contribute(void);
@@ -213,6 +215,8 @@ int main(int argc, char** argv) {
     RUN_TEST(test_calibration_set_offset_command_press);
     RUN_TEST(test_calibration_set_offset_invalid_metric);
     RUN_TEST(test_calibration_set_offset_extreme_rejected);
+    RUN_TEST(test_calibration_request_calibration);
+    RUN_TEST(test_calibration_format_response);
     RUN_TEST(test_calibration_set_offset_zero);
 
     // Light module

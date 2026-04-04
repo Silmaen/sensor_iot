@@ -174,8 +174,9 @@ void test_calibration_module_register(void) {
     reg.init();
     calibration_module_register(reg);
     TEST_ASSERT_EQUAL(0, reg.num_metrics);
-    TEST_ASSERT_EQUAL(1, reg.num_commands);
+    TEST_ASSERT_EQUAL(2, reg.num_commands);
     TEST_ASSERT_EQUAL_STRING("set_offset", reg.commands[0]);
+    TEST_ASSERT_EQUAL_STRING("request_calibration", reg.commands[1]);
 }
 
 void test_calibration_apply_zero_offsets(void) {
@@ -274,6 +275,38 @@ void test_calibration_set_offset_extreme_rejected(void) {
     bool ok = reg.dispatch("set_offset",
         "{\"action\":\"set_offset\",\"metric\":\"temp\",\"value\":99.0}");
     TEST_ASSERT_FALSE(ok);
+}
+
+void test_calibration_request_calibration(void) {
+    calibration_module_reset();
+    calibration_module_set_offsets(-1.5f, 3.0f, -0.3f);
+
+    static bool response_called = false;
+    response_called = false;
+    calibration_module_set_response_callback([]() {
+        response_called = true;
+    });
+
+    ModuleRegistry reg;
+    reg.init();
+    calibration_module_register(reg);
+
+    bool ok = reg.dispatch("request_calibration",
+        "{\"action\":\"request_calibration\"}");
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_TRUE(response_called);
+}
+
+void test_calibration_format_response(void) {
+    calibration_module_reset();
+    calibration_module_set_offsets(-1.5f, 3.0f, -0.3f);
+
+    char buf[128];
+    int len = calibration_format_response(buf, sizeof(buf));
+    TEST_ASSERT_GREATER_THAN(0, len);
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"temp\":-1.50"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humi\":3.00"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"press\":-0.30"));
 }
 
 void test_calibration_set_offset_zero(void) {
