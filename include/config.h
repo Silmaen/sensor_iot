@@ -36,6 +36,11 @@
   // Battery ADC
   #define PIN_BATTERY_ADC A0
 
+  // Battery divider power switch (optional, needs N-MOSFET on this pin).
+  // When defined, the divider is only powered during ADC reads (~1ms),
+  // saving ~247µA quiescent current during deep sleep.
+  // #define PIN_BATTERY_SWITCH 0  // D3 (GPIO0) — uncomment when MOSFET is wired
+
 #elif defined(ARDUINO_SAMD_MKRWIFI1010)
 
   // I2C: default Wire pins (SDA/SCL defined by board variant)

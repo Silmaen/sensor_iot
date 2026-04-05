@@ -20,6 +20,10 @@
 #include "modules/battery_module.h"
 #endif
 
+#ifdef HAS_BH1750
+#include "modules/bh1750_module.h"
+#endif
+
 #ifdef HAS_CALIBRATION
 #include "modules/calibration_module.h"
 #endif
@@ -72,6 +76,11 @@ static bool last_button_state           = true;
 #else
 #include "hw/battery_adc.h"
 #endif
+#endif
+
+#ifdef HAS_BH1750
+#include "hw/bh1750_sensor.h"
+static Bh1750Sensor light_sensor;
 #endif
 
 #ifdef HAS_DEEP_SLEEP
@@ -144,6 +153,9 @@ static void register_modules() {
 #ifdef HAS_BATTERY
     battery_module_register(registry);
 #endif
+#ifdef HAS_BH1750
+    bh1750_module_register(registry);
+#endif
 #ifdef HAS_CALIBRATION
     calibration_module_register(registry);
 #endif
@@ -167,6 +179,13 @@ static void publish_sensor_data() {
 #endif
 #ifdef HAS_MKR_ENV
     mkr_env_module_contribute(pb, last_data);
+#endif
+#ifdef HAS_BH1750
+    {
+        float lux = light_sensor.read_lux();
+        if (lux >= 0.0f)
+            bh1750_module_contribute(pb, lux);
+    }
 #endif
 #ifdef HAS_BATTERY
     uint16_t adc_raw = read_battery_adc();
@@ -341,6 +360,9 @@ void setup() {
 
 #if defined(HAS_BATTERY)
     battery_module_set_adc_reader(read_battery_adc);
+#if defined(ESP8266) && defined(PIN_BATTERY_SWITCH)
+    battery_adc_begin();
+#endif
 #endif
 
 #if defined(HAS_CALIBRATION)
@@ -374,6 +396,12 @@ void setup() {
         sleeper.deep_sleep(publish_interval_s);
         return;
 #endif
+    }
+#endif
+
+#ifdef HAS_BH1750
+    if (!light_sensor.begin()) {
+        Serial.println("BH1750 init failed!");
     }
 #endif
 

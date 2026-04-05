@@ -52,6 +52,41 @@ scales the 2S pack voltage down to the ADC input range.
 | V_adc at 6.0 V   | 2.12 V (ADC ~657)                  |
 | ADC pin          | `A0` (`PIN_BATTERY_ADC`)           |
 
+#### MOSFET Divider Switch (recommended)
+
+The voltage divider draws **~247 µA continuously**, including during deep sleep. An N-channel MOSFET
+on the low side of R2 cuts this drain to zero when not reading.
+
+| Parameter              | Value                                                |
+|------------------------|------------------------------------------------------|
+| Switch pin             | `D3` (GPIO0) — `PIN_BATTERY_SWITCH` in `config.h`   |
+| MOSFET                 | 2N7000, BS170, or any logic-level N-MOSFET           |
+| Vgs(th) requirement    | < 2V (must fully turn on at 3.3V gate drive)         |
+| Settling time          | 500 µs (RC time constant of divider + ADC input cap) |
+| Quiescent savings      | ~247 µA eliminated during deep sleep                 |
+
+**Circuit:** R1 (22k) → mid-point (to A0) → R2 (12k) → Q1 drain. Q1 source → GND. Q1 gate → D3.
+
+When `D3 = HIGH`, Q1 conducts, the divider is active, and A0 reads the battery voltage.
+When `D3 = LOW` (or during deep sleep), Q1 is off, no current flows through the divider.
+
+**Firmware:** Enable by uncommenting `PIN_BATTERY_SWITCH` in `config.h`. The ADC driver
+automatically toggles the pin before/after each read.
+
+**Compatible transistors** (any of these work):
+
+| Type     | Part       | Vgs(th) | Rds(on)  | Package  | Notes                        |
+|----------|------------|---------|----------|----------|------------------------------|
+| N-MOSFET | **2N7000** | 1.0-3.0V | 1.8 ohm  | TO-92    | Most common, easy to solder  |
+| N-MOSFET | **BS170**  | 0.8-3.0V | 1.2 ohm  | TO-92    | Lower Rds(on) than 2N7000   |
+| N-MOSFET | **IRLML6344** | 0.8V | 0.029 ohm | SOT-23 | SMD, excellent for low power |
+| NPN BJT  | **2N2222** | Vbe~0.7V | —        | TO-92    | Needs 10k base resistor      |
+| NPN BJT  | **BC547**  | Vbe~0.7V | —        | TO-92    | Needs 10k base resistor      |
+
+> **N-MOSFET vs NPN:** MOSFETs are preferred — they draw zero gate current and switch cleanly
+> from a GPIO. NPN transistors work too but need a base resistor (~10k) and draw ~330 µA from the
+> GPIO when on. For a switch that's only on for 1 ms per cycle, either is fine.
+
 ![ESP8266 battery wiring diagram](../img/battery-wiring.svg)
 
 ![Battery monitoring schematic](../img/battery-schematic.svg)

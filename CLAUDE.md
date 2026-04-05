@@ -20,6 +20,7 @@ Le projet s'articule autour de :
 | `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)     | `temperature`, `humidity`, `pressure`, `light_lux`, `uv_index` | —                                     |
 | `HAS_BATTERY`      | Monitoring batterie             | `battery_pct`, `battery_v`                                     | —                                     |
 | `HAS_LIGHT`        | Capteur luminosité (analog)     | `light`                                                        | —                                     |
+| `HAS_BH1750`       | Capteur lux BH1750 (I2C)       | `lux`                                                          | —                                     |
 | `HAS_CALIBRATION`  | Offsets capteurs (cross-module) | —                                                              | `set_offset`, `request_calibration`   |
 | `HAS_RELAY`        | Dual relay board (2 ch.)        | `relay1`, `relay2`                                             | `relay_toggle`, `relay_contact`       |
 | `HAS_DISPLAY`      | Afficheur 7-segments + bouton   | —                                                              | —                                     |

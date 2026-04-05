@@ -7,6 +7,7 @@
 #include "modules/relay_module.h"
 #include "modules/light_module.h"
 #include "modules/calibration_module.h"
+#include "modules/bh1750_module.h"
 
 void test_bme280_module_register(void) {
     ModuleRegistry reg;
@@ -320,6 +321,49 @@ void test_calibration_set_offset_zero(void) {
         "{\"action\":\"set_offset\",\"metric\":\"temp\",\"value\":0}");
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, calibration_get_temp_offset());
+}
+
+// --- BH1750 module tests ---
+
+void test_bh1750_module_register(void) {
+    ModuleRegistry reg;
+    reg.init();
+    bh1750_module_register(reg);
+    TEST_ASSERT_EQUAL(1, reg.num_metrics);
+    TEST_ASSERT_EQUAL_STRING("lux", reg.metrics[0]);
+    TEST_ASSERT_EQUAL_STRING("lx", reg.metric_units[0]);
+}
+
+void test_bh1750_module_contribute(void) {
+    char buf[64];
+    PayloadBuilder pb{buf, sizeof(buf), 0, true};
+    pb.begin();
+    bh1750_module_contribute(pb, 342.5f);
+    pb.end();
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"lux\":342"));
+}
+
+void test_bh1750_module_contribute_zero(void) {
+    char buf[64];
+    PayloadBuilder pb{buf, sizeof(buf), 0, true};
+    pb.begin();
+    bh1750_module_contribute(pb, 0.0f);
+    pb.end();
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"lux\":0"));
+}
+
+void test_bh1750_with_sht30(void) {
+    SensorData data = {21.0f, 55.0f, 0.0f, 0.0f, 0.0f, true};
+    char buf[128];
+    PayloadBuilder pb{buf, sizeof(buf), 0, true};
+    pb.begin();
+    sht30_module_contribute(pb, data);
+    bh1750_module_contribute(pb, 150.0f);
+    pb.end();
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"temp\":21.0"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"lux\":150"));
+    TEST_ASSERT_EQUAL('{', buf[0]);
+    TEST_ASSERT_EQUAL('}', buf[strlen(buf) - 1]);
 }
 
 // --- Light module tests ---

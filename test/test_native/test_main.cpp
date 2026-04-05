@@ -82,6 +82,10 @@ void test_mkr_env_module_with_battery(void);
 void test_battery_module_register(void);
 void test_battery_module_contribute(void);
 void test_combined_modules_contribute(void);
+void test_bh1750_module_register(void);
+void test_bh1750_module_contribute(void);
+void test_bh1750_module_contribute_zero(void);
+void test_bh1750_with_sht30(void);
 void test_calibration_module_register(void);
 void test_calibration_apply_zero_offsets(void);
 void test_calibration_apply_temp_offset(void);
@@ -203,6 +207,12 @@ int main(int argc, char** argv) {
     RUN_TEST(test_battery_module_register);
     RUN_TEST(test_battery_module_contribute);
     RUN_TEST(test_combined_modules_contribute);
+
+    // BH1750 module
+    RUN_TEST(test_bh1750_module_register);
+    RUN_TEST(test_bh1750_module_contribute);
+    RUN_TEST(test_bh1750_module_contribute_zero);
+    RUN_TEST(test_bh1750_with_sht30);
 
     // Calibration module
     RUN_TEST(test_calibration_module_register);

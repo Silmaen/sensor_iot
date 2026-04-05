@@ -70,6 +70,7 @@ its fields (see [architecture.md](architecture.md)).
 | `battery_pct` | `HAS_BATTERY` | uint               | %       | Battery state of charge (0-100)                      |
 | `battery_v`   | `HAS_BATTERY` | float (2 decimals) | V       | Battery voltage (ESP: 2S 6.0-8.4V, MKR: 1S 3.0-4.2V) |
 | `light`       | `HAS_LIGHT`   | uint               | %       | Relative light level (0 = dark, 100 = bright)        |
+| `lux`         | `HAS_BH1750`  | float (0 decimals) | lx      | Calibrated illuminance (1-65535 lux)                 |
 | `relay1`      | `HAS_RELAY`   | uint               | —       | Relay 1 state (0 = off, 1 = energized)               |
 | `relay2`      | `HAS_RELAY`   | uint               | —       | Relay 2 state (0 = off, 1 = energized)               |
 

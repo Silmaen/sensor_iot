@@ -12,6 +12,7 @@ See [configurations](configurations.md) for how these components are assembled i
 | Arduino MKR WiFi 1010  | 1        | SAMD21 + WiFiNINA, built-in LiPo charger (JST connector) |
 | Arduino MKR ENV Shield | 1        | BME280 + UV + lux sensors, plugs on top of MKR board     |
 | ESP32 CAM              | 2        | ESP32 + OV2640 camera, WiFi/BT, limited GPIO             |
+| ESP32-C3 Super Mini    | several  | WiFi+BLE, 6 ADC (12-bit), deep sleep ~5µA, 3.3V native   |
 
 ## Sensors
 
@@ -21,6 +22,7 @@ See [configurations](configurations.md) for how these components are assembled i
 | SHT30 Shield v2.1.0     | several  | Wemos D1 Mini stackable shield, I2C — see [module doc](modules/sht30.md) |
 | MKR ENV Shield BME280   | 1        | HTS221+LPS22HB+TEMT6000+VEML6075 — see [module doc](modules/mkr-env.md)  |
 | Seeedstudio Light Sens. | 1        | Analog photoresistor, 0–3.3V — see [module doc](modules/light.md)        |
+| BH1750 (I2C)           | several  | Digital lux sensor, calibrated 1–65535 lux, 16-bit, I2C 0x23/0x5C       |
 
 ## Display
 
@@ -137,6 +139,19 @@ The push button is used in Display config (with display) to cycle through displa
 (e.g. temperature, humidity, pressure). Connect to a GPIO with internal pull-up,
 active LOW with 100nF debounce capacitor to GND.
 
+## Transistors
+
+Kit 24 valeurs — composants les plus utiles pour ce projet :
+
+| Component  | Type     | Package | Notes                                                        |
+|------------|----------|---------|--------------------------------------------------------------|
+| **2N7000** | N-MOSFET | TO-92   | Battery divider switch, relay GPIO driver. Vgs(th) 1-3V.    |
+| 2N2222     | NPN BJT  | TO-92   | Alternative for divider switch (needs 10k base R). General.  |
+| 2N2907     | PNP BJT  | TO-92   | High-side switching.                                         |
+| BC547      | NPN BJT  | TO-92   | Low-power switching, same use as 2N2222.                     |
+| BC557      | PNP BJT  | TO-92   | Low-power high-side switching.                               |
+| BC337      | NPN BJT  | TO-92   | Higher current (800mA) than BC547, relay coil driver option. |
+
 ## Breakout Boards
 
 | Component                           | Quantity | Notes                                                   |
@@ -152,13 +167,15 @@ See [2S power module](modules/power-2s.md) for the battery power chain and
 
 | Component          | Quantity | Notes                                                                             |
 |--------------------|----------|-----------------------------------------------------------------------------------|
-| H78M05BT           | 9        | 5V linear regulator 500mA                                                         |
+| H78M05BT           | 9        | 5V linear regulator 500mA, ~3mA Iq — **legacy, not for battery nodes**           |
+| HT7350             | several  | 5V LDO 250mA, **~4µA Iq** — recommended for 2S battery nodes (TO-92, drop-in)    |
+| HT7333             | several  | 3.3V LDO 250mA, ~4µA Iq — for ESP32-C3 direct from LiPo (TO-92)                 |
 | L78M09CV           | 10       | 9V linear regulator 500mA                                                         |
 | L78m33ACV          | 6        | 3.3V linear regulator 500mA                                                       |
 | 18650 cells        | several  | Reclaimed from laptop packs, 3.7V nominal (see [battery guide](battery-cells.md)) |
 | BMS 2S (7.4V/8.4V) | 5        | JZK HX-2S, overcharge/overdischarge/short-circuit protection for 2S 18650         |
 | MP1584 buck module | -        | Adjustable step-down 4.5–28V → 0.8–20V, 3A max, set to 5V for D1 Mini             |
-| 100µF electrolytic | -        | Bulk decoupling on buck output, filters ripple for ESP8266 WiFi + ADC             |
+| 100µF electrolytic | -        | Bulk decoupling on regulator output, filters ripple for ESP8266 WiFi + ADC        |
 
 ### 18650 Cell References
 
