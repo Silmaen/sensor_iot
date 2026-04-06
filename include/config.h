@@ -35,17 +35,39 @@
 
   // Battery ADC
   #define PIN_BATTERY_ADC A0
+  #define ADC_MAX_VALUE         1023
+  #define ADC_REF_VOLTAGE       3.3f
+  #define BATTERY_VOLTAGE_FULL  8.40f  // 2S LiPo full
+  #define BATTERY_VOLTAGE_EMPTY 6.00f  // 2S LiPo empty
 
   // Battery divider power switch (optional, needs N-MOSFET on this pin).
   // When defined, the divider is only powered during ADC reads (~1ms),
   // saving ~247µA quiescent current during deep sleep.
   // #define PIN_BATTERY_SWITCH 0  // D3 (GPIO0) — uncomment when MOSFET is wired
 
+#elif defined(ESP32)
+
+  // ESP32-C3 Super Mini: I2C on GPIO6/GPIO7
+  #define PIN_I2C_SDA 6
+  #define PIN_I2C_SCL 7
+
+  // Battery ADC (12-bit, 0-3.3V range)
+  #define PIN_BATTERY_ADC 3            // GPIO3 (ADC1_CH3, no strapping conflict)
+  #define PIN_BATTERY_SWITCH 5         // GPIO5 — N-MOSFET gate
+  #define ADC_MAX_VALUE         4095
+  #define ADC_REF_VOLTAGE       3.3f
+  #define BATTERY_VOLTAGE_FULL  8.40f  // 2S LiPo full
+  #define BATTERY_VOLTAGE_EMPTY 6.00f  // 2S LiPo empty
+
 #elif defined(ARDUINO_SAMD_MKRWIFI1010)
 
   // I2C: default Wire pins (SDA/SCL defined by board variant)
   // Battery: built-in ADC pin with voltage divider
   #define PIN_BATTERY_ADC ADC_BATTERY
+  #define ADC_MAX_VALUE         4095
+  #define ADC_REF_VOLTAGE       3.3f
+  #define BATTERY_VOLTAGE_FULL  4.20f  // 1S LiPo full
+  #define BATTERY_VOLTAGE_EMPTY 3.00f  // 1S LiPo empty
 
 #endif
 
@@ -72,7 +94,7 @@
   #define BATTERY_CRITICAL_THRESHOLD  5  // SoC% → error "critical_battery"
 #endif
 
-// --- RTC memory (ESP8266 only) ---
-#ifdef ESP8266
+// --- RTC memory (ESP8266 / ESP32) ---
+#if defined(ESP8266)
 #define RTC_MAGIC 0xDEADBEEF
 #endif

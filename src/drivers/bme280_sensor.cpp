@@ -1,6 +1,6 @@
 #ifndef NATIVE
 
-#include "hw/bme280_sensor.h"
+#include "drivers/bme280_sensor.h"
 #include "config.h"
 #include <Arduino.h>
 
@@ -23,7 +23,7 @@ bool Bme280Sensor::begin() {
 
 bool Bme280Sensor::begin(uint8_t addr) {
     addr_ = addr;
-#ifdef ESP8266
+#if defined(PIN_I2C_SDA) && defined(PIN_I2C_SCL)
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
 #else
     Wire.begin();

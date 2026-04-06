@@ -1,6 +1,6 @@
 #if defined(ESP8266) && !defined(NATIVE)
 
-#include "hw/esp_network.h"
+#include "platform/esp8266/esp_network.h"
 #include "config.h"
 #include "credentials.h"
 #include "debug.h"

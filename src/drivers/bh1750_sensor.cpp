@@ -1,6 +1,6 @@
 #ifndef NATIVE
 
-#include "hw/bh1750_sensor.h"
+#include "drivers/bh1750_sensor.h"
 #include "config.h"
 #include <Arduino.h>
 #include <Wire.h>
@@ -16,7 +16,7 @@ bool Bh1750Sensor::begin() {
 
 bool Bh1750Sensor::begin(uint8_t addr) {
     addr_ = addr;
-#ifdef ESP8266
+#if defined(PIN_I2C_SDA) && defined(PIN_I2C_SCL)
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
 #else
     Wire.begin();

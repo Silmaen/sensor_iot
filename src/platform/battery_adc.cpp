@@ -1,6 +1,10 @@
-#if defined(ESP8266) && !defined(NATIVE)
+// Unified battery ADC driver — platform-selected via #if.
+// Supports optional MOSFET switch (PIN_BATTERY_SWITCH) to cut divider
+// quiescent current during deep sleep.
 
-#include "hw/battery_adc.h"
+#ifndef NATIVE
+
+#include "platform/battery_adc.h"
 #include "config.h"
 #include <Arduino.h>
 
@@ -13,9 +17,13 @@ void battery_adc_begin() {
 
 uint16_t read_battery_adc() {
 #ifdef PIN_BATTERY_SWITCH
-    // Power on the voltage divider via MOSFET gate
     digitalWrite(PIN_BATTERY_SWITCH, HIGH);
-    delayMicroseconds(500); // let RC settle (10k source impedance + ADC cap)
+    delayMicroseconds(500); // let RC settle
+#endif
+
+    // 12-bit resolution on SAMD and ESP32 (ESP8266 is always 10-bit)
+#if defined(ARDUINO_SAMD_MKRWIFI1010) || defined(ESP32)
+    analogReadResolution(12);
 #endif
 
     uint16_t raw = static_cast<uint16_t>(analogRead(PIN_BATTERY_ADC));

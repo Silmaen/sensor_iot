@@ -1,6 +1,6 @@
 #if defined(ESP8266) && !defined(NATIVE)
 
-#include "hw/shift_display.h"
+#include "drivers/shift_display.h"
 #include "config.h"
 #include <Arduino.h>
 

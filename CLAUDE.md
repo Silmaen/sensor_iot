@@ -41,6 +41,10 @@ pio run -e sensor_8266_sht30          # Build : SHT30 + batterie + deep sleep
 pio run -e sensor_8266_display_sht30  # Build : SHT30 + afficheur + debug
 pio run -e sensor_8266_bmp80 -t upload  # Upload ESP8266
 
+# ESP32-C3 (Super Mini)
+pio run -e sensor_c3_bme280_bh1750    # Build : BME280 + BH1750 + batterie + deep sleep
+pio run -e sensor_c3_bme280_bh1750 -t upload  # Upload ESP32-C3
+
 # SAMD21 (Arduino MKR WiFi 1010 + MKR ENV Shield)
 pio run -e sensor_mkr_env             # Build : MKR ENV Shield + batterie 1S (duty-cycle)
 pio run -e sensor_mkr_env -t upload   # Upload MKR
@@ -64,22 +68,39 @@ sans (production). Configurable à distance via la commande MQTT `set_interval`.
 src/
   main.cpp              - Orchestrateur modulaire (#ifdef HAS_xxx)
   cell_tester.cpp       - Firmware testeur de cellules 18650 (MKR, standalone)
-  hw/                   - Drivers hardware (ESP8266 + SAMD21)
+  drivers/              - Drivers Arduino cross-plateforme (I2C/SPI, marchent partout)
+    bme280_sensor.*     - BME/BMP280 I2C driver
+    sht30_sensor.*      - SHT30 I2C driver
+    bh1750_sensor.*     - BH1750 I2C lux sensor driver
+    mkr_env_sensor.*    - MKR ENV Shield driver
+    shift_display.*     - Afficheur 7-segments via shift registers
+  platform/             - Code spécifique à UNE plateforme
+    esp8266/            - ESP8266 : WiFi (ESP8266WiFi), deep sleep, RTC memory
+    esp32/              - ESP32-C3 : WiFi (Arduino-ESP32), deep sleep, RTC_DATA_ATTR
+    samd/               - MKR WiFi 1010 : WiFi (WiFiNINA), standby (RTCZero)
+    battery_adc.*       - Lecture ADC batterie unifiée (sélection plateforme interne)
 include/
-  config.h              - Pins, timing, topics MQTT (DEVICE_ID/TYPE via -D flags)
+  config.h              - Pins, ADC, timing, topics MQTT (DEVICE_ID/TYPE via -D flags)
   credentials.h         - WiFi & MQTT credentials (gitignored)
-  interfaces/           - Interfaces abstraites
-lib/thermo_core/        - Bibliothèque portable et testable
+  debug.h               - Macros debug série (HAS_SERIAL_DEBUG)
+lib/thermo_core/        - Bibliothèque portable et testable (0 dépendance Arduino)
   src/
-    module_registry.h/cpp    - Registre de modules (metrics, commands, handlers)
-    payload_builder.h/cpp    - Construction JSON incrémentale
-    mqtt_payload.h/cpp       - Formatage payloads & parsing commandes
+    interfaces/              - Interfaces abstraites (ISensor, INetwork, ISleep)
+    module_registry.h/cpp   - Registre de modules (metrics, commands, handlers)
+    payload_builder.h/cpp   - Construction JSON incrémentale
+    mqtt_payload.h/cpp      - Formatage payloads & parsing commandes
+    battery.h/cpp           - Maths ADC→tension→SoC (portable)
+    sensor_data.h           - Struct données capteur
+    display_encoding.h/cpp  - Encodage BCD 7-segments
     modules/
-      bme280_module.h/cpp    - Module BME280 (register + contribute)
-      sht30_module.h/cpp     - Module SHT30 (register + contribute)
-      mkr_env_module.h/cpp   - Module MKR ENV Shield (register + contribute)
-      battery_module.h/cpp   - Module batterie (register + contribute)
-    sensor_data.h, battery.h/cpp, display_encoding.h/cpp
+      bme280_module.*       - Module BME280 (register + contribute)
+      sht30_module.*        - Module SHT30 (register + contribute)
+      mkr_env_module.*      - Module MKR ENV Shield (register + contribute)
+      bh1750_module.*       - Module BH1750 lux (register + contribute)
+      light_module.*        - Module photorésistor analogique
+      battery_module.*      - Module batterie (register + contribute + calibrate)
+      calibration_module.*  - Module offsets capteurs (set_offset + request)
+      relay_module.*        - Module relais (toggle + contact timer)
 test/test_native/       - Tests unitaires (Unity)
 docs/
   architecture.md       - Architecture logicielle
@@ -109,8 +130,8 @@ docs/
 ## Conventions
 
 - Code portable dans `lib/thermo_core/`, code hardware-spécifique dans `src/hw/`
-- Sélection plateforme via `#if defined(ESP8266)` / `#elif defined(ARDUINO_SAMD_MKRWIFI1010)` dans `main.cpp` et
-  `config.h`
+- Sélection plateforme via `#if defined(ESP8266)` / `#elif defined(ESP32)` /
+  `#elif defined(ARDUINO_SAMD_MKRWIFI1010)` dans `main.cpp` et `config.h`
 - `#ifdef NATIVE` / `#ifndef NATIVE` pour le code spécifique à la compilation locale
 - `#ifdef HAS_xxx` pour le code conditionnel aux modules
 - Tests unitaires : framework Unity dans `test/test_native/`

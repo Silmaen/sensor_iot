@@ -1,6 +1,6 @@
 #if defined(ESP8266) && !defined(NATIVE)
 
-#include "hw/esp_sleep.h"
+#include "platform/esp8266/esp_sleep.h"
 #include "config.h"
 #include <Arduino.h>
 #include <user_interface.h> // ESP8266 RTC memory API

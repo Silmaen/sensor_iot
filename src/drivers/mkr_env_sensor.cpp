@@ -1,6 +1,6 @@
 #if !defined(NATIVE) && defined(ARDUINO_SAMD_MKRWIFI1010)
 
-#include "hw/mkr_env_sensor.h"
+#include "drivers/mkr_env_sensor.h"
 #include <Arduino.h>
 
 // --- HTS221 registers (from ST datasheet) ---

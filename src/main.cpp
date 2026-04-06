@@ -31,32 +31,37 @@
 #ifndef NATIVE
 #include <Arduino.h>
 
+// --- Platform-specific: network ---
 #if defined(ARDUINO_SAMD_MKRWIFI1010)
-#include "hw/nina_network.h"
+#include "platform/samd/nina_network.h"
 static NinaNetwork network;
+#elif defined(ESP32)
+#include "platform/esp32/esp32_network.h"
+static Esp32Network network;
 #else
-#include "hw/esp_network.h"
+#include "platform/esp8266/esp_network.h"
 static EspNetwork network;
 #endif
 
+// --- Cross-platform drivers: sensors ---
 #ifdef HAS_BME280
-#include "hw/bme280_sensor.h"
+#include "drivers/bme280_sensor.h"
 static Bme280Sensor sensor;
 #endif
 
 #ifdef HAS_SHT30
-#include "hw/sht30_sensor.h"
+#include "drivers/sht30_sensor.h"
 static Sht30Sensor sensor;
 #endif
 
 #ifdef HAS_MKR_ENV
-#include "hw/mkr_env_sensor.h"
+#include "drivers/mkr_env_sensor.h"
 static MkrEnvSensor sensor;
 #endif
 
 #ifdef HAS_DISPLAY
 #include "display_encoding.h"
-#include "hw/shift_display.h"
+#include "drivers/shift_display.h"
 static ShiftDisplay display;
 
 #ifdef HAS_BME280
@@ -69,27 +74,30 @@ static unsigned long last_button_change = 0;
 static bool last_button_state           = true;
 #endif
 
-#ifdef HAS_BATTERY
-#include "battery.h"
-#if defined(ARDUINO_SAMD_MKRWIFI1010)
-#include "hw/samd_battery_adc.h"
-#else
-#include "hw/battery_adc.h"
-#endif
-#endif
-
 #ifdef HAS_BH1750
-#include "hw/bh1750_sensor.h"
+#include "drivers/bh1750_sensor.h"
 static Bh1750Sensor light_sensor;
 #endif
 
+// --- Platform-specific: battery ADC ---
+#ifdef HAS_BATTERY
+#include "battery.h"
+#include "platform/battery_adc.h"
+#endif
+
+// --- Platform-specific: sleep ---
 #ifdef HAS_DEEP_SLEEP
-#include "hw/esp_sleep.h"
+#if defined(ESP32)
+#include "platform/esp32/esp32_sleep.h"
+static Esp32Sleep sleeper;
+#else
+#include "platform/esp8266/esp_sleep.h"
 static EspSleep sleeper;
+#endif
 #endif
 
 #if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
-#include "hw/samd_sleep.h"
+#include "platform/samd/samd_sleep.h"
 static SamdSleep samd_sleeper;
 #endif
 
@@ -217,6 +225,11 @@ static void publish_sensor_data() {
 static void get_hw_id(char* buf, size_t len) {
 #if defined(ESP8266)
     snprintf(buf, len, "ESP-%06X", static_cast<unsigned int>(ESP.getChipId()));
+#elif defined(ESP32)
+    // ESP32 unique MAC as chip ID
+    uint64_t mac = ESP.getEfuseMac();
+    snprintf(buf, len, "C3-%06X",
+             static_cast<unsigned int>(mac & 0xFFFFFF));
 #elif defined(ARDUINO_SAMD_MKRWIFI1010)
     // SAMD21 unique ID: 4 x 32-bit words at 0x0080A00C
     volatile uint32_t* uid = reinterpret_cast<volatile uint32_t*>(0x0080A00C);
@@ -360,7 +373,7 @@ void setup() {
 
 #if defined(HAS_BATTERY)
     battery_module_set_adc_reader(read_battery_adc);
-#if defined(ESP8266) && defined(PIN_BATTERY_SWITCH)
+#if defined(PIN_BATTERY_SWITCH)
     battery_adc_begin();
 #endif
 #endif
