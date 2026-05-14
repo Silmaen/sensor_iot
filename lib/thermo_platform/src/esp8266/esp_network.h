@@ -1,14 +1,15 @@
 #pragma once
 
-#if defined(ESP32) && !defined(NATIVE)
+#if defined(ESP8266) && !defined(NATIVE)
 
 #include "interfaces/i_network.h"
+#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include <WiFi.h>
+#include <functional>
 
-class Esp32Network : public INetwork {
+class EspNetwork : public INetwork {
 public:
-    Esp32Network();
+    void configure(const NetworkConfig& cfg) override;
     bool connect_wifi() override;
     bool connect_mqtt() override;
     bool wifi_connected() override;
@@ -19,13 +20,13 @@ public:
     bool subscribe(const char* topic) override;
     void loop() override;
     void disconnect() override;
-    void power_down() override;
 
-    void set_callback(void (*cb)(char*, uint8_t*, unsigned int));
+    void set_callback(std::function<void(char*, uint8_t*, unsigned int)> cb);
 
 private:
     WiFiClient wifi_client_;
-    PubSubClient mqtt_client_;
+    PubSubClient mqtt_client_{wifi_client_};
+    NetworkConfig cfg_ = {};
     unsigned long last_reconnect_attempt_ = 0;
     bool was_mqtt_connected_ = false;
 };

@@ -1,6 +1,6 @@
 #if defined(ESP32) && !defined(NATIVE)
 
-#include "platform/esp32/esp32_sleep.h"
+#include "esp32/esp32_sleep.h"
 #include "config.h"
 #include <Arduino.h>
 #include <esp_sleep.h>

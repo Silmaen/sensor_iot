@@ -2,9 +2,20 @@
 
 #include <stdint.h>
 
+struct NetworkConfig {
+    const char* wifi_ssid;
+    const char* wifi_password;
+    const char* mqtt_server;
+    uint16_t    mqtt_port;
+    const char* mqtt_user;      // nullptr = no auth
+    const char* mqtt_password;  // nullptr = no auth
+    const char* device_id;      // MQTT client ID
+};
+
 class INetwork {
 public:
     virtual ~INetwork() = default;
+    virtual void configure(const NetworkConfig& cfg) = 0;
     virtual bool connect_wifi() = 0;
     virtual bool connect_mqtt() = 0;
     virtual bool wifi_connected() = 0;
@@ -15,5 +26,5 @@ public:
     virtual bool subscribe(const char* topic) = 0;
     virtual void loop() = 0;
     virtual void disconnect() = 0;
-    virtual void power_down() { disconnect(); }  // Power down radio if supported
+    virtual void power_down() { disconnect(); }
 };

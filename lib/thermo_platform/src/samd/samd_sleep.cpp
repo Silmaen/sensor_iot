@@ -1,6 +1,6 @@
 #if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(NATIVE)
 
-#include "platform/samd/samd_sleep.h"
+#include "samd/samd_sleep.h"
 #include <RTCZero.h>
 
 static RTCZero rtc;

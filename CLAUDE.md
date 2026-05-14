@@ -55,7 +55,7 @@ pio run -e cell_tester_mkr -t upload  # Upload testeur
 
 # Tests & monitoring
 pio run -e native              # Build natif (tests)
-pio test -e native             # Exécuter les tests unitaires (63 tests)
+pio test -e native             # Exécuter les tests unitaires (104 tests)
 pio device monitor             # Moniteur série (115200 baud)
 ```
 
@@ -66,41 +66,36 @@ sans (production). Configurable à distance via la commande MQTT `set_interval`.
 
 ```bash
 src/
-  main.cpp              - Orchestrateur modulaire (#ifdef HAS_xxx)
+  main.cpp              - Orchestrateur (seul fichier de "glue", #ifdef HAS_xxx)
   cell_tester.cpp       - Firmware testeur de cellules 18650 (MKR, standalone)
-  drivers/              - Drivers Arduino cross-plateforme (I2C/SPI, marchent partout)
-    bme280_sensor.*     - BME/BMP280 I2C driver
-    sht30_sensor.*      - SHT30 I2C driver
-    bh1750_sensor.*     - BH1750 I2C lux sensor driver
-    mkr_env_sensor.*    - MKR ENV Shield driver
-    shift_display.*     - Afficheur 7-segments via shift registers
-  platform/             - Code spécifique à UNE plateforme
-    esp8266/            - ESP8266 : WiFi (ESP8266WiFi), deep sleep, RTC memory
-    esp32/              - ESP32-C3 : WiFi (Arduino-ESP32), deep sleep, RTC_DATA_ATTR
-    samd/               - MKR WiFi 1010 : WiFi (WiFiNINA), standby (RTCZero)
-    battery_adc.*       - Lecture ADC batterie unifiée (sélection plateforme interne)
 include/
   config.h              - Pins, ADC, timing, topics MQTT (DEVICE_ID/TYPE via -D flags)
   credentials.h         - WiFi & MQTT credentials (gitignored)
   debug.h               - Macros debug série (HAS_SERIAL_DEBUG)
-lib/thermo_core/        - Bibliothèque portable et testable (0 dépendance Arduino)
-  src/
-    interfaces/              - Interfaces abstraites (ISensor, INetwork, ISleep)
-    module_registry.h/cpp   - Registre de modules (metrics, commands, handlers)
-    payload_builder.h/cpp   - Construction JSON incrémentale
-    mqtt_payload.h/cpp      - Formatage payloads & parsing commandes
-    battery.h/cpp           - Maths ADC→tension→SoC (portable)
-    sensor_data.h           - Struct données capteur
-    display_encoding.h/cpp  - Encodage BCD 7-segments
-    modules/
-      bme280_module.*       - Module BME280 (register + contribute)
-      sht30_module.*        - Module SHT30 (register + contribute)
-      mkr_env_module.*      - Module MKR ENV Shield (register + contribute)
-      bh1750_module.*       - Module BH1750 lux (register + contribute)
-      light_module.*        - Module photorésistor analogique
-      battery_module.*      - Module batterie (register + contribute + calibrate)
-      calibration_module.*  - Module offsets capteurs (set_offset + request)
-      relay_module.*        - Module relais (toggle + contact timer)
+lib/
+  thermo_core/          Portable, testable, 0 dépendance Arduino
+    src/
+      interfaces/            - Interfaces abstraites (ISensor, INetwork, ISleep)
+      modules/               - Modules register/contribute (voir tableau ci-dessus)
+      module_registry.*      - Registre de modules (metrics, commands, handlers)
+      payload_builder.*      - Construction JSON incrémentale
+      mqtt_payload.*         - Formatage payloads & parsing commandes
+      battery.*              - Maths ADC→tension→SoC (portable)
+      sensor_data.h          - Struct données capteur
+      display_encoding.*     - Encodage BCD 7-segments
+  thermo_drivers/       Drivers capteurs cross-plateforme (Arduino, I2C/SPI)
+    src/
+      bme280_sensor.*        - BME/BMP280 I2C driver
+      sht30_sensor.*         - SHT30 I2C driver
+      bh1750_sensor.*        - BH1750 I2C lux sensor driver
+      mkr_env_sensor.*       - MKR ENV Shield driver
+      shift_display.*        - Afficheur 7-segments via shift registers
+  thermo_platform/      Code spécifique à UNE plateforme
+    src/
+      esp8266/               - WiFi (ESP8266WiFi), deep sleep, RTC memory
+      esp32/                 - WiFi (Arduino-ESP32), deep sleep, RTC_DATA_ATTR
+      samd/                  - WiFi (WiFiNINA), standby (RTCZero)
+      battery_adc.*          - Lecture ADC batterie unifiée (#if plateforme)
 test/test_native/       - Tests unitaires (Unity)
 docs/
   architecture.md       - Architecture logicielle

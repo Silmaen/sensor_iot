@@ -1,6 +1,6 @@
 #ifndef NATIVE
 
-#include "drivers/bh1750_sensor.h"
+#include "bh1750_sensor.h"
 #include "config.h"
 #include <Arduino.h>
 #include <Wire.h>

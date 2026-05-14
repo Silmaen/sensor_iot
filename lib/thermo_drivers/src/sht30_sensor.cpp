@@ -1,6 +1,6 @@
 #ifndef NATIVE
 
-#include "drivers/sht30_sensor.h"
+#include "sht30_sensor.h"
 #include "config.h"
 #include <Arduino.h>
 

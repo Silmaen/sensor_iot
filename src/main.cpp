@@ -1,5 +1,7 @@
 #include "config.h"
+#include "credentials.h"
 #include "debug.h"
+#include "hw_id.h"
 #include "module_registry.h"
 #include "mqtt_payload.h"
 #include "payload_builder.h"
@@ -31,37 +33,37 @@
 #ifndef NATIVE
 #include <Arduino.h>
 
-// --- Platform-specific: network ---
+// --- Platform: network ---
 #if defined(ARDUINO_SAMD_MKRWIFI1010)
-#include "platform/samd/nina_network.h"
+#include "samd/nina_network.h"
 static NinaNetwork network;
 #elif defined(ESP32)
-#include "platform/esp32/esp32_network.h"
+#include "esp32/esp32_network.h"
 static Esp32Network network;
 #else
-#include "platform/esp8266/esp_network.h"
+#include "esp8266/esp_network.h"
 static EspNetwork network;
 #endif
 
-// --- Cross-platform drivers: sensors ---
+// --- Drivers: sensors ---
 #ifdef HAS_BME280
-#include "drivers/bme280_sensor.h"
+#include "bme280_sensor.h"
 static Bme280Sensor sensor;
 #endif
 
 #ifdef HAS_SHT30
-#include "drivers/sht30_sensor.h"
+#include "sht30_sensor.h"
 static Sht30Sensor sensor;
 #endif
 
 #ifdef HAS_MKR_ENV
-#include "drivers/mkr_env_sensor.h"
+#include "mkr_env_sensor.h"
 static MkrEnvSensor sensor;
 #endif
 
 #ifdef HAS_DISPLAY
 #include "display_encoding.h"
-#include "drivers/shift_display.h"
+#include "shift_display.h"
 static ShiftDisplay display;
 
 #ifdef HAS_BME280
@@ -75,29 +77,29 @@ static bool last_button_state           = true;
 #endif
 
 #ifdef HAS_BH1750
-#include "drivers/bh1750_sensor.h"
+#include "bh1750_sensor.h"
 static Bh1750Sensor light_sensor;
 #endif
 
-// --- Platform-specific: battery ADC ---
+// --- Platform: battery ADC ---
 #ifdef HAS_BATTERY
 #include "battery.h"
-#include "platform/battery_adc.h"
+#include "battery_adc.h"
 #endif
 
-// --- Platform-specific: sleep ---
+// --- Platform: sleep ---
 #ifdef HAS_DEEP_SLEEP
 #if defined(ESP32)
-#include "platform/esp32/esp32_sleep.h"
+#include "esp32/esp32_sleep.h"
 static Esp32Sleep sleeper;
 #else
-#include "platform/esp8266/esp_sleep.h"
+#include "esp8266/esp_sleep.h"
 static EspSleep sleeper;
 #endif
 #endif
 
 #if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
-#include "platform/samd/samd_sleep.h"
+#include "samd/samd_sleep.h"
 static SamdSleep samd_sleeper;
 #endif
 
@@ -218,24 +220,6 @@ static void publish_sensor_data() {
         DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_STATUS, status_buf);
         network.publish(MQTT_TOPIC_STATUS, status_buf);
     }
-#endif
-}
-
-// --- Platform-specific hardware ID ---
-static void get_hw_id(char* buf, size_t len) {
-#if defined(ESP8266)
-    snprintf(buf, len, "ESP-%06X", static_cast<unsigned int>(ESP.getChipId()));
-#elif defined(ESP32)
-    // ESP32 unique MAC as chip ID
-    uint64_t mac = ESP.getEfuseMac();
-    snprintf(buf, len, "C3-%06X",
-             static_cast<unsigned int>(mac & 0xFFFFFF));
-#elif defined(ARDUINO_SAMD_MKRWIFI1010)
-    // SAMD21 unique ID: 4 x 32-bit words at 0x0080A00C
-    volatile uint32_t* uid = reinterpret_cast<volatile uint32_t*>(0x0080A00C);
-    snprintf(buf, len, "MKR-%08lX", static_cast<unsigned long>(uid[0] ^ uid[1] ^ uid[2] ^ uid[3]));
-#else
-    snprintf(buf, len, "UNKNOWN");
 #endif
 }
 
@@ -423,6 +407,16 @@ void setup() {
     pinMode(PIN_BUTTON, INPUT_PULLUP);
 #endif
 
+    network.configure({
+        WIFI_SSID, WIFI_PASSWORD,
+        MQTT_SERVER, MQTT_PORT,
+#if defined(MQTT_USER) && defined(MQTT_PASSWORD)
+        MQTT_USER, MQTT_PASSWORD,
+#else
+        nullptr, nullptr,
+#endif
+        DEVICE_ID
+    });
     network.set_callback(on_mqtt_message);
 
 #if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY) && !defined(HAS_DEEP_SLEEP)

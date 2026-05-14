@@ -1,6 +1,6 @@
 #ifndef NATIVE
 
-#include "drivers/bme280_sensor.h"
+#include "bme280_sensor.h"
 #include "config.h"
 #include <Arduino.h>
 

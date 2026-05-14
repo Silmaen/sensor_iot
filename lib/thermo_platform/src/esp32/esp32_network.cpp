@@ -1,8 +1,7 @@
 #if defined(ESP32) && !defined(NATIVE)
 
-#include "platform/esp32/esp32_network.h"
+#include "esp32/esp32_network.h"
 #include "config.h"
-#include "credentials.h"
 #include "debug.h"
 
 #ifdef HAS_SERIAL_DEBUG
@@ -23,14 +22,15 @@ static const char* mqtt_state_str(int state) {
 }
 #endif
 
-Esp32Network::Esp32Network() : mqtt_client_(wifi_client_) {
-    mqtt_client_.setServer(MQTT_SERVER, MQTT_PORT);
+void Esp32Network::configure(const NetworkConfig& cfg) {
+    cfg_ = cfg;
+    mqtt_client_.setServer(cfg.mqtt_server, cfg.mqtt_port);
 }
 
 bool Esp32Network::connect_wifi() {
     WiFi.mode(WIFI_STA);
-    DEBUG_PRINTF("[WIFI] connecting to SSID \"%s\"...\n", WIFI_SSID);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    DEBUG_PRINTF("[WIFI] connecting to SSID \"%s\"...\n", cfg_.wifi_ssid);
+    WiFi.begin(cfg_.wifi_ssid, cfg_.wifi_password);
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
@@ -50,13 +50,13 @@ bool Esp32Network::connect_wifi() {
 bool Esp32Network::connect_mqtt() {
     if (!mqtt_client_.connected()) {
         DEBUG_PRINTF("[MQTT] connecting to %s:%d as \"%s\"...\n",
-                     MQTT_SERVER, MQTT_PORT, DEVICE_ID);
+                     cfg_.mqtt_server, cfg_.mqtt_port, cfg_.device_id);
         bool connected;
-#if defined(MQTT_USER) && defined(MQTT_PASSWORD)
-        connected = mqtt_client_.connect(DEVICE_ID, MQTT_USER, MQTT_PASSWORD);
-#else
-        connected = mqtt_client_.connect(DEVICE_ID);
-#endif
+        if (cfg_.mqtt_user && cfg_.mqtt_password) {
+            connected = mqtt_client_.connect(cfg_.device_id, cfg_.mqtt_user, cfg_.mqtt_password);
+        } else {
+            connected = mqtt_client_.connect(cfg_.device_id);
+        }
         if (connected) {
             DEBUG_PRINTLN("[MQTT] connected");
         } else {

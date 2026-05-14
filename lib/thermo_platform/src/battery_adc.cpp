@@ -4,7 +4,7 @@
 
 #ifndef NATIVE
 
-#include "platform/battery_adc.h"
+#include "battery_adc.h"
 #include "config.h"
 #include <Arduino.h>
 
