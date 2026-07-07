@@ -8,6 +8,18 @@
 #error "MQTT_DEVICE_TYPE must be defined via build flags (-DMQTT_DEVICE_TYPE='\"thermo\"')"
 #endif
 
+// Firmware version (semver), bumped on each release. Defined globally in the
+// [common] build_flags; fall back to a dev marker if a build omits it.
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION "0.0.0-dev"
+#endif
+// Hardware code: identical hardware/module configuration => identical code,
+// regardless of the per-unit DEVICE_ID. Defined per environment in
+// platformio.ini; used to look up the right firmware image for an update.
+#ifndef HW_CODE
+#define HW_CODE "unknown"
+#endif
+
 // --- MQTT topics ---
 #define MQTT_TOPIC_SENSORS      MQTT_DEVICE_TYPE "/" DEVICE_ID "/sensors"
 #define MQTT_TOPIC_STATUS       MQTT_DEVICE_TYPE "/" DEVICE_ID "/status"
@@ -37,8 +49,9 @@
   #define PIN_BATTERY_ADC A0
   #define ADC_MAX_VALUE         1023
   #define ADC_REF_VOLTAGE       3.3f
-  #define BATTERY_VOLTAGE_FULL  8.40f  // 2S LiPo full
-  #define BATTERY_VOLTAGE_EMPTY 6.00f  // 2S LiPo empty
+  #define BATTERY_CELLS         2      // 2S pack
+  #define BATTERY_VOLTAGE_FULL  8.30f  // 2S: real observed ceiling (~4.15V/cell under load)
+  #define BATTERY_VOLTAGE_EMPTY 6.00f  // 2S: practical floor (~3.00V/cell)
 
   // Battery divider power switch (optional, needs N-MOSFET on this pin).
   // When defined, the divider is only powered during ADC reads (~1ms),
@@ -56,8 +69,9 @@
   #define PIN_BATTERY_SWITCH 5         // GPIO5 — N-MOSFET gate
   #define ADC_MAX_VALUE         4095
   #define ADC_REF_VOLTAGE       3.3f
-  #define BATTERY_VOLTAGE_FULL  8.40f  // 2S LiPo full
-  #define BATTERY_VOLTAGE_EMPTY 6.00f  // 2S LiPo empty
+  #define BATTERY_CELLS         2      // 2S pack
+  #define BATTERY_VOLTAGE_FULL  8.30f  // 2S: real observed ceiling (~4.15V/cell under load)
+  #define BATTERY_VOLTAGE_EMPTY 6.00f  // 2S: practical floor (~3.00V/cell)
 
 #elif defined(ARDUINO_SAMD_MKRWIFI1010)
 
@@ -66,8 +80,9 @@
   #define PIN_BATTERY_ADC ADC_BATTERY
   #define ADC_MAX_VALUE         4095
   #define ADC_REF_VOLTAGE       3.3f
-  #define BATTERY_VOLTAGE_FULL  4.20f  // 1S LiPo full
-  #define BATTERY_VOLTAGE_EMPTY 3.00f  // 1S LiPo empty
+  #define BATTERY_CELLS         1      // 1S pack
+  #define BATTERY_VOLTAGE_FULL  4.10f  // 1S: real observed ceiling (charger/divider tops ~4.08V)
+  #define BATTERY_VOLTAGE_EMPTY 3.30f  // 1S: real cutoff (device stops/recharges ~3.30V)
 
 #endif
 

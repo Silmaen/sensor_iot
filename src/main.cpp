@@ -230,6 +230,8 @@ static void publish_capabilities() {
 
     char buf[768];
     format_capabilities_payload(hw_id,
+                                HW_CODE,
+                                FIRMWARE_VERSION,
                                 publish_interval_s,
                                 registry,
                                 buf,
@@ -238,39 +240,66 @@ static void publish_capabilities() {
     network.publish(MQTT_TOPIC_CAPABILITIES, buf);
 }
 
-// --- MQTT message callback ---
+// --- Incoming command queue ---
+// The PubSubClient message callback runs *inside* mqtt_client_.loop() and reuses
+// the client's TX buffer. Publishing from it (ack, or capabilities with its 768B
+// stack buffer nested deep in the call chain) is re-entrant and stack-heavy and
+// has wedged deep-sleep nodes. So the callback only *copies* each payload into
+// this queue; process_pending_commands() runs the handlers — and their
+// publishes — from the main loop, outside the callback.
+static constexpr uint8_t CMD_QUEUE_SIZE = 4;
+static constexpr size_t CMD_PAYLOAD_MAX = 128;
+static char cmd_queue[CMD_QUEUE_SIZE][CMD_PAYLOAD_MAX];
+static uint8_t cmd_queue_count = 0;
+
+// --- MQTT message callback (enqueue only — never publishes) ---
 static void on_mqtt_message(char* topic, uint8_t* payload, unsigned int length) {
-    DEBUG_PRINTF("[MQTT] << topic=%s len=%u\n", topic, length);
-    char buf[128];
-    unsigned int copy_len = length < sizeof(buf) - 1 ? length : sizeof(buf) - 1;
-    memcpy(buf, payload, copy_len);
-    buf[copy_len] = '\0';
-    DEBUG_PRINTF("[MQTT] << payload: %s\n", buf);
-
-    char action[32];
-    if (!parse_command_action(buf, action, sizeof(action))) {
-        DEBUG_PRINTF("[MQTT] parse_command_action failed for: %s\n", buf);
+    (void)topic;
+    if (cmd_queue_count >= CMD_QUEUE_SIZE) {
+        DEBUG_PRINTLN("[MQTT] << queue full, dropping command");
         return;
     }
+    size_t const n = length < CMD_PAYLOAD_MAX - 1 ? length : CMD_PAYLOAD_MAX - 1;
+    memcpy(cmd_queue[cmd_queue_count], payload, n);
+    cmd_queue[cmd_queue_count][n] = '\0';
+    DEBUG_PRINTF("[MQTT] << queued (%u): %s\n",
+                 static_cast<unsigned>(cmd_queue_count + 1), cmd_queue[cmd_queue_count]);
+    cmd_queue_count++;
+}
 
-    DEBUG_PRINTF("[MQTT] command received: action=%s\n", action);
+// --- Process queued commands (called from the main loop, NOT the callback) ---
+// Safe to publish here: we are outside mqtt_client_.loop(), so the client buffer
+// and stack are ours. Single-threaded — the callback only appends during
+// network.loop(), which we do not call from within this function.
+static void process_pending_commands() {
+    for (uint8_t i = 0; i < cmd_queue_count; i++) {
+        const char* buf = cmd_queue[i];
 
-    if (strcmp(action, "request_capabilities") == 0) {
-        DEBUG_PRINTLN("[MQTT] publishing capabilities (requested)");
-        publish_capabilities();
-        return;
+        char action[32];
+        if (!parse_command_action(buf, action, sizeof(action))) {
+            DEBUG_PRINTF("[MQTT] parse_command_action failed for: %s\n", buf);
+            continue;
+        }
+        DEBUG_PRINTF("[MQTT] command: action=%s\n", action);
+
+        if (strcmp(action, "request_capabilities") == 0) {
+            DEBUG_PRINTLN("[MQTT] publishing capabilities (requested)");
+            publish_capabilities();
+            continue;
+        }
+
+        bool const ok = registry.dispatch(action, buf);
+        if (!ok) {
+            DEBUG_PRINTF("[MQTT] unknown command: %s\n", action);
+        }
+
+        // Acknowledge the command
+        char ack_buf[96];
+        format_ack_payload(action, ok ? "ok" : "error", ack_buf, sizeof(ack_buf));
+        DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_ACK, ack_buf);
+        network.publish(MQTT_TOPIC_ACK, ack_buf);
     }
-
-    bool ok = registry.dispatch(action, buf);
-    if (!ok) {
-        DEBUG_PRINTF("[MQTT] unknown command: %s\n", action);
-    }
-
-    // Acknowledge the command
-    char ack_buf[96];
-    format_ack_payload(action, ok ? "ok" : "error", ack_buf, sizeof(ack_buf));
-    DEBUG_PRINTF("[MQTT] publish %s: %s\n", MQTT_TOPIC_ACK, ack_buf);
-    network.publish(MQTT_TOPIC_ACK, ack_buf);
+    cmd_queue_count = 0;
 }
 
 #ifdef HAS_DISPLAY
@@ -470,6 +499,7 @@ void setup() {
     unsigned long start = millis();
     while (millis() - start < MQTT_COMMAND_WAIT_MS) {
         network.loop();
+        process_pending_commands(); // handle/ack outside the MQTT callback
         delay(10);
     }
 
@@ -535,6 +565,7 @@ static void duty_cycle_publish() {
     unsigned long cmd_start = millis();
     while (millis() - cmd_start < MQTT_COMMAND_WAIT_MS) {
         network.loop();
+        process_pending_commands(); // handle/ack outside the MQTT callback
         delay(10);
     }
 
@@ -569,6 +600,7 @@ void loop() {
     // --- Continuous mode (ESP8266, or any config with display) ---
     // WiFi stays connected for responsive display + low-latency commands.
     network.loop();
+    process_pending_commands(); // handle/ack outside the MQTT callback
 
 #ifdef HAS_DISPLAY
     handle_button();

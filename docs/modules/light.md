@@ -13,14 +13,14 @@ light level as a percentage. It is enabled by the `-DHAS_LIGHT` build flag in `p
 
 ## Sensor Specifications
 
-| Parameter       | Value                                        |
-|-----------------|----------------------------------------------|
-| Sensor type     | Photoresistor (LDR) in voltage divider       |
-| Output          | Analog voltage, 0–VCC proportional to light  |
-| Supply voltage  | 3.3–5V                                       |
-| Interface       | Single analog pin                            |
-| Response time   | 20–30 ms                                     |
-| Spectral peak   | ~540 nm (green, matches human eye)           |
+| Parameter      | Value                                       |
+|----------------|---------------------------------------------|
+| Sensor type    | Photoresistor (LDR) in voltage divider      |
+| Output         | Analog voltage, 0–VCC proportional to light |
+| Supply voltage | 3.3–5V                                      |
+| Interface      | Single analog pin                           |
+| Response time  | 20–30 ms                                    |
+| Spectral peak  | ~540 nm (green, matches human eye)          |
 
 > **Note:** This sensor is **not calibrated** to lux. The published percentage represents a relative
 > reading: 0% = very dark, 100% = maximum light the sensor can detect. For calibrated lux
@@ -30,11 +30,11 @@ light level as a percentage. It is enabled by the `-DHAS_LIGHT` build flag in `p
 
 ### ESP8266 (D1 Mini)
 
-| D1 Mini Pin | GPIO | Sensor Pin | Notes                       |
-|-------------|------|------------|-----------------------------|
-| A0          | ADC0 | SIG        | Analog output               |
-| 3V3         | —    | VCC        | 3.3V supply                 |
-| GND         | —    | GND        | Ground                      |
+| D1 Mini Pin | GPIO | Sensor Pin | Notes         |
+|-------------|------|------------|---------------|
+| A0          | ADC0 | SIG        | Analog output |
+| 3V3         | —    | VCC        | 3.3V supply   |
+| GND         | —    | GND        | Ground        |
 
 > **Important:** The ESP8266 has a single ADC pin (A0). If `HAS_BATTERY` is also enabled,
 > A0 is already used for battery voltage. In that case, the light sensor requires an external
@@ -89,12 +89,12 @@ build_flags =
 
 ## Firmware Files
 
-| File                                            | Role                                    |
-|-------------------------------------------------|-----------------------------------------|
-| `lib/thermo_core/src/modules/light_module.h`    | Module interface + ADC conversion       |
-| `lib/thermo_core/src/modules/light_module.cpp`  | Module logic (register, contribute)     |
-| `src/hw/light_adc.h` _(to create)_              | Hardware driver header (platform ADC)   |
-| `src/hw/light_adc.cpp` _(to create)_            | Hardware driver (analogRead + max)      |
+| File                                           | Role                                  |
+|------------------------------------------------|---------------------------------------|
+| `lib/thermo_core/src/modules/light_module.h`   | Module interface + ADC conversion     |
+| `lib/thermo_core/src/modules/light_module.cpp` | Module logic (register, contribute)   |
+| `src/hw/light_adc.h` _(to create)_             | Hardware driver header (platform ADC) |
+| `src/hw/light_adc.cpp` _(to create)_           | Hardware driver (analogRead + max)    |
 
 ### Module API
 
@@ -114,12 +114,12 @@ When active alongside other modules, the device publishes on `thermo/{device_id}
 
 ## Troubleshooting
 
-| Symptom            | Cause                        | Fix                                            |
-|--------------------|------------------------------|------------------------------------------------|
-| Always reads 0%    | Wrong ADC pin or not wired   | Check wiring and pin definition in config.h    |
-| Always reads 100%  | VCC connected to signal pin  | Verify SIG goes to ADC, not VCC                |
-| Erratic readings   | Long wire or no decoupling   | Add 100nF cap near sensor, keep wires short    |
-| Conflicts with bat | A0 shared on ESP8266         | Use ESP32 or add analog multiplexer            |
+| Symptom            | Cause                       | Fix                                         |
+|--------------------|-----------------------------|---------------------------------------------|
+| Always reads 0%    | Wrong ADC pin or not wired  | Check wiring and pin definition in config.h |
+| Always reads 100%  | VCC connected to signal pin | Verify SIG goes to ADC, not VCC             |
+| Erratic readings   | Long wire or no decoupling  | Add 100nF cap near sensor, keep wires short |
+| Conflicts with bat | A0 shared on ESP8266        | Use ESP32 or add analog multiplexer         |
 
 ## See Also
 

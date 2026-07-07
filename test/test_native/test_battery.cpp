@@ -37,13 +37,36 @@ void test_voltage_to_soc_below_empty(void) {
 }
 
 void test_voltage_to_soc_midpoint(void) {
-    // 7.2V: (7.2-6.0)/(8.4-6.0) = 1.2/2.4 = 50%
-    TEST_ASSERT_EQUAL_UINT8(50, voltage_to_soc(7.2f));
+    // Non-linear curve: 7.2V (3.60V/cell) sits on the discharge cliff, ~24%,
+    // far below the 50% a linear model would report. This is the whole point.
+    TEST_ASSERT_UINT8_WITHIN(3, 24, voltage_to_soc(7.2f));
 }
 
 void test_voltage_to_soc_quarter(void) {
-    // 6.6V: (6.6-6.0)/(8.4-6.0) = 0.6/2.4 = 25%
-    TEST_ASSERT_EQUAL_UINT8(25, voltage_to_soc(6.6f));
+    // 6.6V (3.30V/cell) is deep in the end-of-life cliff, ~11%.
+    TEST_ASSERT_UINT8_WITHIN(3, 11, voltage_to_soc(6.6f));
+}
+
+void test_voltage_to_soc_monotonic(void) {
+    // SoC must strictly increase with voltage across the range.
+    uint8_t prev = 0;
+    for (float v = 6.1f; v <= 8.3f; v += 0.1f) {
+        uint8_t s = voltage_to_soc(v);
+        TEST_ASSERT_TRUE(s >= prev);
+        prev = s;
+    }
+}
+
+void test_voltage_to_soc_below_linear_on_plateau(void) {
+    // A linear map (6.0-8.4V) would put 7.5V at ~62%; the real curve is lower
+    // because most capacity lives on the high-voltage plateau.
+    TEST_ASSERT_TRUE(voltage_to_soc(7.5f) < 55);
+}
+
+void test_voltage_to_soc_reaches_full_at_ceiling(void) {
+    // The realistic ceiling must read 100% (the old 8.40V full made it
+    // unreachable). Native default full is 8.40V; 8.30V should be ~100%.
+    TEST_ASSERT_TRUE(voltage_to_soc(8.30f) >= 98);
 }
 
 void test_battery_calibrate_set_ratio(void) {

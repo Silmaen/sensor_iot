@@ -42,14 +42,17 @@ static int buf_append(char* buf, size_t buf_size, int pos, const char* fmt, ...)
 }
 
 int format_capabilities_payload(const char* hardware_id,
+                                const char* hw_code,
+                                const char* fw_version,
                                 uint32_t publish_interval,
                                 const ModuleRegistry& reg,
                                 char* buf, size_t buf_size) {
     // Compact format: metrics and units merged, commands and params merged.
-    // Keys: id, intrvl, metrics (name→unit), cmds (name→params)
+    // Keys: id (chip serial), hw (hardware code), fw (firmware version),
+    //       intrvl, metrics (name→unit), cmds (name→params)
     int pos = snprintf(buf, buf_size,
-        "{\"id\":\"%s\",\"intrvl\":%lu,\"metrics\":{",
-        hardware_id, (unsigned long)publish_interval);
+        "{\"id\":\"%s\",\"hw\":\"%s\",\"fw\":\"%s\",\"intrvl\":%lu,\"metrics\":{",
+        hardware_id, hw_code, fw_version, (unsigned long)publish_interval);
     if (pos < 0 || (size_t)pos >= buf_size) return pos;
 
     // metrics: {"name":"unit", ...} — empty string if no unit

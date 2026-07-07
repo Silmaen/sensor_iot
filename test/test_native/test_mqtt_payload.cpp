@@ -63,10 +63,13 @@ void test_format_capabilities_payload(void) {
     reg.add_command("set_interval", dummy_cmd_handler, si_params, 1);
 
     char buf[512];
-    int len = format_capabilities_payload("ESP-ABC123", 60,
+    int len = format_capabilities_payload("ESP-ABC123", "esp8266-bme280-bat",
+                                          "1.2.3", 60,
                                           reg, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"id\":\"ESP-ABC123\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"hw\":\"esp8266-bme280-bat\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"fw\":\"1.2.3\""));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"intrvl\":60"));
     // metrics merged with units
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"humi\":\"%\""));
@@ -86,7 +89,8 @@ void test_format_capabilities_payload_with_battery_metrics(void) {
     reg.add_command("set_interval", dummy_cmd_handler);
 
     char buf[512];
-    format_capabilities_payload("ESP-DEADBEEF", 300,
+    format_capabilities_payload("ESP-DEADBEEF", "mkr1010-mkrenv-bat",
+                                "1.0.0", 300,
                                 reg, buf, sizeof(buf));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"bat\":\"%\""));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"batv\":\"V\""));
@@ -100,7 +104,8 @@ void test_format_capabilities_no_units_no_params(void) {
     reg.add_command("set_interval", dummy_cmd_handler);
 
     char buf[256];
-    int len = format_capabilities_payload("ESP-000000", 10,
+    int len = format_capabilities_payload("ESP-000000", "esp8266-bme280",
+                                          "1.0.0", 10,
                                           reg, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
     // No unit → empty string

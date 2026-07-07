@@ -66,10 +66,15 @@ bool EspNetwork::connect_mqtt() {
         DEBUG_PRINTF("[MQTT] connecting to %s:%d as \"%s\"...\n",
                      cfg_.mqtt_server, cfg_.mqtt_port, cfg_.device_id);
         bool connected;
+        // cleanSession=false: the broker keeps our subscription and queues
+        // QoS-1 commands while we deep-sleep, delivering them on reconnect.
+        // No LWT (per protocol): willTopic=nullptr, willQos=0, willRetain=false.
         if (cfg_.mqtt_user && cfg_.mqtt_password) {
-            connected = mqtt_client_.connect(cfg_.device_id, cfg_.mqtt_user, cfg_.mqtt_password);
+            connected = mqtt_client_.connect(cfg_.device_id, cfg_.mqtt_user, cfg_.mqtt_password,
+                                             nullptr, 0, false, nullptr, false);
         } else {
-            connected = mqtt_client_.connect(cfg_.device_id);
+            connected = mqtt_client_.connect(cfg_.device_id, nullptr, nullptr,
+                                             nullptr, 0, false, nullptr, false);
         }
         if (connected) {
             DEBUG_PRINTLN("[MQTT] connected");
@@ -106,7 +111,7 @@ bool EspNetwork::publish(const char* topic, const char* payload, bool retained) 
 }
 
 bool EspNetwork::subscribe(const char* topic) {
-    bool ok = mqtt_client_.subscribe(topic);
+    bool ok = mqtt_client_.subscribe(topic, 1); // QoS 1: broker queues while asleep
     DEBUG_PRINTF("[MQTT] subscribe(%s) => %s\n", topic, ok ? "OK" : "FAILED");
     return ok;
 }

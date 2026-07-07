@@ -22,7 +22,7 @@ See [configurations](configurations.md) for how these components are assembled i
 | SHT30 Shield v2.1.0     | several  | Wemos D1 Mini stackable shield, I2C — see [module doc](modules/sht30.md) |
 | MKR ENV Shield BME280   | 1        | HTS221+LPS22HB+TEMT6000+VEML6075 — see [module doc](modules/mkr-env.md)  |
 | Seeedstudio Light Sens. | 1        | Analog photoresistor, 0–3.3V — see [module doc](modules/light.md)        |
-| BH1750 (I2C)           | several  | Digital lux sensor, calibrated 1–65535 lux, 16-bit, I2C 0x23/0x5C       |
+| BH1750 (I2C)            | several  | Digital lux sensor, calibrated 1–65535 lux, 16-bit, I2C 0x23/0x5C        |
 
 ## Display
 
@@ -145,7 +145,7 @@ Kit 24 valeurs — composants les plus utiles pour ce projet :
 
 | Component  | Type     | Package | Notes                                                        |
 |------------|----------|---------|--------------------------------------------------------------|
-| **2N7000** | N-MOSFET | TO-92   | Battery divider switch, relay GPIO driver. Vgs(th) 1-3V.    |
+| **2N7000** | N-MOSFET | TO-92   | Battery divider switch, relay GPIO driver. Vgs(th) 1-3V.     |
 | 2N2222     | NPN BJT  | TO-92   | Alternative for divider switch (needs 10k base R). General.  |
 | 2N2907     | PNP BJT  | TO-92   | High-side switching.                                         |
 | BC547      | NPN BJT  | TO-92   | Low-power switching, same use as 2N2222.                     |
@@ -167,9 +167,9 @@ See [2S power module](modules/power-2s.md) for the battery power chain and
 
 | Component          | Quantity | Notes                                                                             |
 |--------------------|----------|-----------------------------------------------------------------------------------|
-| H78M05BT           | 9        | 5V linear regulator 500mA, ~3mA Iq — **legacy, not for battery nodes**           |
-| HT7350             | several  | 5V LDO 250mA, **~4µA Iq** — recommended for 2S battery nodes (TO-92, drop-in)    |
-| HT7333             | several  | 3.3V LDO 250mA, ~4µA Iq — for ESP32-C3 direct from LiPo (TO-92)                 |
+| H78M05BT           | 9        | 5V linear regulator 500mA, ~3mA Iq — **legacy, not for battery nodes**            |
+| HT7350             | several  | 5V LDO 250mA, **~4µA Iq** — recommended for 2S battery nodes (TO-92, drop-in)     |
+| HT7333             | several  | 3.3V LDO 250mA, ~4µA Iq — for ESP32-C3 direct from LiPo (TO-92)                   |
 | L78M09CV           | 10       | 9V linear regulator 500mA                                                         |
 | L78m33ACV          | 6        | 3.3V linear regulator 500mA                                                       |
 | 18650 cells        | several  | Reclaimed from laptop packs, 3.7V nominal (see [battery guide](battery-cells.md)) |

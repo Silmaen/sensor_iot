@@ -19,6 +19,12 @@
 #ifndef BATTERY_DIVIDER_RATIO
 #define BATTERY_DIVIDER_RATIO 2.833f
 #endif
+// Number of Li-ion/LiPo cells in series (2 for 2S packs, 1 for 1S).
+// The state-of-charge curve is expressed per cell, so the pack voltage is
+// divided by this before the lookup.
+#ifndef BATTERY_CELLS
+#define BATTERY_CELLS 2
+#endif
 
 // Convert raw ADC value to battery voltage using current divider ratio
 float adc_to_voltage(uint16_t adc_value);

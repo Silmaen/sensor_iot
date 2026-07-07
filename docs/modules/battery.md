@@ -57,13 +57,13 @@ scales the 2S pack voltage down to the ADC input range.
 The voltage divider draws **~247 µA continuously**, including during deep sleep. An N-channel MOSFET
 on the low side of R2 cuts this drain to zero when not reading.
 
-| Parameter              | Value                                                |
-|------------------------|------------------------------------------------------|
-| Switch pin             | `D3` (GPIO0) — `PIN_BATTERY_SWITCH` in `config.h`   |
-| MOSFET                 | 2N7000, BS170, or any logic-level N-MOSFET           |
-| Vgs(th) requirement    | < 2V (must fully turn on at 3.3V gate drive)         |
-| Settling time          | 500 µs (RC time constant of divider + ADC input cap) |
-| Quiescent savings      | ~247 µA eliminated during deep sleep                 |
+| Parameter           | Value                                                |
+|---------------------|------------------------------------------------------|
+| Switch pin          | `D3` (GPIO0) — `PIN_BATTERY_SWITCH` in `config.h`    |
+| MOSFET              | 2N7000, BS170, or any logic-level N-MOSFET           |
+| Vgs(th) requirement | < 2V (must fully turn on at 3.3V gate drive)         |
+| Settling time       | 500 µs (RC time constant of divider + ADC input cap) |
+| Quiescent savings   | ~247 µA eliminated during deep sleep                 |
 
 **Circuit:** R1 (22k) → mid-point (to A0) → R2 (12k) → Q1 drain. Q1 source → GND. Q1 gate → D3.
 
@@ -75,13 +75,13 @@ automatically toggles the pin before/after each read.
 
 **Compatible transistors** (any of these work):
 
-| Type     | Part       | Vgs(th) | Rds(on)  | Package  | Notes                        |
-|----------|------------|---------|----------|----------|------------------------------|
-| N-MOSFET | **2N7000** | 1.0-3.0V | 1.8 ohm  | TO-92    | Most common, easy to solder  |
-| N-MOSFET | **BS170**  | 0.8-3.0V | 1.2 ohm  | TO-92    | Lower Rds(on) than 2N7000   |
-| N-MOSFET | **IRLML6344** | 0.8V | 0.029 ohm | SOT-23 | SMD, excellent for low power |
-| NPN BJT  | **2N2222** | Vbe~0.7V | —        | TO-92    | Needs 10k base resistor      |
-| NPN BJT  | **BC547**  | Vbe~0.7V | —        | TO-92    | Needs 10k base resistor      |
+| Type     | Part          | Vgs(th)  | Rds(on)   | Package | Notes                        |
+|----------|---------------|----------|-----------|---------|------------------------------|
+| N-MOSFET | **2N7000**    | 1.0-3.0V | 1.8 ohm   | TO-92   | Most common, easy to solder  |
+| N-MOSFET | **BS170**     | 0.8-3.0V | 1.2 ohm   | TO-92   | Lower Rds(on) than 2N7000    |
+| N-MOSFET | **IRLML6344** | 0.8V     | 0.029 ohm | SOT-23  | SMD, excellent for low power |
+| NPN BJT  | **2N2222**    | Vbe~0.7V | —         | TO-92   | Needs 10k base resistor      |
+| NPN BJT  | **BC547**     | Vbe~0.7V | —         | TO-92   | Needs 10k base resistor      |
 
 > **N-MOSFET vs NPN:** MOSFETs are preferred — they draw zero gate current and switch cleanly
 > from a GPIO. NPN transistors work too but need a base resistor (~10k) and draw ~330 µA from the
@@ -107,51 +107,64 @@ The SAMD21 driver calls `analogReadResolution(12)` before each read to ensure 12
 
 ## Voltage-to-SoC Mapping
 
-The firmware uses a **linear interpolation** between `BATTERY_VOLTAGE_EMPTY` (0%) and
-`BATTERY_VOLTAGE_FULL` (100%), clamped at both ends.
+The firmware maps voltage to SoC through a **non-linear Li-ion/LiPo discharge curve** rather than a
+straight line. A linear mapping is badly wrong for these cells: it never reaches 100% (a real pack
+tops out below its nominal full voltage under load) and it *overestimates* charge near the end,
+making the device die while still reporting 20-25%.
 
-```text
-SoC = (V_bat - V_empty) / (V_full - V_empty) x 100
-```
+The curve is expressed **per cell** and shared by all platforms (`voltage_to_soc()` divides the pack
+voltage by `BATTERY_CELLS`). It was derived from real 17-18 day discharge traces of the 2S field
+devices — assuming a roughly constant load, `SoC ≈ 100% − fraction of runtime elapsed`. It captures
+the flat mid plateau and the steep end-of-life cliff. The raw curve result is then rescaled so that
+the configured `BATTERY_VOLTAGE_EMPTY` reads exactly 0% and `BATTERY_VOLTAGE_FULL` exactly 100% on
+the given hardware.
 
-### 2S LiPo (ESP8266)
+Bounds are **calibrated from observed field data** (in `config.h`):
+
+| Platform        | Cells | Empty (0%) | Full (100%) | Basis                                             |
+|-----------------|-------|------------|-------------|---------------------------------------------------|
+| ESP8266 / ESP32 | 2     | 6.00 V     | 8.30 V      | Observed ceiling ~8.30 V, floor ~5.9 V            |
+| MKR WiFi 1010   | 1     | 3.30 V     | 4.10 V      | Observed ceiling ~4.08 V, cutoff/recharge ~3.30 V |
+
+### 2S (ESP8266 / ESP32-C3)
 
 | Voltage (V) | SoC (%) | Notes                    |
 |-------------|--------:|--------------------------|
-| 8.40        |     100 | Fully charged            |
-| 8.16        |      90 |                          |
-| 7.92        |      80 |                          |
-| 7.68        |      70 |                          |
-| 7.44        |      60 |                          |
-| 7.20        |      50 | Nominal                  |
-| 6.96        |      40 |                          |
-| 6.72        |      30 |                          |
-| 6.48        |      20 |                          |
-| 6.36        |      15 | Warning (low_battery)    |
-| 6.24        |      10 |                          |
-| 6.12        |       5 | Error (critical_battery) |
+| 8.30        |     100 | Fully charged (ceiling)  |
+| 8.10        |      96 |                          |
+| 7.90        |      84 | Plateau                  |
+| 7.70        |      71 | Plateau                  |
+| 7.55        |      52 | Plateau                  |
+| 7.45        |      36 | Knee                     |
+| 7.35        |      29 | Cliff begins             |
+| 7.10        |      21 |                          |
+| 6.90        |      17 | Warning (low_battery)    |
+| 6.60        |      11 |                          |
+| 6.35        |       5 | Error (critical_battery) |
+| 6.15        |       2 |                          |
 | 6.00        |       0 | Empty / cutoff           |
 
-### 1S LiPo (MKR WiFi 1010)
+### 1S (MKR WiFi 1010)
 
 | Voltage (V) | SoC (%) | Notes                    |
 |-------------|--------:|--------------------------|
-| 4.20        |     100 | Fully charged            |
-| 4.08        |      90 |                          |
-| 3.96        |      80 |                          |
-| 3.84        |      70 |                          |
-| 3.72        |      60 |                          |
-| 3.60        |      50 | Nominal                  |
-| 3.48        |      40 |                          |
-| 3.36        |      30 |                          |
-| 3.24        |      20 | Warning (low_battery)    |
-| 3.12        |      10 |                          |
-| 3.06        |       5 | Error (critical_battery) |
-| 3.00        |       0 | Empty / cutoff           |
+| 4.10        |     100 | Fully charged (ceiling)  |
+| 4.05        |      96 |                          |
+| 4.00        |      89 |                          |
+| 3.90        |      75 | Plateau                  |
+| 3.80        |      55 | Plateau                  |
+| 3.75        |      35 | Knee                     |
+| 3.70        |      23 | Cliff begins             |
+| 3.65        |      17 | Warning (low_battery)    |
+| 3.55        |      11 |                          |
+| 3.45        |       7 | Error (critical_battery) |
+| 3.35        |       2 |                          |
+| 3.30        |       0 | Empty / cutoff (PMIC)    |
 
-> **Note:** Real LiPo discharge curves are non-linear. The linear mapping is a deliberate
-> simplification. For higher accuracy, a lookup table or polynomial fit could replace the linear
-> formula in `voltage_to_soc()`.
+> **Note:** The curve is calibrated on voltage measured *while the radio is active* (there is some
+> sag), so it is slightly conservative. The `LIPO_CURVE[]` table lives in `battery.cpp`; adjust the
+> per-cell breakpoints there if a different cell chemistry is used. The observed MKR ceiling (~4.08 V
+> instead of 4.20 V) suggests its built-in divider may read a few % low — verify with `calibrate_battery`.
 
 ## Calibration Notes
 

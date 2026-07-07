@@ -12,10 +12,10 @@ It is enabled by the `-DHAS_CALIBRATION` build flag and works with **any** senso
 
 **Commands** (on `thermo/{id}/command`):
 
-| Action                  | Payload                                                | Effect                            |
-|-------------------------|--------------------------------------------------------|-----------------------------------|
-| `set_offset`            | `{"action":"set_offset","metric":"temp","value":-0.5}` | Set calibration offset            |
-| `request_calibration`   | `{"action":"request_calibration"}`                     | Device publishes current offsets  |
+| Action                | Payload                                                | Effect                           |
+|-----------------------|--------------------------------------------------------|----------------------------------|
+| `set_offset`          | `{"action":"set_offset","metric":"temp","value":-0.5}` | Set calibration offset           |
+| `request_calibration` | `{"action":"request_calibration"}`                     | Device publishes current offsets |
 
 ## Why Calibrate?
 
@@ -56,11 +56,11 @@ build_flags =
     -DCALIBRATION_HUMI_OFFSET=3.0f
 ```
 
-| Flag                       | Default | Description               |
-|----------------------------|---------|---------------------------|
-| `CALIBRATION_TEMP_OFFSET`  | `0.0f`  | Temperature offset (°C)   |
-| `CALIBRATION_HUMI_OFFSET`  | `0.0f`  | Humidity offset (% RH)    |
-| `CALIBRATION_PRESS_OFFSET` | `0.0f`  | Pressure offset (hPa)     |
+| Flag                       | Default | Description             |
+|----------------------------|---------|-------------------------|
+| `CALIBRATION_TEMP_OFFSET`  | `0.0f`  | Temperature offset (°C) |
+| `CALIBRATION_HUMI_OFFSET`  | `0.0f`  | Humidity offset (% RH)  |
+| `CALIBRATION_PRESS_OFFSET` | `0.0f`  | Pressure offset (hPa)   |
 
 These defaults are used at boot and after a `calibration_module_reset()`. They can still be
 overridden at runtime via the `set_offset` MQTT command. If offset persistence is configured
@@ -79,10 +79,10 @@ overridden at runtime via the `set_offset` MQTT command. If offset persistence i
 {"action":"set_offset","metric":"temp","value":-0.5}
 ```
 
-| Field    | Type   | Required | Values                              |
-|----------|--------|:--------:|-------------------------------------|
-| `metric` | string |   Yes    | `"temp"`, `"humi"`, or `"press"`    |
-| `value`  | number |   Yes    | Offset to add (-50.0 to +50.0)      |
+| Field    | Type   | Required | Values                           |
+|----------|--------|:--------:|----------------------------------|
+| `metric` | string |   Yes    | `"temp"`, `"humi"`, or `"press"` |
+| `value`  | number |   Yes    | Offset to add (-50.0 to +50.0)   |
 
 The offset is **added** to the raw sensor reading:
 

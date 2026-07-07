@@ -25,31 +25,75 @@ Both `device_type` and `device_id` are defined via build flags in
 | `capabilities` | Device -> Server | `thermo/thermo_1/capabilities` |
 | `ack`          | Device -> Server | `thermo/thermo_1/ack`          |
 
+## Connection & session model
+
+Most thermo nodes are battery powered and spend ~99% of their time in deep
+sleep: they are only connected for a ~2 s window once per `publish_interval`
+(default 300 s). To make server→device commands survive that offline time, the
+connection is set up as follows:
+
+| Setting         | Value                    | Why                                                                 |
+|-----------------|--------------------------|---------------------------------------------------------------------|
+| Client ID       | `DEVICE_ID` (stable)     | The broker ties the persistent session to this id across wakes.     |
+| Clean session   | **`false`**              | Broker keeps the subscription and **queues** commands while asleep. |
+| `command` sub   | **QoS 1**                | Only QoS ≥ 1 messages are queued for an offline session.            |
+| Last Will (LWT) | **none**                 | Online status is derived from `last_seen`, not LWT (see below).     |
+| Keepalive       | 15 s (PubSubClient dflt) | Short; the connection only lives for the brief awake window.        |
+
+**Consequence for whoever publishes commands (the server, or any integrator):**
+
+- Publish on `{type}/{id}/command` with **QoS 1** so the broker queues the
+  message for a sleeping device and delivers it on the next reconnect. A QoS 0
+  command sent while the device is asleep is silently dropped.
+- Expect **latency**: a command issued while the device sleeps takes effect on
+  its next wake (≤ `publish_interval` later). This is by design.
+- The broker must persist sessions (`persistence true` in `mosquitto.conf`, no
+  `persistent_client_expiration`). This is the default in this project.
+
+QoS/retain used per message type:
+
+| Message        | Direction        | QoS   | Retain | Notes                                                |
+|----------------|------------------|-------|--------|------------------------------------------------------|
+| `sensors`      | Device -> Server | 0     | no     | Device publishes at QoS 0 (server is always online). |
+| `status`       | Device -> Server | 0     | no     | Alert JSON, see §2.                                  |
+| `capabilities` | Device -> Server | 0     | no     | Sent in response to `request_capabilities`.          |
+| `ack`          | Device -> Server | 0     | no     | Command acknowledgement, see §4.                     |
+| `command`      | Server -> Device | **1** | no     | QoS 1 so it is queued for sleeping devices.          |
+
+> The device firmware (PubSubClient) only **publishes** at QoS 0, which is fine
+> because the server is always connected. Reliability is only needed in the
+> server→device direction, which QoS 1 + the persistent session provide.
+
 ## 1. Publishing sensor readings (`sensors`)
 
 Publish a JSON object mapping metric names to numeric values. The payload
 is built dynamically by `PayloadBuilder` — each enabled module contributes
 its fields (see [architecture.md](architecture.md)).
 
+Devices publish **compact metric names** (`temp`, `humi`, `bat`, …) to keep
+payloads small. The server maps them to canonical names for storage (see
+*Metric reference* below).
+
 **Example with `HAS_BME280` only:**
 
 ```json
 {
-  "temperature": 22.5,
-  "humidity": 45.2,
-  "pressure": 1013.1
+  "temp": 22.5,
+  "humi": 45.2,
+  "press": 1013.1
 }
 ```
 
-**Example with `HAS_BME280` + `HAS_BATTERY`:**
+**Example with `HAS_BME280` + `HAS_BATTERY`** (also carries `rssi`):
 
 ```json
 {
-  "temperature": 22.0,
-  "humidity": 50.0,
-  "pressure": 1000.0,
-  "battery_pct": 75,
-  "battery_v": 7.80
+  "temp": 22.0,
+  "humi": 50.0,
+  "press": 1000.0,
+  "bat": 75,
+  "batv": 7.80,
+  "rssi": -47
 }
 ```
 
@@ -62,20 +106,27 @@ its fields (see [architecture.md](architecture.md)).
 
 ### Metric reference
 
-| Metric        | Module        | Type               | Unit    | Description                                          |
-|---------------|---------------|--------------------|---------|------------------------------------------------------|
-| `temperature` | `HAS_BME280`  | float (1 decimal)  | Celsius | Ambient temperature                                  |
-| `humidity`    | `HAS_BME280`  | float (1 decimal)  | % RH    | Relative humidity                                    |
-| `pressure`    | `HAS_BME280`  | float (1 decimal)  | hPa     | Atmospheric pressure                                 |
-| `battery_pct` | `HAS_BATTERY` | uint               | %       | Battery state of charge (0-100)                      |
-| `battery_v`   | `HAS_BATTERY` | float (2 decimals) | V       | Battery voltage (ESP: 2S 6.0-8.4V, MKR: 1S 3.0-4.2V) |
-| `light`       | `HAS_LIGHT`   | uint               | %       | Relative light level (0 = dark, 100 = bright)        |
-| `lux`         | `HAS_BH1750`  | float (0 decimals) | lx      | Calibrated illuminance (1-65535 lux)                 |
-| `relay1`      | `HAS_RELAY`   | uint               | —       | Relay 1 state (0 = off, 1 = energized)               |
-| `relay2`      | `HAS_RELAY`   | uint               | —       | Relay 2 state (0 = off, 1 = energized)               |
+The device emits the **name sent on the wire** (compact); the server stores it
+under the **canonical name** via its alias map (`METRIC_ALIASES` in
+`../sensor_server/`).
 
-New modules can add additional metrics. The server auto-discovers metric
-names from the sensor readings and capabilities message.
+| Sent (device) | Canonical (server) | Module                                     | Type          | Unit | Description                                        |
+|---------------|--------------------|--------------------------------------------|---------------|------|----------------------------------------------------|
+| `temp`        | `temperature`      | `HAS_BME280` / `HAS_SHT30` / `HAS_MKR_ENV` | float (1 dec) | °C   | Ambient temperature                                |
+| `humi`        | `humidity`         | `HAS_BME280` / `HAS_SHT30` / `HAS_MKR_ENV` | float (1 dec) | % RH | Relative humidity                                  |
+| `press`       | `pressure`         | `HAS_BME280` / `HAS_MKR_ENV`               | float (1 dec) | hPa  | Atmospheric pressure                               |
+| `bat`         | `bat_percent`      | `HAS_BATTERY`                              | uint          | %    | Battery state of charge (0-100)                    |
+| `batv`        | `bat_voltage`      | `HAS_BATTERY`                              | float (2 dec) | V    | Battery voltage (ESP 2S 6.0-8.3V, MKR 1S 3.3-4.1V) |
+| `rssi`        | `rssi`             | core                                       | int           | dBm  | WiFi signal strength                               |
+| `light`       | `light`            | `HAS_LIGHT`                                | uint          | %    | Relative light level (0 = dark, 100 = bright)      |
+| `lux`         | `lux`              | `HAS_BH1750`                               | float (0 dec) | lx   | Calibrated illuminance (1-65535 lux)               |
+| `uv`          | `uv_index`         | `HAS_MKR_ENV`                              | float         | —    | UV index                                           |
+| `relay1`      | `relay1`           | `HAS_RELAY`                                | uint          | —    | Relay 1 state (0 = off, 1 = energized)             |
+| `relay2`      | `relay2`           | `HAS_RELAY`                                | uint          | —    | Relay 2 state (0 = off, 1 = energized)             |
+
+New modules can add additional metrics. The server auto-discovers metric names
+from the sensor readings and capabilities message; add an entry to the server's
+`METRIC_ALIASES` if a new compact name needs a canonical mapping.
 
 ## 2. Publishing status alerts (`status`)
 
@@ -152,7 +203,7 @@ Commands are routed through the `ModuleRegistry`:
 | `set_interval`         | seconds (1-86400)                     | Core        | Updates publish/sleep interval          |
 | `request_capabilities` | _(none)_                              | Core        | Responds with capabilities (section 4)  |
 | `set_offset`           | `{"metric":"<name>","value":<float>}` | Calibration | Set sensor offset (temp/humi/press)     |
-| `request_calibration`  | _(none)_                              | Calibration | Device publishes current offsets on ack  |
+| `request_calibration`  | _(none)_                              | Calibration | Device publishes current offsets on ack |
 | `relay_toggle`         | `{"value":<1\|2>}`                    | Relay       | Toggle relay on/off                     |
 | `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`       | Relay       | Activate relay, auto-revert after delay |
 
@@ -166,12 +217,17 @@ by the dispatcher.
   commands in `loop()` via `network.loop()`. Always connected, no special
   handling needed.
 - **One-shot mode** (`HAS_DEEP_SLEEP`) and **duty-cycle mode** (MKR WiFi):
-  1. Subscribe to command topic
-  2. Publish sensor data (triggers server-side command flush)
-  3. Wait 5 seconds for pending commands (`MQTT_COMMAND_WAIT_MS`)
-  4. Process each command as it arrives (ack immediately)
-  5. Publish capabilities (reflects post-command state)
-  6. Disconnect and sleep / power down radio
+  1. Connect (persistent session, see *Connection & session model*) and
+     subscribe to the command topic at QoS 1.
+  2. On reconnect the broker immediately delivers any commands it **queued**
+     while the device slept (they were published QoS 1).
+  3. Publish sensor data.
+  4. Keep the connection open for `MQTT_COMMAND_WAIT_MS` (**2 s**), pumping
+     `network.loop()` so queued/arriving commands are processed and acked.
+  5. If a `request_capabilities` was among them, the capabilities response is
+     published during that window.
+  6. Disconnect and sleep / power down radio. The persistent session (and any
+     still-undelivered commands) survives on the broker until the next wake.
 - Multiple commands may arrive per wake cycle — the firmware processes all
   of them during the wait window.
 - `request_capabilities` is not acked — the capabilities response serves as
@@ -213,8 +269,10 @@ it reflects exactly which modules are enabled in the current firmware build.
 ```json
 {
   "id": "ESP-00A1B2",
+  "hw": "esp8266-bme280",
+  "fw": "1.0.0",
   "intrvl": 10,
-  "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa"},
+  "metrics": {"rssi": "dBm", "temp": "°C", "humi": "%", "press": "hPa"},
   "cmds": {"set_interval": [{"n": "value", "t": "number"}]}
 }
 ```
@@ -224,18 +282,27 @@ it reflects exactly which modules are enabled in the current firmware build.
 ```json
 {
   "id": "ESP-00A1B2",
+  "hw": "esp8266-bme280-bat",
+  "fw": "1.0.0",
   "intrvl": 300,
-  "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa", "battery_pct": "%", "battery_v": "V"},
-  "cmds": {"set_interval": [{"n": "value", "t": "number"}]}
+  "metrics": {"rssi": "dBm", "temp": "°C", "humi": "%", "press": "hPa", "bat": "%", "batv": "V"},
+  "cmds": {"set_interval": [{"n": "value", "t": "number"}], "calibrate_battery": [{"n": "value", "t": "number"}]}
 }
 ```
 
-| Field     | Type   | Required | Description                                                        |
-|-----------|--------|:--------:|--------------------------------------------------------------------|
-| `id`      | string |   Yes    | Unique chip ID. Format: `ESP-XXXXXX` or `MKR-XXXXXXXX`. Max 256    |
-| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                     |
-| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit |
-| `cmds`    | object |   Yes    | Command name → array of `{n, t}` params (`[]` if no params)        |
+| Field     | Type   | Required | Description                                                                        |
+|-----------|--------|:--------:|------------------------------------------------------------------------------------|
+| `id`      | string |   Yes    | Unique chip serial. Format: `ESP-XXXXXX` / `C3-XXXXXX` / `MKR-XXXXXXXX`. Per unit  |
+| `hw`      | string |   Yes    | Hardware code — identical across units with the same hardware/module config        |
+| `fw`      | string |   Yes    | Firmware version (semver). Compare against latest image for `hw` to detect updates |
+| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                                     |
+| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit                 |
+| `cmds`    | object |   Yes    | Command name → array of `{n, t}` params (`[]` if no params)                        |
+
+> **Update discovery (planned):** `hw` selects the firmware line for a physical
+> board; `fw` is the version currently running. A server can offer an OTA update
+> when it holds a newer `fw` for that `hw`. `id` (chip serial) stays unique per
+> unit and is not used for update matching.
 
 **Parameter definition format:** each entry is `{"n": "<param>", "t": "<number|string|boolean>"}`.
 
@@ -246,10 +313,15 @@ it reflects exactly which modules are enabled in the current firmware build.
 
 ## 6. Timeout handling
 
-If the device does not respond to `request_capabilities` within 60 seconds,
-the server flags it with `alert_level = "error"` and
-`alert_message = "no_capabilities_response"`. This is automatically cleared
-when the device sends a valid capabilities response.
+If the device does not respond to `request_capabilities`, the server flags it
+with `alert_level = "error"` and `alert_message = "no_capabilities_response"`.
+This is automatically cleared when the device sends a valid capabilities
+response.
+
+The response deadline is **`max(60 s, 2 × publish_interval)`**: a deep-sleep
+device only sees the queued request on its next wake, so the server waits at
+least two publish intervals before flagging a missing response. Do not expect
+capabilities from a sleeping device sooner than its next wake.
 
 The server requests capabilities in three situations:
 
@@ -283,16 +355,18 @@ Approved (active) --> data stored, commands enabled
 
 ```text
 # 1. Device powers on (HAS_BME280 + HAS_BATTERY), publishes first reading
-thermo/thermo_1/sensors  <- {"temperature":22.5,"humidity":45,"pressure":1013.2,"battery_pct":85,"battery_v":7.92}
+thermo/thermo_1/sensors  <- {"temp":22.5,"humi":45,"press":1013.2,"bat":85,"batv":7.92,"rssi":-47}
 
-# 2. Server auto-discovers device, requests capabilities
+# 2. Server auto-discovers device, requests capabilities (QoS 1)
 thermo/thermo_1/command  -> {"action":"request_capabilities"}
 
 # 3. Device responds (metrics/commands from ModuleRegistry)
 thermo/thermo_1/capabilities <- {
     "id":"ESP-00A1B2",
+    "hw":"esp8266-bme280-bat",
+    "fw":"1.0.0",
     "intrvl":300,
-    "metrics":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
+    "metrics":{"rssi":"dBm","temp":"°C","humi":"%","press":"hPa","bat":"%","batv":"V"},
     "cmds":{"set_interval":[{"name":"value","type":"number"}]}
 }
 
@@ -313,8 +387,60 @@ thermo/thermo_1/command -> {"action":"request_capabilities"}
 # 8. Device responds with updated interval
 thermo/thermo_1/capabilities <- {
     "id":"ESP-00A1B2",
+    "hw":"esp8266-bme280-bat",
+    "fw":"1.0.0",
     "intrvl":120,
-    "metrics":{"temperature":"°C","humidity":"%","pressure":"hPa","battery_pct":"%","battery_v":"V"},
+    "metrics":{"rssi":"dBm","temp":"°C","humi":"%","press":"hPa","bat":"%","batv":"V"},
     "cmds":{"set_interval":[{"name":"value","type":"number"}]}
 }
 ```
+
+## 10. Talking to a device directly (integrator quickstart)
+
+Normally you drive devices through the server (web UI or the read-only HTTP
+API). Talk to the broker directly only for debugging or a custom integration.
+The examples use `mosquitto_pub`/`mosquitto_sub`; `$H` is the broker host and
+`-u/-P` the credentials.
+
+**Watch everything a device sends:**
+
+```bash
+mosquitto_sub -h $H -p 1883 -u USER -P PASS -v -t 'thermo/thermo_1/#'
+# thermo/thermo_1/sensors      {"temp":22.5,"humi":45,"press":1013.2,"bat":85,"batv":7.92}
+# thermo/thermo_1/capabilities {"id":"ESP-00A1B2","hw":"esp8266-bme280-bat","fw":"1.0.0",...}
+```
+
+**Send a command — MUST be QoS 1** so a sleeping device receives it on its next
+wake (a QoS 0 command is dropped while it is asleep):
+
+```bash
+# Change the publish interval to 600 s
+mosquitto_pub -h $H -p 1883 -u USER -P PASS -q 1 \
+  -t 'thermo/thermo_1/command' -m '{"action":"set_interval","value":600}'
+
+# Watch for the ack (arrives on the device's next wake)
+mosquitto_sub -h $H -p 1883 -u USER -P PASS -v -t 'thermo/thermo_1/ack'
+# thermo/thermo_1/ack {"action":"set_interval","status":"ok"}
+```
+
+**Read a device's hardware code and firmware version** (for update detection):
+
+```bash
+mosquitto_sub -h $H -p 1883 -u USER -P PASS -t 'thermo/thermo_1/capabilities' &
+mosquitto_pub -h $H -p 1883 -u USER -P PASS -q 1 \
+  -t 'thermo/thermo_1/command' -m '{"action":"request_capabilities"}'
+# -> capabilities response carries "hw" (hardware code) and "fw" (version).
+```
+
+The `hw`/`fw` pair is how you decide whether an update applies: `hw` identifies
+the board (same hardware ⇒ same code), `fw` is the running version. Offer an
+update when a newer image exists for that `hw`.
+
+**Rules of thumb:**
+
+- Always publish commands with **`-q 1`**. Without it, deep-sleep devices miss them.
+- Expect the ack/response on the device's **next wake** (≤ `publish_interval`), not immediately.
+- Do **not** set a retained command (`-r`) on the command topic: the firmware
+  re-subscribes every wake and would re-execute a retained command each time.
+- One command action per message (`{"action":...,"value":...}`); send several
+  messages for several commands — they are queued and processed in order.

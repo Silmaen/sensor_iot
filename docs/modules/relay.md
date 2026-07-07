@@ -86,9 +86,9 @@ it is cancelled.
 {"action":"relay_toggle","value":1}
 ```
 
-| Field   | Type   | Required | Values | Description         |
-|---------|--------|:--------:|--------|---------------------|
-| `value` | number |   Yes    | 1 or 2 | Relay number        |
+| Field   | Type   | Required | Values | Description  |
+|---------|--------|:--------:|--------|--------------|
+| `value` | number |   Yes    | 1 or 2 | Relay number |
 
 ### `relay_contact`
 
@@ -99,10 +99,10 @@ If the relay is already active from a previous contact, the timer is reset.
 {"action":"relay_contact","relay":1,"value":2000}
 ```
 
-| Field   | Type   | Required | Values       | Description              |
-|---------|--------|:--------:|--------------|--------------------------|
-| `relay` | number |   Yes    | 1 or 2       | Relay number             |
-| `value` | number |   Yes    | 1–300000     | Delay before revert (ms) |
+| Field   | Type   | Required | Values   | Description              |
+|---------|--------|:--------:|----------|--------------------------|
+| `relay` | number |   Yes    | 1 or 2   | Relay number             |
+| `value` | number |   Yes    | 1–300000 | Delay before revert (ms) |
 
 Use cases:
 - **Door buzzer**: `relay_contact` with 3000 ms to unlock for 3 seconds
@@ -144,12 +144,12 @@ build_flags =
 
 ## Firmware Files
 
-| File                                            | Role                                     |
-|-------------------------------------------------|------------------------------------------|
-| `lib/thermo_core/src/modules/relay_module.h`    | Module interface (register, contribute)  |
-| `lib/thermo_core/src/modules/relay_module.cpp`  | Module logic (commands, timer, state)    |
-| `src/hw/relay_driver.h` _(to create)_           | Hardware driver header (GPIO init/write) |
-| `src/hw/relay_driver.cpp` _(to create)_         | Hardware driver implementation           |
+| File                                           | Role                                     |
+|------------------------------------------------|------------------------------------------|
+| `lib/thermo_core/src/modules/relay_module.h`   | Module interface (register, contribute)  |
+| `lib/thermo_core/src/modules/relay_module.cpp` | Module logic (commands, timer, state)    |
+| `src/hw/relay_driver.h` _(to create)_          | Hardware driver header (GPIO init/write) |
+| `src/hw/relay_driver.cpp` _(to create)_        | Hardware driver implementation           |
 
 ### Module API
 

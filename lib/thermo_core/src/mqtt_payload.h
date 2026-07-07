@@ -21,7 +21,12 @@ int format_status_payload(const char* level, const char* message,
 struct ModuleRegistry;
 
 // Format capabilities response as JSON payload from registry contents.
+//   hardware_id: unique per-chip serial (e.g. "ESP-A1B2C3")
+//   hw_code:     hardware class code, shared across identical hardware
+//   fw_version:  firmware version (semver)
 int format_capabilities_payload(const char* hardware_id,
+                                const char* hw_code,
+                                const char* fw_version,
                                 uint32_t publish_interval,
                                 const ModuleRegistry& registry,
                                 char* buf, size_t buf_size);
