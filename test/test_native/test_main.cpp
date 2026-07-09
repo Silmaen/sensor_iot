@@ -38,8 +38,10 @@ void test_format_status_payload_warning(void);
 void test_format_status_payload_ok_no_message(void);
 void test_format_status_payload_error(void);
 void test_format_capabilities_payload(void);
-void test_format_capabilities_payload_with_battery_metrics(void);
-void test_format_capabilities_no_units_no_params(void);
+void test_format_capabilities_ota_cal_flags_off(void);
+void test_format_capabilities_no_units(void);
+void test_format_commands_payload(void);
+void test_format_commands_payload_no_params(void);
 void test_format_ack_payload_ok(void);
 void test_format_ack_payload_error(void);
 void test_parse_command_action_set_interval(void);
@@ -56,6 +58,31 @@ void test_parse_command_float_value_integer(void);
 void test_parse_command_float_value_missing(void);
 void test_parse_command_float_value_zero_rejected(void);
 void test_parse_command_float_value_negative_rejected(void);
+void test_parse_command_string_value_url(void);
+void test_parse_command_string_value_other_key(void);
+void test_parse_command_string_value_with_spaces(void);
+void test_parse_command_string_value_missing(void);
+void test_parse_command_string_value_not_a_string(void);
+void test_parse_command_string_value_overflow_rejected(void);
+
+// HW identity tests
+void test_hw_code_valid_accepts_8_alnum(void);
+void test_hw_code_valid_rejects_wrong_length(void);
+void test_hw_code_valid_rejects_bad_chars(void);
+void test_hw_code_valid_null(void);
+
+// Config store tests
+void test_config_store_str_roundtrip(void);
+void test_config_store_float_roundtrip(void);
+void test_config_store_missing_key(void);
+void test_config_store_overwrite(void);
+void test_config_store_type_mismatch(void);
+void test_config_store_get_str_overflow(void);
+void test_config_store_set_str_too_long(void);
+void test_config_store_remove(void);
+void test_config_store_clear(void);
+void test_config_store_full(void);
+void test_config_calibration_present_flag(void);
 
 // Module registry tests
 void test_registry_init(void);
@@ -101,6 +128,9 @@ void test_calibration_set_offset_invalid_metric(void);
 void test_calibration_set_offset_extreme_rejected(void);
 void test_calibration_request_calibration(void);
 void test_calibration_format_response(void);
+void test_calibration_set_calibration_bat_divider(void);
+void test_calibration_set_calibration_unknown_key(void);
+void test_calibration_set_calibration_invalid_ratio(void);
 void test_calibration_set_offset_zero(void);
 void test_light_module_register(void);
 void test_light_module_contribute(void);
@@ -118,6 +148,18 @@ void test_relay_toggle_invalid_relay(void);
 void test_relay_contact_activates_and_reverts(void);
 void test_relay_contact_invalid_delay(void);
 void test_relay_toggle_cancels_contact(void);
+
+// OTA module tests
+void test_ota_module_register(void);
+void test_ota_happy_path(void);
+void test_ota_hw_code_mismatch(void);
+void test_ota_hw_rev_mismatch(void);
+void test_ota_same_version_rejected(void);
+void test_ota_low_battery_rejected(void);
+void test_ota_battery_ok_proceeds(void);
+void test_ota_no_battery_provider_skips_guard(void);
+void test_ota_performer_failure_acked(void);
+void test_ota_bad_request(void);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -166,8 +208,10 @@ int main(int argc, char** argv) {
     RUN_TEST(test_format_status_payload_ok_no_message);
     RUN_TEST(test_format_status_payload_error);
     RUN_TEST(test_format_capabilities_payload);
-    RUN_TEST(test_format_capabilities_payload_with_battery_metrics);
-    RUN_TEST(test_format_capabilities_no_units_no_params);
+    RUN_TEST(test_format_capabilities_ota_cal_flags_off);
+    RUN_TEST(test_format_capabilities_no_units);
+    RUN_TEST(test_format_commands_payload);
+    RUN_TEST(test_format_commands_payload_no_params);
     RUN_TEST(test_format_ack_payload_ok);
     RUN_TEST(test_format_ack_payload_error);
     RUN_TEST(test_parse_command_action_set_interval);
@@ -184,6 +228,31 @@ int main(int argc, char** argv) {
     RUN_TEST(test_parse_command_float_value_missing);
     RUN_TEST(test_parse_command_float_value_zero_rejected);
     RUN_TEST(test_parse_command_float_value_negative_rejected);
+    RUN_TEST(test_parse_command_string_value_url);
+    RUN_TEST(test_parse_command_string_value_other_key);
+    RUN_TEST(test_parse_command_string_value_with_spaces);
+    RUN_TEST(test_parse_command_string_value_missing);
+    RUN_TEST(test_parse_command_string_value_not_a_string);
+    RUN_TEST(test_parse_command_string_value_overflow_rejected);
+
+    // HW identity
+    RUN_TEST(test_hw_code_valid_accepts_8_alnum);
+    RUN_TEST(test_hw_code_valid_rejects_wrong_length);
+    RUN_TEST(test_hw_code_valid_rejects_bad_chars);
+    RUN_TEST(test_hw_code_valid_null);
+
+    // Config store
+    RUN_TEST(test_config_store_str_roundtrip);
+    RUN_TEST(test_config_store_float_roundtrip);
+    RUN_TEST(test_config_store_missing_key);
+    RUN_TEST(test_config_store_overwrite);
+    RUN_TEST(test_config_store_type_mismatch);
+    RUN_TEST(test_config_store_get_str_overflow);
+    RUN_TEST(test_config_store_set_str_too_long);
+    RUN_TEST(test_config_store_remove);
+    RUN_TEST(test_config_store_clear);
+    RUN_TEST(test_config_store_full);
+    RUN_TEST(test_config_calibration_present_flag);
 
     // Module registry
     RUN_TEST(test_registry_init);
@@ -233,6 +302,9 @@ int main(int argc, char** argv) {
     RUN_TEST(test_calibration_set_offset_extreme_rejected);
     RUN_TEST(test_calibration_request_calibration);
     RUN_TEST(test_calibration_format_response);
+    RUN_TEST(test_calibration_set_calibration_bat_divider);
+    RUN_TEST(test_calibration_set_calibration_unknown_key);
+    RUN_TEST(test_calibration_set_calibration_invalid_ratio);
     RUN_TEST(test_calibration_set_offset_zero);
 
     // Light module
@@ -254,6 +326,18 @@ int main(int argc, char** argv) {
     RUN_TEST(test_relay_contact_activates_and_reverts);
     RUN_TEST(test_relay_contact_invalid_delay);
     RUN_TEST(test_relay_toggle_cancels_contact);
+
+    // OTA module
+    RUN_TEST(test_ota_module_register);
+    RUN_TEST(test_ota_happy_path);
+    RUN_TEST(test_ota_hw_code_mismatch);
+    RUN_TEST(test_ota_hw_rev_mismatch);
+    RUN_TEST(test_ota_same_version_rejected);
+    RUN_TEST(test_ota_low_battery_rejected);
+    RUN_TEST(test_ota_battery_ok_proceeds);
+    RUN_TEST(test_ota_no_battery_provider_skips_guard);
+    RUN_TEST(test_ota_performer_failure_acked);
+    RUN_TEST(test_ota_bad_request);
 
     return UNITY_END();
 }

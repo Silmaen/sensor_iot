@@ -14,10 +14,18 @@
 #define FIRMWARE_VERSION "0.0.0-dev"
 #endif
 // Hardware code: identical hardware/module configuration => identical code,
-// regardless of the per-unit DEVICE_ID. Defined per environment in
-// platformio.ini; used to look up the right firmware image for an update.
+// regardless of the per-unit device_id. Defined per environment in
+// platformio.ini as a fixed-length 8-char code (^[A-Z0-9]{8}$); used to look
+// up the right firmware image for an update. Validated at boot via
+// hw_code_valid() (see hw_identity.h).
 #ifndef HW_CODE
 #define HW_CODE "unknown"
+#endif
+// Hardware revision: physical/electrical revision of a given HW_CODE (battery
+// MOSFET, regulator swap, pin remap...). Gates #if HW_REV >= n code and selects
+// the compatible firmware image. Defaults to 1.
+#ifndef HW_REV
+#define HW_REV 1
 #endif
 
 // --- MQTT topics ---

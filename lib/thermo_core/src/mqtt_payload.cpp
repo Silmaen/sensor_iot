@@ -43,16 +43,23 @@ static int buf_append(char* buf, size_t buf_size, int pos, const char* fmt, ...)
 
 int format_capabilities_payload(const char* hardware_id,
                                 const char* hw_code,
+                                uint16_t hw_rev,
                                 const char* fw_version,
+                                bool ota_capable,
+                                bool calibration_present,
                                 uint32_t publish_interval,
                                 const ModuleRegistry& reg,
                                 char* buf, size_t buf_size) {
-    // Compact format: metrics and units merged, commands and params merged.
-    // Keys: id (chip serial), hw (hardware code), fw (firmware version),
-    //       intrvl, metrics (name→unit), cmds (name→params)
+    // Identity + metrics only (commands moved to format_commands_payload so
+    // each message fits MQTT_MAX_PACKET_SIZE). Keys: id (chip serial),
+    // hw (8-char code), hwrev, fw, ota (0/1), cal (0/1), intrvl,
+    // metrics (name→unit).
     int pos = snprintf(buf, buf_size,
-        "{\"id\":\"%s\",\"hw\":\"%s\",\"fw\":\"%s\",\"intrvl\":%lu,\"metrics\":{",
-        hardware_id, hw_code, fw_version, (unsigned long)publish_interval);
+        "{\"id\":\"%s\",\"hw\":\"%s\",\"hwrev\":%u,\"fw\":\"%s\","
+        "\"ota\":%d,\"cal\":%d,\"intrvl\":%lu,\"metrics\":{",
+        hardware_id, hw_code, (unsigned)hw_rev, fw_version,
+        ota_capable ? 1 : 0, calibration_present ? 1 : 0,
+        (unsigned long)publish_interval);
     if (pos < 0 || (size_t)pos >= buf_size) return pos;
 
     // metrics: {"name":"unit", ...} — empty string if no unit
@@ -61,20 +68,38 @@ int format_capabilities_payload(const char* hardware_id,
         pos = buf_append(buf, buf_size, pos, "%s\"%s\":\"%s\"",
                          i > 0 ? "," : "", reg.metrics[i], unit);
     }
+    pos = buf_append(buf, buf_size, pos, "}}");
 
-    // cmds: {"name":[params], ...} — empty array if no params
-    pos = buf_append(buf, buf_size, pos, "},\"cmds\":{");
+    return pos;
+}
+
+int format_commands_payload(const ModuleRegistry& reg,
+                            char* buf, size_t buf_size) {
+    // {"commands":["a",..],"command_params":{"a":[{"n":..,"t":..}],..}}
+    // Compact param keys (n/t) to stay within MQTT_MAX_PACKET_SIZE; only
+    // commands with parameters appear in command_params.
+    int pos = snprintf(buf, buf_size, "{\"commands\":[");
+    if (pos < 0 || (size_t)pos >= buf_size) return pos;
+
     for (size_t i = 0; i < reg.num_commands; i++) {
-        pos = buf_append(buf, buf_size, pos, "%s\"%s\":[",
+        pos = buf_append(buf, buf_size, pos, "%s\"%s\"",
                          i > 0 ? "," : "", reg.commands[i]);
-        if (reg.command_params[i] && reg.command_param_counts[i] > 0) {
-            for (size_t j = 0; j < reg.command_param_counts[i]; j++) {
-                pos = buf_append(buf, buf_size, pos,
-                    "%s{\"n\":\"%s\",\"t\":\"%s\"}",
-                    j > 0 ? "," : "",
-                    reg.command_params[i][j].name,
-                    reg.command_params[i][j].type);
-            }
+    }
+
+    pos = buf_append(buf, buf_size, pos, "],\"command_params\":{");
+    bool first = true;
+    for (size_t i = 0; i < reg.num_commands; i++) {
+        if (!reg.command_params[i] || reg.command_param_counts[i] == 0)
+            continue;
+        pos = buf_append(buf, buf_size, pos, "%s\"%s\":[",
+                         first ? "" : ",", reg.commands[i]);
+        first = false;
+        for (size_t j = 0; j < reg.command_param_counts[i]; j++) {
+            pos = buf_append(buf, buf_size, pos,
+                "%s{\"n\":\"%s\",\"t\":\"%s\"}",
+                j > 0 ? "," : "",
+                reg.command_params[i][j].name,
+                reg.command_params[i][j].type);
         }
         pos = buf_append(buf, buf_size, pos, "]");
     }
@@ -155,5 +180,35 @@ bool parse_command_float_value(const char* json, float& out_value) {
     if (end == pos || val <= 0.0f) return false;
 
     out_value = val;
+    return true;
+}
+
+bool parse_command_string_value(const char* json, const char* key,
+                                char* out_buf, size_t out_buf_size) {
+    if (!json || !key || !out_buf || out_buf_size == 0) return false;
+
+    char search[64];
+    snprintf(search, sizeof(search), "\"%s\"", key);
+    const char* pos = strstr(json, search);
+    if (!pos) return false;
+
+    pos += strlen(search);
+    while (*pos == ' ' || *pos == '\t') pos++;
+    if (*pos != ':') return false;
+    pos++;
+    while (*pos == ' ' || *pos == '\t') pos++;
+    if (*pos != '"') return false;
+    pos++;
+
+    const char* end = strchr(pos, '"');
+    if (!end) return false;
+
+    size_t len = (size_t)(end - pos);
+    // Reject (rather than silently truncate): a truncated value such as an OTA
+    // URL would be worse than a clean failure.
+    if (len >= out_buf_size) return false;
+
+    memcpy(out_buf, pos, len);
+    out_buf[len] = '\0';
     return true;
 }

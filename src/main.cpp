@@ -228,10 +228,21 @@ static void publish_capabilities() {
     char hw_id[20];
     get_hw_id(hw_id, sizeof(hw_id));
 
-    char buf[768];
+#ifdef HAS_OTA
+    constexpr bool ota_capable = true;
+#else
+    constexpr bool ota_capable = false;
+#endif
+
+    // TODO(integration): source calibration_present from the config store, and
+    // publish the command list on the new `commands` topic (runtime device_id).
+    char buf[512];
     format_capabilities_payload(hw_id,
                                 HW_CODE,
+                                HW_REV,
                                 FIRMWARE_VERSION,
+                                ota_capable,
+                                false /* calibration_present: wired at integration */,
                                 publish_interval_s,
                                 registry,
                                 buf,
