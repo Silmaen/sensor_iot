@@ -54,64 +54,93 @@ void test_format_status_payload_error(void) {
 static bool dummy_cmd_handler(const char*) { return true; }
 
 void test_format_capabilities_payload(void) {
-    static const CommandParamDef si_params[] = {{"value", "number"}};
     ModuleRegistry reg;
     reg.init();
     reg.add_metric("temp", "\xC2\xB0""C");
     reg.add_metric("humi", "%");
     reg.add_metric("press", "hPa");
-    reg.add_command("set_interval", dummy_cmd_handler, si_params, 1);
 
     char buf[512];
-    int len = format_capabilities_payload("ESP-ABC123", "esp8266-bme280-bat",
-                                          "1.2.3", 60,
+    int len = format_capabilities_payload("ESP-ABC123", "E8BMEBAT", 1,
+                                          "1.2.3", true, true, 60,
                                           reg, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"id\":\"ESP-ABC123\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"hw\":\"esp8266-bme280-bat\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"hw\":\"E8BMEBAT\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"hwrev\":1"));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"fw\":\"1.2.3\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"ota\":1"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cal\":1"));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"intrvl\":60"));
     // metrics merged with units
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"humi\":\"%\""));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"press\":\"hPa\""));
-    // cmds merged with params
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cmds\":{\"set_interval\":[{\"n\":\"value\",\"t\":\"number\"}]}"));
+    // command list is NOT in capabilities anymore
+    TEST_ASSERT_NULL(strstr(buf, "cmds"));
+    TEST_ASSERT_NULL(strstr(buf, "command"));
 }
 
-void test_format_capabilities_payload_with_battery_metrics(void) {
+void test_format_capabilities_ota_cal_flags_off(void) {
     ModuleRegistry reg;
     reg.init();
     reg.add_metric("temp", "\xC2\xB0""C");
-    reg.add_metric("humi", "%");
-    reg.add_metric("press", "hPa");
-    reg.add_metric("bat", "%");
-    reg.add_metric("batv", "V");
-    reg.add_command("set_interval", dummy_cmd_handler);
 
-    char buf[512];
-    format_capabilities_payload("ESP-DEADBEEF", "mkr1010-mkrenv-bat",
-                                "1.0.0", 300,
-                                reg, buf, sizeof(buf));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"bat\":\"%\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"batv\":\"V\""));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"intrvl\":300"));
+    char buf[256];
+    format_capabilities_payload("ESP-1", "MKENVBAT", 2, "1.0.0",
+                                false, false, 300, reg, buf, sizeof(buf));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"hwrev\":2"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"ota\":0"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cal\":0"));
 }
 
-void test_format_capabilities_no_units_no_params(void) {
+void test_format_capabilities_no_units(void) {
     ModuleRegistry reg;
     reg.init();
     reg.add_metric("rssi");
-    reg.add_command("set_interval", dummy_cmd_handler);
 
     char buf[256];
-    int len = format_capabilities_payload("ESP-000000", "esp8266-bme280",
-                                          "1.0.0", 10,
+    int len = format_capabilities_payload("ESP-000000", "E8BMEBAT", 1,
+                                          "1.0.0", false, false, 10,
                                           reg, buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
     // No unit → empty string
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"rssi\":\"\""));
-    // No params → empty array
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"set_interval\":[]"));
+}
+
+// --- Commands payload tests ---
+
+void test_format_commands_payload(void) {
+    static const CommandParamDef si_params[] = {{"value", "number"}};
+    static const CommandParamDef off_params[] = {{"metric", "string"}, {"value", "number"}};
+    ModuleRegistry reg;
+    reg.init();
+    reg.add_command("set_interval", dummy_cmd_handler, si_params, 1);
+    reg.add_command("set_offset", dummy_cmd_handler, off_params, 2);
+    reg.add_command("request_capabilities", dummy_cmd_handler);
+
+    char buf[512];
+    int len = format_commands_payload(reg, buf, sizeof(buf));
+    TEST_ASSERT_GREATER_THAN(0, len);
+    // All command names listed
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"commands\":[\"set_interval\",\"set_offset\",\"request_capabilities\"]"));
+    // Params for commands that have them (compact n/t keys)
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"set_interval\":[{\"n\":\"value\",\"t\":\"number\"}]"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"set_offset\":[{\"n\":\"metric\",\"t\":\"string\"},{\"n\":\"value\",\"t\":\"number\"}]"));
+    // Paramless command not present in command_params
+    TEST_ASSERT_NULL(strstr(buf, "\"request_capabilities\":["));
+}
+
+void test_format_commands_payload_no_params(void) {
+    ModuleRegistry reg;
+    reg.init();
+    reg.add_command("request_capabilities", dummy_cmd_handler);
+    reg.add_command("request_commands", dummy_cmd_handler);
+
+    char buf[256];
+    format_commands_payload(reg, buf, sizeof(buf));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"commands\":[\"request_capabilities\",\"request_commands\"]"));
+    // Empty command_params object
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"command_params\":{}"));
 }
 
 // --- Ack payload tests ---
@@ -222,5 +251,50 @@ void test_parse_command_float_value_zero_rejected(void) {
 void test_parse_command_float_value_negative_rejected(void) {
     float value = 0.0f;
     bool ok = parse_command_float_value("{\"value\":-5.0}", value);
+    TEST_ASSERT_FALSE(ok);
+}
+
+// --- String value parsing tests ---
+
+void test_parse_command_string_value_url(void) {
+    char buf[128];
+    bool ok = parse_command_string_value(
+        "{\"action\":\"ota_update\",\"value\":\"http://srv/fw/E8BMEBAT/1/1.1.0.bin\"}",
+        "value", buf, sizeof(buf));
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_STRING("http://srv/fw/E8BMEBAT/1/1.1.0.bin", buf);
+}
+
+void test_parse_command_string_value_other_key(void) {
+    char buf[64];
+    bool ok = parse_command_string_value(
+        "{\"value\":\"x\",\"md5\":\"d41d8cd98f00b204e9800998ecf8427e\"}",
+        "md5", buf, sizeof(buf));
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_STRING("d41d8cd98f00b204e9800998ecf8427e", buf);
+}
+
+void test_parse_command_string_value_with_spaces(void) {
+    char buf[32];
+    bool ok = parse_command_string_value("{\"hw\" : \"E8BMEBAT\"}", "hw", buf, sizeof(buf));
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_STRING("E8BMEBAT", buf);
+}
+
+void test_parse_command_string_value_missing(void) {
+    char buf[32];
+    bool ok = parse_command_string_value("{\"action\":\"ota_update\"}", "value", buf, sizeof(buf));
+    TEST_ASSERT_FALSE(ok);
+}
+
+void test_parse_command_string_value_not_a_string(void) {
+    char buf[32];
+    bool ok = parse_command_string_value("{\"value\":42}", "value", buf, sizeof(buf));
+    TEST_ASSERT_FALSE(ok);
+}
+
+void test_parse_command_string_value_overflow_rejected(void) {
+    char buf[8]; // too small for the value
+    bool ok = parse_command_string_value("{\"value\":\"http://too-long\"}", "value", buf, sizeof(buf));
     TEST_ASSERT_FALSE(ok);
 }

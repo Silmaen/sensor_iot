@@ -25,8 +25,10 @@ static const float default_press_offset = CALIBRATION_PRESS_OFFSET;
 static float temp_offset  = CALIBRATION_TEMP_OFFSET;
 static float humi_offset  = CALIBRATION_HUMI_OFFSET;
 static float press_offset = CALIBRATION_PRESS_OFFSET;
+static float bat_divider  = 0.0f; // 0 = unset (nominal used until re-pushed)
 static CalibrationPersistCallback persist_cb = nullptr;
 static CalibrationResponseCallback response_cb = nullptr;
+static CalibrationValueCallback value_cb = nullptr;
 
 // --- Local JSON helpers ---
 
@@ -100,6 +102,31 @@ static bool handle_set_offset(const char* payload) {
     return true;
 }
 
+// Command: {"action":"set_calibration","key":"bat_divider","value":2.771}
+// Generic calibration values that are not per-metric offsets. Currently only
+// "bat_divider" is supported; the actual apply/persist is delegated to the
+// injected value callback.
+static bool handle_set_calibration(const char* payload) {
+    char key[24];
+    if (!parse_string_field(payload, "key", key, sizeof(key)))
+        return false;
+
+    float value = 0.0f;
+    if (!parse_signed_float_field(payload, "value", value))
+        return false;
+
+    if (strcmp(key, "bat_divider") == 0) {
+        // Divider ratio is a small positive multiplier.
+        if (value <= 0.0f || value > 100.0f)
+            return false;
+        bat_divider = value;
+        if (value_cb)
+            return value_cb(key, value);
+        return true;
+    }
+    return false; // unsupported key
+}
+
 static bool handle_request_calibration(const char* /*payload*/) {
     if (response_cb)
         response_cb();
@@ -111,10 +138,16 @@ static const CommandParamDef offset_params[] = {
     {"value",  "number"},
 };
 
+static const CommandParamDef calibration_params[] = {
+    {"key",   "string"},
+    {"value", "number"},
+};
+
 // --- Module interface ---
 
 void calibration_module_register(ModuleRegistry& reg) {
     reg.add_command("set_offset", handle_set_offset, offset_params, 2);
+    reg.add_command("set_calibration", handle_set_calibration, calibration_params, 2);
     reg.add_command("request_calibration", handle_request_calibration);
 }
 
@@ -139,16 +172,30 @@ void calibration_module_set_offsets(float temp, float humi, float press) {
 
 int calibration_format_response(char* buf, size_t buf_size) {
     return snprintf(buf, buf_size,
-        "{\"temp\":%.2f,\"humi\":%.2f,\"press\":%.2f}",
-        temp_offset, humi_offset, press_offset);
+        "{\"cal_temp\":%.2f,\"cal_humi\":%.2f,\"cal_press\":%.2f,\"bat_divider\":%.4f}",
+        temp_offset, humi_offset, press_offset, bat_divider);
+}
+
+void calibration_module_set_bat_divider(float ratio) {
+    bat_divider = ratio;
+}
+
+float calibration_get_bat_divider() {
+    return bat_divider;
+}
+
+void calibration_module_set_value_callback(CalibrationValueCallback cb) {
+    value_cb = cb;
 }
 
 void calibration_module_reset() {
     temp_offset  = default_temp_offset;
     humi_offset  = default_humi_offset;
     press_offset = default_press_offset;
+    bat_divider  = 0.0f;
     persist_cb   = nullptr;
     response_cb  = nullptr;
+    value_cb     = nullptr;
 }
 
 void calibration_module_set_persist_callback(CalibrationPersistCallback cb) {

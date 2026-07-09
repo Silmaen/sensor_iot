@@ -175,9 +175,10 @@ void test_calibration_module_register(void) {
     reg.init();
     calibration_module_register(reg);
     TEST_ASSERT_EQUAL(0, reg.num_metrics);
-    TEST_ASSERT_EQUAL(2, reg.num_commands);
+    TEST_ASSERT_EQUAL(3, reg.num_commands);
     TEST_ASSERT_EQUAL_STRING("set_offset", reg.commands[0]);
-    TEST_ASSERT_EQUAL_STRING("request_calibration", reg.commands[1]);
+    TEST_ASSERT_EQUAL_STRING("set_calibration", reg.commands[1]);
+    TEST_ASSERT_EQUAL_STRING("request_calibration", reg.commands[2]);
 }
 
 void test_calibration_apply_zero_offsets(void) {
@@ -301,13 +302,63 @@ void test_calibration_request_calibration(void) {
 void test_calibration_format_response(void) {
     calibration_module_reset();
     calibration_module_set_offsets(-1.5f, 3.0f, -0.3f);
+    calibration_module_set_bat_divider(2.771f);
 
     char buf[128];
     int len = calibration_format_response(buf, sizeof(buf));
     TEST_ASSERT_GREATER_THAN(0, len);
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"temp\":-1.50"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"humi\":3.00"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "\"press\":-0.30"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cal_temp\":-1.50"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cal_humi\":3.00"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cal_press\":-0.30"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"bat_divider\":2.771"));
+}
+
+void test_calibration_set_calibration_bat_divider(void) {
+    calibration_module_reset();
+    ModuleRegistry reg;
+    reg.init();
+    calibration_module_register(reg);
+
+    static char cb_key[24];
+    static float cb_value;
+    cb_key[0] = '\0';
+    cb_value = 0.0f;
+    calibration_module_set_value_callback([](const char* key, float value) -> bool {
+        strncpy(cb_key, key, sizeof(cb_key) - 1);
+        cb_key[sizeof(cb_key) - 1] = '\0';
+        cb_value = value;
+        return true;
+    });
+
+    bool ok = reg.dispatch("set_calibration",
+        "{\"action\":\"set_calibration\",\"key\":\"bat_divider\",\"value\":2.833}");
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_STRING("bat_divider", cb_key);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 2.833f, cb_value);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 2.833f, calibration_get_bat_divider());
+}
+
+void test_calibration_set_calibration_unknown_key(void) {
+    calibration_module_reset();
+    ModuleRegistry reg;
+    reg.init();
+    calibration_module_register(reg);
+
+    bool ok = reg.dispatch("set_calibration",
+        "{\"action\":\"set_calibration\",\"key\":\"nonsense\",\"value\":1.0}");
+    TEST_ASSERT_FALSE(ok);
+}
+
+void test_calibration_set_calibration_invalid_ratio(void) {
+    calibration_module_reset();
+    ModuleRegistry reg;
+    reg.init();
+    calibration_module_register(reg);
+
+    // Non-positive ratio is rejected.
+    bool ok = reg.dispatch("set_calibration",
+        "{\"action\":\"set_calibration\",\"key\":\"bat_divider\",\"value\":0}");
+    TEST_ASSERT_FALSE(ok);
 }
 
 void test_calibration_set_offset_zero(void) {
