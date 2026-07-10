@@ -1,9 +1,8 @@
 #pragma once
 
-// --- Device identity (must be defined via -D build flags in platformio.ini) ---
-#ifndef DEVICE_ID
-#error "DEVICE_ID must be defined via build flags (-DDEVICE_ID='\"mydevice\"')"
-#endif
+// --- Device identity ---
+// device_id is provisioned at runtime (config store) — NOT a build flag (Stage B).
+// device_type stays a build constant (per firmware type).
 #ifndef MQTT_DEVICE_TYPE
 #error "MQTT_DEVICE_TYPE must be defined via build flags (-DMQTT_DEVICE_TYPE='\"thermo\"')"
 #endif
@@ -28,12 +27,8 @@
 #define HW_REV 1
 #endif
 
-// --- MQTT topics ---
-#define MQTT_TOPIC_SENSORS      MQTT_DEVICE_TYPE "/" DEVICE_ID "/sensors"
-#define MQTT_TOPIC_STATUS       MQTT_DEVICE_TYPE "/" DEVICE_ID "/status"
-#define MQTT_TOPIC_COMMAND      MQTT_DEVICE_TYPE "/" DEVICE_ID "/command"
-#define MQTT_TOPIC_CAPABILITIES MQTT_DEVICE_TYPE "/" DEVICE_ID "/capabilities"
-#define MQTT_TOPIC_ACK          MQTT_DEVICE_TYPE "/" DEVICE_ID "/ack"
+// MQTT topics are built at runtime from device_type + provisioned device_id
+// (see DeviceTopics in device_topics.h).
 
 // --- MQTT settings ---
 #define MQTT_PORT 1883

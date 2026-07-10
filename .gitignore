@@ -13,6 +13,10 @@
 # Build
 cmake-build-*/
 
+# Python (tools/)
+__pycache__/
+*.pyc
+
 # OS
 .DS_Store
 Thumbs.db
@@ -20,3 +24,4 @@ Thumbs.db
 # Secrets
 credentials.h
 secrets.h
+tools/ota.env

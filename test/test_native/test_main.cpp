@@ -71,6 +71,11 @@ void test_hw_code_valid_rejects_wrong_length(void);
 void test_hw_code_valid_rejects_bad_chars(void);
 void test_hw_code_valid_null(void);
 
+// Device topics tests
+void test_device_topics_build(void);
+void test_device_id_valid_accepts(void);
+void test_device_id_valid_rejects(void);
+
 // Config store tests
 void test_config_store_str_roundtrip(void);
 void test_config_store_float_roundtrip(void);
@@ -82,6 +87,9 @@ void test_config_store_set_str_too_long(void);
 void test_config_store_remove(void);
 void test_config_store_clear(void);
 void test_config_store_full(void);
+void test_config_store_serialize_roundtrip(void);
+void test_config_store_deserialize_replaces(void);
+void test_config_store_deserialize_empty_and_garbage(void);
 void test_config_calibration_present_flag(void);
 
 // Module registry tests
@@ -241,6 +249,11 @@ int main(int argc, char** argv) {
     RUN_TEST(test_hw_code_valid_rejects_bad_chars);
     RUN_TEST(test_hw_code_valid_null);
 
+    // Device topics
+    RUN_TEST(test_device_topics_build);
+    RUN_TEST(test_device_id_valid_accepts);
+    RUN_TEST(test_device_id_valid_rejects);
+
     // Config store
     RUN_TEST(test_config_store_str_roundtrip);
     RUN_TEST(test_config_store_float_roundtrip);
@@ -252,6 +265,9 @@ int main(int argc, char** argv) {
     RUN_TEST(test_config_store_remove);
     RUN_TEST(test_config_store_clear);
     RUN_TEST(test_config_store_full);
+    RUN_TEST(test_config_store_serialize_roundtrip);
+    RUN_TEST(test_config_store_deserialize_replaces);
+    RUN_TEST(test_config_store_deserialize_empty_and_garbage);
     RUN_TEST(test_config_calibration_present_flag);
 
     // Module registry

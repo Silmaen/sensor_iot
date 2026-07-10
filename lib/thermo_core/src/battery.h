@@ -2,6 +2,13 @@
 
 #include <stdint.h>
 
+// Pull the platform-specific battery constants (ADC_MAX_VALUE, BATTERY_CELLS,
+// thresholds...) — WITHOUT this, a translation unit that includes only battery.h
+// (battery.cpp, battery_module.cpp) falls back to the defaults below, which are
+// 10-bit / 2S. That silently 4x-over-reads on 12-bit ADC boards (ESP32-C3, SAMD)
+// and uses 2S thresholds on 1S packs. config.h is pure #defines (no deps).
+#include "config.h"
+
 // Platform-specific battery constants come from config.h (ESP8266, ESP32, SAMD).
 // For native builds (tests), provide sensible defaults (2S LiPo, 10-bit ADC).
 #ifndef ADC_MAX_VALUE
@@ -38,3 +45,6 @@ float battery_calibrate(float measured_voltage, uint16_t adc_value);
 
 // Directly set the divider ratio (e.g. restored from RTC memory).
 void battery_calibrate_set_ratio(float ratio);
+
+// Current divider ratio in use (for debugging / reporting).
+float battery_get_divider_ratio();

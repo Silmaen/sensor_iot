@@ -91,6 +91,47 @@ void test_config_store_full(void) {
     TEST_ASSERT_FALSE(store.set_float("overflow", 1.0f));
 }
 
+void test_config_store_serialize_roundtrip(void) {
+    MemoryConfigStore a;
+    a.set_str(config_keys::device_id, "thermo_1");
+    a.set_float(config_keys::cal_temp, -2.5f);
+    a.set_float(config_keys::bat_divider, 2.771f);
+
+    char blob[256];
+    int len = a.serialize(blob, sizeof(blob));
+    TEST_ASSERT_GREATER_THAN(0, len);
+
+    MemoryConfigStore b;
+    b.deserialize(blob);
+
+    char id[32];
+    TEST_ASSERT_TRUE(b.get_str(config_keys::device_id, id, sizeof(id)));
+    TEST_ASSERT_EQUAL_STRING("thermo_1", id);
+    float t = 0, d = 0;
+    TEST_ASSERT_TRUE(b.get_float(config_keys::cal_temp, t));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -2.5f, t);
+    TEST_ASSERT_TRUE(b.get_float(config_keys::bat_divider, d));
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 2.771f, d);
+}
+
+void test_config_store_deserialize_replaces(void) {
+    MemoryConfigStore s;
+    s.set_str(config_keys::device_id, "stale");
+    s.deserialize("sdevice_id=fresh\n");
+    char id[16];
+    s.get_str(config_keys::device_id, id, sizeof(id));
+    TEST_ASSERT_EQUAL_STRING("fresh", id);
+    TEST_ASSERT_FALSE(s.has(config_keys::cal_temp));
+}
+
+void test_config_store_deserialize_empty_and_garbage(void) {
+    MemoryConfigStore s;
+    s.deserialize("");           // no crash, empty
+    TEST_ASSERT_FALSE(s.has(config_keys::device_id));
+    s.deserialize("garbage-no-equals\nx\n"); // ignored lines
+    TEST_ASSERT_FALSE(s.has(config_keys::device_id));
+}
+
 void test_config_calibration_present_flag(void) {
     MemoryConfigStore store;
     // Fresh store, only device_id provisioned → no calibration.
