@@ -22,6 +22,15 @@ public:
     bool remove(const char* key) override;
     bool clear() override;
 
+    // Serialize all entries to a text blob for platform persistence. One line
+    // per entry: "<type><key>=<value>" where type is 's' (string) or 'f'
+    // (float). Returns the number of chars written (excluding the terminator),
+    // or a negative value on overflow.
+    int serialize(char* buf, size_t buf_size) const;
+
+    // Replace all contents from a text blob produced by serialize().
+    void deserialize(const char* blob);
+
 private:
     enum class Type : uint8_t { NONE, STR, FLOAT };
     struct Entry {

@@ -30,6 +30,7 @@ private:
     NetworkConfig cfg_ = {};
     unsigned long last_reconnect_attempt_ = 0;
     bool was_mqtt_connected_ = false;
+    char subscribe_topic_[112] = {}; // remembered for auto-resubscribe on reconnect
 };
 
 #endif

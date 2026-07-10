@@ -68,3 +68,7 @@ void battery_calibrate_set_ratio(float ratio) {
     if (ratio > 0.0f)
         divider_ratio = ratio;
 }
+
+float battery_get_divider_ratio() {
+    return divider_ratio;
+}

@@ -4,6 +4,8 @@
 #include "config.h"
 #include "debug.h"
 
+#include <string.h>
+
 #ifdef HAS_SERIAL_DEBUG
 static const char* wifi_status_str(uint8_t status) {
     switch (status) {
@@ -111,6 +113,8 @@ bool NinaNetwork::publish(const char* topic, const char* payload, bool retained)
 }
 
 bool NinaNetwork::subscribe(const char* topic) {
+    strncpy(subscribe_topic_, topic, sizeof(subscribe_topic_) - 1);
+    subscribe_topic_[sizeof(subscribe_topic_) - 1] = '\0';
     bool ok = mqtt_client_.subscribe(topic, 1); // QoS 1: broker queues while asleep
     DEBUG_PRINTF("[MQTT] subscribe(%s) => %s\n", topic, ok ? "OK" : "FAILED");
     return ok;
@@ -145,8 +149,8 @@ void NinaNetwork::loop() {
         unsigned long now = millis();
         if (now - last_reconnect_attempt_ >= RECONNECT_INTERVAL_MS) {
             last_reconnect_attempt_ = now;
-            if (connect_mqtt()) {
-                subscribe(MQTT_TOPIC_COMMAND);
+            if (connect_mqtt() && subscribe_topic_[0] != '\0') {
+                subscribe(subscribe_topic_);
             }
         }
         return;

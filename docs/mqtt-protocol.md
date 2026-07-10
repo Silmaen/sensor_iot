@@ -14,8 +14,9 @@ All topics follow:
 {device_type}/{device_id}/{message_type}
 ```
 
-Both `device_type` and `device_id` are defined via build flags in
-`platformio.ini` (`-DMQTT_DEVICE_TYPE` and `-DDEVICE_ID`).
+`device_type` is a build flag (`-DMQTT_DEVICE_TYPE`); `device_id` is **provisioned at
+runtime** (config store, not a build flag) and topics are built from it at boot. See
+[ota-calibration-protocol.md](ota-calibration-protocol.md) §2.
 
 | Message type   | Direction        | Topic example                  |
 |----------------|------------------|--------------------------------|
@@ -23,7 +24,13 @@ Both `device_type` and `device_id` are defined via build flags in
 | `status`       | Device -> Server | `thermo/thermo_1/status`       |
 | `command`      | Server -> Device | `thermo/thermo_1/command`      |
 | `capabilities` | Device -> Server | `thermo/thermo_1/capabilities` |
+| `commands`     | Device -> Server | `thermo/thermo_1/commands`     |
+| `calibration`  | Device -> Server | `thermo/thermo_1/calibration`  |
 | `ack`          | Device -> Server | `thermo/thermo_1/ack`          |
+
+> **OTA, calibration & hardware versioning** are specified in full in
+> [ota-calibration-protocol.md](ota-calibration-protocol.md). This document covers the base
+> protocol; the sections below note where that spec extends or supersedes it.
 
 ## Connection & session model
 
@@ -198,14 +205,21 @@ Commands are routed through the `ModuleRegistry`:
 
 ### Built-in commands
 
-| Action                 | Value                                 | Handler     | Behavior                                |
-|------------------------|---------------------------------------|-------------|-----------------------------------------|
-| `set_interval`         | seconds (1-86400)                     | Core        | Updates publish/sleep interval          |
-| `request_capabilities` | _(none)_                              | Core        | Responds with capabilities (section 4)  |
-| `set_offset`           | `{"metric":"<name>","value":<float>}` | Calibration | Set sensor offset (temp/humi/press)     |
-| `request_calibration`  | _(none)_                              | Calibration | Device publishes current offsets on ack |
-| `relay_toggle`         | `{"value":<1\|2>}`                    | Relay       | Toggle relay on/off                     |
-| `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`       | Relay       | Activate relay, auto-revert after delay |
+| Action                 | Value                                      | Handler     | Behavior                                          |
+|------------------------|--------------------------------------------|-------------|---------------------------------------------------|
+| `set_interval`         | seconds (1-86400)                          | Core        | Updates publish/sleep interval                    |
+| `request_capabilities` | _(none)_                                   | Core        | Responds with capabilities (section 5)            |
+| `request_commands`     | _(none)_                                   | Core        | Responds with the command list on `commands`      |
+| `set_offset`           | `{"metric":"<name>","value":<float>}`      | Calibration | Set sensor offset (temp/humi/press)               |
+| `set_calibration`      | `{"key":"bat_divider","value":<float>}`    | Calibration | Set a generic calibration value (divider ratio)   |
+| `request_calibration`  | _(none)_                                   | Calibration | Publishes current calibration on `calibration`    |
+| `ota_update`           | see [OTA module](modules/ota.md)           | OTA         | Download + verify + flash new firmware, reboot    |
+| `relay_toggle`         | `{"value":<1\|2>}`                         | Relay       | Toggle relay on/off                               |
+| `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`            | Relay       | Activate relay, auto-revert after delay           |
+
+> `request_calibration` now publishes on the dedicated `calibration` topic (not `ack`), and
+> `ota_update` emits its own detailed ack (`start` / `error`+`message`). See
+> [ota-calibration-protocol.md](ota-calibration-protocol.md) §4, §6.
 
 Modules can register additional commands via `reg.add_command()`. These
 commands automatically appear in the capabilities message and are routed
@@ -264,52 +278,58 @@ its capabilities within **60 seconds** on the `capabilities` topic.
 The capabilities message is built dynamically from the `ModuleRegistry` —
 it reflects exactly which modules are enabled in the current firmware build.
 
-**Example with `HAS_BME280` only:**
+The message carries **identity + metrics only** — the command list moved to a separate
+`commands` message (§5b) so each payload fits `MQTT_MAX_PACKET_SIZE` (512 B). See
+[ota-calibration-protocol.md](ota-calibration-protocol.md) §5.
+
+**Example with `HAS_BME280` + `HAS_BATTERY` + `HAS_OTA`:**
 
 ```json
 {
   "id": "ESP-00A1B2",
-  "hw": "esp8266-bme280",
+  "hw": "E8BMEBAT",
+  "hwrev": 1,
   "fw": "1.0.0",
-  "intrvl": 10,
-  "metrics": {"rssi": "dBm", "temp": "°C", "humi": "%", "press": "hPa"},
-  "cmds": {"set_interval": [{"n": "value", "t": "number"}]}
-}
-```
-
-**Example with `HAS_BME280` + `HAS_BATTERY`:**
-
-```json
-{
-  "id": "ESP-00A1B2",
-  "hw": "esp8266-bme280-bat",
-  "fw": "1.0.0",
+  "ota": 1,
+  "cal": 1,
   "intrvl": 300,
-  "metrics": {"rssi": "dBm", "temp": "°C", "humi": "%", "press": "hPa", "bat": "%", "batv": "V"},
-  "cmds": {"set_interval": [{"n": "value", "t": "number"}], "calibrate_battery": [{"n": "value", "t": "number"}]}
+  "metrics": {"rssi": "dBm", "temp": "°C", "humi": "%", "press": "hPa", "bat": "%", "batv": "V"}
 }
 ```
 
 | Field     | Type   | Required | Description                                                                        |
 |-----------|--------|:--------:|------------------------------------------------------------------------------------|
-| `id`      | string |   Yes    | Unique chip serial. Format: `ESP-XXXXXX` / `C3-XXXXXX` / `MKR-XXXXXXXX`. Per unit  |
-| `hw`      | string |   Yes    | Hardware code — identical across units with the same hardware/module config        |
-| `fw`      | string |   Yes    | Firmware version (semver). Compare against latest image for `hw` to detect updates |
+| `id`      | string |   Yes    | Unique chip serial. Per unit                                                       |
+| `hw`      | string |   Yes    | Hardware code — fixed 8 chars `^[A-Z0-9]{8}$`, identical across units of a type     |
+| `hwrev`   | number |   Yes    | Hardware revision (physical/electrical), selects the compatible image with `hw`    |
+| `fw`      | string |   Yes    | Firmware version (semver). Compare against latest image for `(hw, hwrev)`           |
+| `ota`     | 0/1    |   Yes    | 1 if the device can perform OTA updates (server only offers updates then)          |
+| `cal`     | 0/1    |   Yes    | 1 if the calibration store holds any value; 0 (fresh/reset) → server re-pushes it  |
 | `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                                     |
 | `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit                 |
-| `cmds`    | object |   Yes    | Command name → array of `{n, t}` params (`[]` if no params)                        |
 
-> **Update discovery (planned):** `hw` selects the firmware line for a physical
-> board; `fw` is the version currently running. A server can offer an OTA update
-> when it holds a newer `fw` for that `hw`. `id` (chip serial) stays unique per
-> unit and is not used for update matching.
-
-**Parameter definition format:** each entry is `{"n": "<param>", "t": "<number|string|boolean>"}`.
-
-- Do NOT include `request_capabilities` in `cmds` (implicit).
-- `intrvl` reflects the current value (may have been changed by a
-  `set_interval` command or read from RTC memory).
+- `intrvl` reflects the current value (may have been changed by `set_interval`).
 - Publish with `retain = false`.
+
+### 5b. Command list (`commands`)
+
+In response to `request_commands`, the device publishes the actionable command list on the
+`commands` topic (Device → Server), within 60 s:
+
+```json
+{
+  "commands": ["set_interval", "set_offset", "set_calibration", "request_calibration", "ota_update"],
+  "command_params": {
+    "set_interval": [{"n": "value", "t": "number"}],
+    "set_offset":   [{"n": "metric", "t": "string"}, {"n": "value", "t": "number"}]
+  }
+}
+```
+
+- `commands` lists every registered action; `command_params` holds `{n, t}` params only for
+  the commands that declare them (compact keys `n`/`t` to fit 512 B). Params: `t` ∈
+  `number | string | boolean`.
+- `request_capabilities` / `request_commands` are implicit and not listed.
 
 ## 6. Timeout handling
 
@@ -360,14 +380,16 @@ thermo/thermo_1/sensors  <- {"temp":22.5,"humi":45,"press":1013.2,"bat":85,"batv
 # 2. Server auto-discovers device, requests capabilities (QoS 1)
 thermo/thermo_1/command  -> {"action":"request_capabilities"}
 
-# 3. Device responds (metrics/commands from ModuleRegistry)
+# 3. Device responds with identity + metrics (commands via request_commands)
 thermo/thermo_1/capabilities <- {
     "id":"ESP-00A1B2",
-    "hw":"esp8266-bme280-bat",
+    "hw":"E8BMEBAT",
+    "hwrev":1,
     "fw":"1.0.0",
+    "ota":1,
+    "cal":1,
     "intrvl":300,
-    "metrics":{"rssi":"dBm","temp":"°C","humi":"%","press":"hPa","bat":"%","batv":"V"},
-    "cmds":{"set_interval":[{"name":"value","type":"number"}]}
+    "metrics":{"rssi":"dBm","temp":"°C","humi":"%","press":"hPa","bat":"%","batv":"V"}
 }
 
 # 4. Admin approves from web UI — data now stored
@@ -387,11 +409,13 @@ thermo/thermo_1/command -> {"action":"request_capabilities"}
 # 8. Device responds with updated interval
 thermo/thermo_1/capabilities <- {
     "id":"ESP-00A1B2",
-    "hw":"esp8266-bme280-bat",
+    "hw":"E8BMEBAT",
+    "hwrev":1,
     "fw":"1.0.0",
+    "ota":1,
+    "cal":1,
     "intrvl":120,
-    "metrics":{"rssi":"dBm","temp":"°C","humi":"%","press":"hPa","bat":"%","batv":"V"},
-    "cmds":{"set_interval":[{"name":"value","type":"number"}]}
+    "metrics":{"rssi":"dBm","temp":"°C","humi":"%","press":"hPa","bat":"%","batv":"V"}
 }
 ```
 
