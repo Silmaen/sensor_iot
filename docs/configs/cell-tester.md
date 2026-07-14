@@ -13,7 +13,7 @@ See [battery cells guide](../battery-cells.md) and [components inventory](../com
 | Charger        | BQ24195L (built-in on MKR)                         |
 | Discharge load | Sfernice RH10 6.8 ohm 10W resistor + toggle switch |
 | Connectivity   | Serial (115200 baud)                               |
-| PlatformIO env | `cell_tester`                                      |
+| PlatformIO env | `cell_tester_mkr`                                  |
 
 ## Modules Used
 
@@ -42,21 +42,22 @@ grading criteria.
 ## PlatformIO Environment
 
 ```ini
-[env:cell_tester]
+[env:cell_tester_mkr]
 platform = atmelsam
 board = mkrwifi1010
 framework = arduino
 monitor_speed = 115200
 build_flags = -Wall -Wextra -std=gnu++17 -DCELL_TESTER
-src_filter = +<cell_tester.cpp>
+build_unflags = -std=gnu++11
+build_src_filter = +<cell_tester.cpp>
 lib_deps = Wire
 ```
 
 ## Build & Upload
 
 ```bash
-pio run -e cell_tester
-pio run -e cell_tester -t upload
+pio run -e cell_tester_mkr
+pio run -e cell_tester_mkr -t upload
 pio device monitor
 ```
 

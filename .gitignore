@@ -25,3 +25,4 @@ Thumbs.db
 credentials.h
 secrets.h
 tools/ota.env
+.env

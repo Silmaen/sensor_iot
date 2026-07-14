@@ -10,10 +10,11 @@ See [components inventory](../components.md) and [architecture](../architecture.
 | MCU            | Arduino MKR WiFi 1010                                      |
 | Sensors        | HTS221 + LPS22HB + TEMT6000 + VEML6075 (on MKR ENV Shield) |
 | Power          | 1S 18650 via JST connector (BQ24195L built-in charger)     |
-| Sleep mode     | None (continuous)                                          |
-| Autonomy       | ~35h continuous (3000 mAh cell)                            |
-| PlatformIO env | `sensor_mkr_env`                                           |
-| Device ID      | `thermo_mkr`                                               |
+| Sleep mode     | Standby between publications (RTCZero)                     |
+| Autonomy       | ~5 d theoretical (duty-cycle, 5 min) · ~18 d measured      |
+| PlatformIO env | `sensor_mkr_env` (debug: `sensor_mkr_debug`)               |
+| HW code / rev  | `MKENVBAT` / rev 1                                         |
+| Device ID      | Provisioned at runtime (fleet: `thermo_mkr`)               |
 
 ## Modules Used
 
@@ -68,11 +69,23 @@ I_avg = (297 × 18 + 3 × 80) / 300 ≈ 18.6 mA
 | Samsung ICR18650-22HU  | 2150 mAh | ~4.8 days        | ~5.5 days         |
 | Generic 18650 3000 mAh | 3000 mAh | ~6.7 days        | ~7.5 days         |
 
+> **Measured vs theoretical:** field data for `thermo_mkr` (daily `bat_percent`
+> aggregates over ~100 days, 3 full cycles) gives **~18 days** per charge (16–27 days
+> per cycle, ~5.6 %/day). That is **3–4× the estimate above**. The gap means the
+> "~18 mA idle" assumption in the power budget is wrong: the SAMD21 actually enters
+> **standby (RTCZero)** between publications, so the real average current is ~5 mA
+> (2150 mAh / 18 days), not 18.6 mA. The estimates below are a worst-case (no standby)
+> bound; treat ~18 days as the realistic figure.
+
 With `HAS_SERIAL_DEBUG` enabled, the default interval is 10s (for testing), which
 keeps WiFi active most of the time (~75 mA average, ~28h with 2150 mAh).
 Disable debug for production to use the 5-min interval.
 
 ## PlatformIO Environment
+
+The production env carries no serial debug and no `-DDEVICE_ID` — identity is provisioned at
+runtime. For bring-up, use `sensor_mkr_debug` (same hardware, `-DHAS_SERIAL_DEBUG`, waits for the
+monitor at boot with a 10 s interval).
 
 ```ini
 [env:sensor_mkr_env]
@@ -80,20 +93,27 @@ extends = common_samd
 board = mkrwifi1010
 build_flags =
     ${common_samd.build_flags}
-    -DDEVICE_ID='"thermo_mkr"'
     -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"MKENVBAT"'
+    -DHW_REV=1
     -DHAS_MKR_ENV
     -DHAS_BATTERY
-    -DHAS_SERIAL_DEBUG
+    -DHAS_CALIBRATION
 ```
+
+There is **no `-DHAS_OTA`**: OTA is ESP-only, so the MKR is reflashed over USB.
 
 ## Build & Upload
 
 ```bash
 pio run -e sensor_mkr_env
 pio run -e sensor_mkr_env -t upload
-pio device monitor
+pio run -e sensor_mkr_debug -t upload   # serial-debug variant for bring-up
 ```
+
+After the first flash, provision identity over serial (`provision thermo_mkr`). The MKR's USB is
+native, so it does **not** reset when the port opens — press RESET or use `sensor_mkr_debug` to
+catch the boot banner. See the [calibration module](../modules/calibration.md).
 
 ## Notes
 
@@ -101,7 +121,6 @@ pio device monitor
   done.
 - The ENV Shield uses HTS221 + LPS22HB + TEMT6000 + VEML6075, **not** a BME280.
   Use `-DHAS_MKR_ENV`, not `-DHAS_BME280`.
-- Battery monitoring uses the MKR's built-in ADC voltage divider (ratio 2.0), different
-  from the ESP8266 external divider.
-- `HAS_SERIAL_DEBUG` is enabled -- disable it for production to save power.
+- Battery monitoring uses the MKR's built-in ADC voltage divider (calibrated `bat_divider`,
+  runtime), different from the ESP8266 external divider.
 - The SAMD21 uses `WiFiNINA` (not the ESP8266 WiFi stack).

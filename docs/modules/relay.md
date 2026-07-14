@@ -131,25 +131,31 @@ build_flags = -DHAS_RELAY
 
 ### Example Environment
 
+> **Illustrative** — no relay environment ships in `platformio.ini` today (no current env sets `HAS_RELAY`, and the
+> hardware driver is still to be written). The block below shows the Stage-B shape a relay env would take: a real
+> `HW_CODE` would be assigned when the config first ships. A production image carries **no** `-DDEVICE_ID` — the
+> `device_id` is provisioned once over serial (see [OTA module](ota.md#first-provisioning)).
+
 ```ini
-[env:relay_esp8266]
+[env:sensor_8266_relay]
 extends = common_esp8266
 build_flags =
     ${common_esp8266.build_flags}
-    -DDEVICE_ID='"relay_1"'
     -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"E8RELAY0"'   ; illustrative 8-char code (E8 = ESP8266 family)
+    -DHW_REV=1
     -DHAS_RELAY
-    -DHAS_SERIAL_DEBUG
+    -DHAS_OTA
 ```
 
 ## Firmware Files
 
-| File                                           | Role                                     |
-|------------------------------------------------|------------------------------------------|
-| `lib/thermo_core/src/modules/relay_module.h`   | Module interface (register, contribute)  |
-| `lib/thermo_core/src/modules/relay_module.cpp` | Module logic (commands, timer, state)    |
-| `src/hw/relay_driver.h` _(to create)_          | Hardware driver header (GPIO init/write) |
-| `src/hw/relay_driver.cpp` _(to create)_        | Hardware driver implementation           |
+| File                                                    | Role                                     |
+|---------------------------------------------------------|------------------------------------------|
+| `lib/thermo_core/src/modules/relay_module.h`            | Module interface (register, contribute)  |
+| `lib/thermo_core/src/modules/relay_module.cpp`          | Module logic (commands, timer, state)    |
+| `lib/thermo_drivers/src/relay_driver.h` _(to create)_   | Hardware driver header (GPIO init/write) |
+| `lib/thermo_drivers/src/relay_driver.cpp` _(to create)_ | Hardware driver implementation           |
 
 ### Module API
 
@@ -168,7 +174,7 @@ void relay_module_set_writer(RelayWriter writer);
 When active, the device publishes relay state alongside other metrics on `thermo/{device_id}/sensors`:
 
 ```json
-{"relay1":0,"relay2":1,"temperature":22.5,"humidity":48.3}
+{"relay1":0,"relay2":1,"temp":22.5,"humi":48.3}
 ```
 
 ## Safety Considerations

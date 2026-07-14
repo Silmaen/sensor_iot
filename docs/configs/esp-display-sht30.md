@@ -13,7 +13,8 @@ and [architecture](../architecture.md).
 | Display        | 3-digit 7-segment, shift registers      |
 | Power          | USB 5V (always connected)               |
 | Sleep mode     | None (continuous)                       |
-| PlatformIO env | `thermo_display_sht30`                  |
+| PlatformIO env | `sensor_8266_display_sht30` (dev build) |
+| HW code / rev  | `E8SHTDSP` / rev 1                      |
 
 ## Modules Used
 
@@ -48,30 +49,38 @@ Only 2 display modes (vs 3 with BME280) since the SHT30 has no pressure sensor.
 
 ## PlatformIO Environment
 
+This is a **dev build**: it keeps `-DHAS_SERIAL_DEBUG` and, as a Stage-B convenience, a
+`-DDEVICE_ID` *seed* (used only when the runtime config store is empty). Production battery
+envs omit `-DDEVICE_ID` entirely and are provisioned over serial.
+
 ```ini
-[env:thermo_display_sht30]
+[env:sensor_8266_display_sht30]
 extends = common_esp8266
 build_flags =
     ${common_esp8266.build_flags}
     -DDEVICE_ID='"thermo_display_sht30"'
     -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"E8SHTDSP"'
+    -DHW_REV=1
     -DHAS_SHT30
     -DHAS_DISPLAY
     -DHAS_SERIAL_DEBUG
+    -DHAS_CALIBRATION
+    -DHAS_OTA
 ```
 
 ## Build & Upload
 
 ```bash
-pio run -e thermo_display_sht30
-pio run -e thermo_display_sht30 -t upload
+pio run -e sensor_8266_display_sht30
+pio run -e sensor_8266_display_sht30 -t upload
 pio device monitor
 ```
 
 ## Notes
 
-- The existing `thermo_display` env uses BME280. This config replaces the BME280 with
-  the SHT30 Shield for a more compact build (sensor stacks, no wiring).
+- This is the only SHT30 build with a display; it stacks the SHT30 Shield on the D1 Mini for a
+  compact, wiring-free sensor (no pressure, unlike a BME280 build).
 - The `DisplayMode` enum is automatically adapted: only Temperature and Humidity modes
   (no Pressure) when `HAS_SHT30` is used without `HAS_BME280`.
 - WiFi always active, continuous MQTT publishing.

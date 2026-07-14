@@ -1,4 +1,4 @@
-je vois 2 fichie# Available Electronic Components
+# Available Electronic Components
 
 Components listed here should be used in priority when designing circuits and features for this project.
 See [configurations](configurations.md) for how these components are assembled into devices, and
@@ -10,7 +10,7 @@ See [configurations](configurations.md) for how these components are assembled i
 |------------------------|----------|----------------------------------------------------------|
 | Wemos D1 Mini v3.0.0   | 1        | ESP8266, for display and battery/deep-sleep configs      |
 | Arduino MKR WiFi 1010  | 1        | SAMD21 + WiFiNINA, built-in LiPo charger (JST connector) |
-| Arduino MKR ENV Shield | 1        | BME280 + UV + lux sensors, plugs on top of MKR board     |
+| Arduino MKR ENV Shield | 1        | HTS221 + LPS22HB + light + UV, plugs on top of MKR board |
 | ESP32 CAM              | 2        | ESP32 + OV2640 camera, WiFi/BT, limited GPIO             |
 | ESP32-C3 Super Mini    | several  | WiFi+BLE, 6 ADC (12-bit), deep sleep ~5µA, 3.3V native   |
 
@@ -20,7 +20,7 @@ See [configurations](configurations.md) for how these components are assembled i
 |-------------------------|----------|--------------------------------------------------------------------------|
 | bme/bmp280              | 1        | I2C temp/humi/pressure — see [module doc](modules/bme280.md)             |
 | SHT30 Shield v2.1.0     | several  | Wemos D1 Mini stackable shield, I2C — see [module doc](modules/sht30.md) |
-| MKR ENV Shield BME280   | 1        | HTS221+LPS22HB+TEMT6000+VEML6075 — see [module doc](modules/mkr-env.md)  |
+| MKR ENV Shield          | 1        | HTS221+LPS22HB+TEMT6000+VEML6075 — see [module doc](modules/mkr-env.md)  |
 | Seeedstudio Light Sens. | 1        | Analog photoresistor, 0–3.3V — see [module doc](modules/light.md)        |
 | BH1750 (I2C)            | several  | Digital lux sensor, calibrated 1–65535 lux, 16-bit, I2C 0x23/0x5C        |
 
@@ -111,7 +111,7 @@ Each SN54LS04J: VCC (pin 14) → 5V, GND (pin 7) → GND.
 
 #### Power Supply
 
-- DC input (7-12V) → H78M05BT → 5V rail
+- DC input (7-12V) → MC78M05BTG → 5V rail
 - Decoupling: 100nF ceramic on regulator input and output
 - Bulk capacitor: **10µF / 400V** on power input line
 
@@ -167,8 +167,8 @@ See [2S power module](modules/power-2s.md) for the battery power chain and
 
 | Component          | Quantity | Notes                                                                             |
 |--------------------|----------|-----------------------------------------------------------------------------------|
-| H78M05BT           | 9        | 5V linear regulator 500mA, ~3mA Iq — **legacy, not for battery nodes**            |
-| HT7350             | several  | 5V LDO 250mA, **~4µA Iq** — recommended for 2S battery nodes (TO-92, drop-in)     |
+| MC78M05BTG         | 9        | 5V linear regulator 500mA, ~3mA Iq — **HW rev 1 current on 2S battery nodes**     |
+| HT7350             | several  | 5V LDO 250mA, **~4µA Iq** — **HW rev 2 (planned)**, low Iq, ~4× autonomy on 2S    |
 | HT7333             | several  | 3.3V LDO 250mA, ~4µA Iq — for ESP32-C3 direct from LiPo (TO-92)                   |
 | L78M09CV           | 10       | 9V linear regulator 500mA                                                         |
 | L78m33ACV          | 6        | 3.3V linear regulator 500mA                                                       |

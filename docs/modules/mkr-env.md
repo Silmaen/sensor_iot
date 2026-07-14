@@ -13,13 +13,13 @@ The shield carries four sensors, all used by this module:
 This module is **mutually exclusive** with `HAS_BME280` and `HAS_SHT30` -- only one temperature/humidity source can be
 active at a time.
 
-| Metric        | Unit | Sensor   | Accuracy    |
-|---------------|------|----------|-------------|
-| `temperature` | °C   | HTS221   | ±0.5°C      |
-| `humidity`    | % RH | HTS221   | ±3.5%       |
-| `pressure`    | hPa  | LPS22HB  | ±0.025 hPa  |
-| `light_lux`   | lux  | TEMT6000 | ±10% (typ.) |
-| `uv_index`    | --   | VEML6075 | ±1 UVI      |
+| Metric  | Unit | Sensor   | Accuracy    |
+|---------|------|----------|-------------|
+| `temp`  | °C   | HTS221   | ±0.5°C      |
+| `humi`  | % RH | HTS221   | ±3.5%       |
+| `press` | hPa  | LPS22HB  | ±0.025 hPa  |
+| `lux`   | lux  | TEMT6000 | ±10% (typ.) |
+| `uv`    | --   | VEML6075 | ±1 UVI      |
 
 ## Shield Specifications
 
@@ -128,19 +128,32 @@ extends = common_samd
 board = mkrwifi1010
 build_flags =
     ${common_samd.build_flags}
-    -DDEVICE_ID='"thermo_mkr"'
     -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"MKENVBAT"'
+    -DHW_REV=1
     -DHAS_MKR_ENV
     -DHAS_BATTERY
-    -DHAS_SERIAL_DEBUG
+    -DHAS_CALIBRATION
 ```
+
+Build and upload with the real env name:
+
+```bash
+pio run -e sensor_mkr_env            # build
+pio run -e sensor_mkr_env -t upload  # upload
+```
+
+> **Identity (Stage B):** this production image carries no compiled `device_id`. A single binary per
+> `(HW_CODE, HW_REV)` serves every unit; assign identity once over serial with `provision <id>`.
+> Calibration is runtime too (config store + server mirror). For a verbose serial build of the same
+> hardware, use `sensor_mkr_debug` (same `HW_CODE`, adds `-DHAS_SERIAL_DEBUG`). SAMD/MKR has **no OTA**.
 
 ## Firmware Files
 
 | File                                             | Role                                    |
 |--------------------------------------------------|-----------------------------------------|
-| `src/hw/mkr_env_sensor.h`                        | Hardware driver header (all 4 sensors)  |
-| `src/hw/mkr_env_sensor.cpp`                      | I2C/analog communication, calibration   |
+| `lib/thermo_drivers/src/mkr_env_sensor.h`        | Hardware driver header (all 4 sensors)  |
+| `lib/thermo_drivers/src/mkr_env_sensor.cpp`      | I2C/analog communication, calibration   |
 | `lib/thermo_core/src/modules/mkr_env_module.h`   | Module interface (register, contribute) |
 | `lib/thermo_core/src/modules/mkr_env_module.cpp` | Module logic (5 metrics registration)   |
 
@@ -156,7 +169,7 @@ void mkr_env_module_contribute(PayloadBuilder& pb, const SensorData& data);
 When active with battery monitoring, the device publishes on `thermo/{device_id}/sensors`:
 
 ```json
-{"temperature":22.5,"humidity":48.3,"pressure":1013.2,"light_lux":150,"uv_index":3.45,"battery_pct":85,"battery_v":3.95,"wifi_rssi":-42}
+{"temp":22.5,"humi":48.3,"press":1013.2,"lux":150,"uv":3.45,"bat":85,"batv":3.95,"rssi":-42}
 ```
 
 ## Troubleshooting

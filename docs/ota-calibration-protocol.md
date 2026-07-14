@@ -29,13 +29,13 @@ signature en v1 (durcissement v2 optionnel, cf. §7).
 
 Trois axes **orthogonaux**. Aucun ne dépend d'un autre.
 
-| Axe | Champ | Porté par | Change quand… |
-|-----|-------|-----------|---------------|
-| Type matériel (fonctionnel) | `HW_CODE` | build flag `-DHW_CODE` | le jeu de capteurs/modules change (features → binaire différent) |
-| Révision matérielle (physique/élec.) | `HW_REV` | build flag `-DHW_REV` | même fonction, mais PCB/câblage/électronique qui change le binaire |
-| Version firmware | `FIRMWARE_VERSION` | `[common]` semver | à chaque release |
-| Identité de l'unité | `device_id` | **runtime** (voir §3) | jamais dans le firmware |
-| Calibration | offsets, ratio diviseur | **runtime** (voir §4) | jamais dans le firmware |
+| Axe                                  | Champ                   | Porté par              | Change quand…                                                      |
+|--------------------------------------|-------------------------|------------------------|--------------------------------------------------------------------|
+| Type matériel (fonctionnel)          | `HW_CODE`               | build flag `-DHW_CODE` | le jeu de capteurs/modules change (features → binaire différent)   |
+| Révision matérielle (physique/élec.) | `HW_REV`                | build flag `-DHW_REV`  | même fonction, mais PCB/câblage/électronique qui change le binaire |
+| Version firmware                     | `FIRMWARE_VERSION`      | `[common]` semver      | à chaque release                                                   |
+| Identité de l'unité                  | `device_id`             | **runtime** (voir §3)  | jamais dans le firmware                                            |
+| Calibration                          | offsets, ratio diviseur | **runtime** (voir §4)  | jamais dans le firmware                                            |
 
 ### 1.1 `HW_CODE` — code de longueur fixe (8 car.) + registre serveur
 
@@ -53,21 +53,21 @@ Structure `<FF><TTTTTT>` :
   l'enregistrement du matériel. Mnémonique de préférence, numérique (`000001`) en repli si
   ça devient ambigu. Peu importe : le sens est dans la DB.
 
-| `<FF>` | Plateforme |
-|--------|------------|
-| `E8` | ESP8266 (D1 Mini) |
-| `C3` | ESP32-C3 (Super Mini) |
-| `MK` | SAMD21 (MKR WiFi 1010) |
+| `<FF>` | Plateforme             |
+|--------|------------------------|
+| `E8`   | ESP8266 (D1 Mini)      |
+| `C3`   | ESP32-C3 (Super Mini)  |
+| `MK`   | SAMD21 (MKR WiFi 1010) |
 
 Codes figés (D3 ✅ — seed du registre serveur via l'API A1) :
 
-| `HW_CODE` | Ancien code | Modules (`HAS_xxx`) |
-|-----------|-------------|---------------------|
-| `E8BMEBAT` | `esp8266-bme280-bat` | BME280 + BATTERY + DEEP_SLEEP |
-| `E8SHTBAT` | `esp8266-sht30-bat` | SHT30 + BATTERY + DEEP_SLEEP |
-| `E8SHTDSP` | `esp8266-sht30-disp` | SHT30 + DISPLAY |
+| `HW_CODE`  | Ancien code                 | Modules (`HAS_xxx`)                    |
+|------------|-----------------------------|----------------------------------------|
+| `E8BMEBAT` | `esp8266-bme280-bat`        | BME280 + BATTERY + DEEP_SLEEP          |
+| `E8SHTBAT` | `esp8266-sht30-bat`         | SHT30 + BATTERY + DEEP_SLEEP           |
+| `E8SHTDSP` | `esp8266-sht30-disp`        | SHT30 + DISPLAY                        |
 | `C3BMELUX` | `esp32c3-bme280-bh1750-bat` | BME280 + BH1750 + BATTERY + DEEP_SLEEP |
-| `MKENVBAT` | `mkr1010-mkrenv-bat` | MKR ENV + BATTERY |
+| `MKENVBAT` | `mkr1010-mkrenv-bat`        | MKR ENV + BATTERY                      |
 
 > Règle : un nouveau capteur/module ⇒ **nouveau `HW_CODE`** (nouvelle entrée du registre
 > serveur, créée via l'API). Le firmware ne connaît que sa propre chaîne `HW_CODE` (8 car.).
@@ -133,11 +133,11 @@ une fois** (D14) — pas seulement celles qui font l'OTA ; le MKR/SAMD migre aus
 compilés vers le store. Accès via une interface portable `IConfigStore` (impl par plateforme
 + stub mémoire natif pour les tests) :
 
-| Plateforme | Techno (D11) | Survit à l'OTA | Survit à coupure secteur |
-|------------|--------------|----------------|--------------------------|
-| ESP8266 | **LittleFS** (fichier JSON, layout 4M1M) | oui | oui |
-| ESP32-C3 | NVS (`Preferences`) | oui | oui |
-| SAMD21 | `FlashStorage` | oui | oui |
+| Plateforme | Techno (D11)                             | Survit à l'OTA | Survit à coupure secteur |
+|------------|------------------------------------------|----------------|--------------------------|
+| ESP8266    | **LittleFS** (fichier JSON, layout 4M1M) | oui            | oui                      |
+| ESP32-C3   | NVS (`Preferences`)                      | oui            | oui                      |
+| SAMD21     | `FlashStorage`                           | oui            | oui                      |
 
 > ⚠️ Un **effacement complet** au flash série (erase flash) vide le store → re-provisioning
 > `device_id` (série) + re-push calibration (serveur). C'est le chemin de migration des
@@ -145,13 +145,13 @@ compilés vers le store. Accès via une interface portable `IConfigStore` (impl 
 
 Contenu du store (`config` runtime) :
 
-| Clé | Type | Défaut si absent | Origine |
-|-----|------|------------------|---------|
-| `cal_temp` | float | `0.0` | serveur (`set_offset`) |
-| `cal_humi` | float | `0.0` | serveur (`set_offset`) |
-| `cal_press` | float | `0.0` | serveur (`set_offset`) |
-| `bat_divider` | float | valeur nominale par `HW_REV` | serveur (`set_calibration`) |
-| `device_id` | string | — (device inactif tant qu'absent) | provisioning série (§3.1) |
+| Clé           | Type   | Défaut si absent                  | Origine                     |
+|---------------|--------|-----------------------------------|-----------------------------|
+| `cal_temp`    | float  | `0.0`                             | serveur (`set_offset`)      |
+| `cal_humi`    | float  | `0.0`                             | serveur (`set_offset`)      |
+| `cal_press`   | float  | `0.0`                             | serveur (`set_offset`)      |
+| `bat_divider` | float  | valeur nominale par `HW_REV`      | serveur (`set_calibration`) |
+| `device_id`   | string | — (device inactif tant qu'absent) | provisioning série (§3.1)   |
 
 **Le `bat_divider` (ratio du diviseur de tension) devient une valeur de calibration
 runtime** et remplace l'actuel build flag `-DBATTERY_DIVIDER_RATIO`. Valeur nominale par
@@ -195,11 +195,11 @@ calibration connue.
 
 ### 4.1 Commandes (extension de `HAS_CALIBRATION`)
 
-| Action | Payload | Effet |
-|--------|---------|-------|
-| `set_offset` | `{"action":"set_offset","metric":"temp","value":-2.5}` | écrit un offset (`cal_temp/humi/press`) dans le store rémanent |
-| `set_calibration` | `{"action":"set_calibration","key":"bat_divider","value":2.771}` | écrit une valeur de calibration générique (ratio diviseur…) |
-| `request_calibration` | `{"action":"request_calibration"}` | le device publie sa calibration courante (voir §4.2) |
+| Action                | Payload                                                          | Effet                                                          |
+|-----------------------|------------------------------------------------------------------|----------------------------------------------------------------|
+| `set_offset`          | `{"action":"set_offset","metric":"temp","value":-2.5}`           | écrit un offset (`cal_temp/humi/press`) dans le store rémanent |
+| `set_calibration`     | `{"action":"set_calibration","key":"bat_divider","value":2.771}` | écrit une valeur de calibration générique (ratio diviseur…)    |
+| `request_calibration` | `{"action":"request_calibration"}`                               | le device publie sa calibration courante (voir §4.2)           |
 
 Les commandes existantes `set_offset` / `request_calibration` sont conservées ;
 `set_calibration` est ajoutée pour les valeurs non-offset (ratio diviseur).
@@ -258,11 +258,11 @@ Réponse à `request_capabilities`. Reste petit (identité + métriques) :
 }
 ```
 
-| Champ | Type | Sens |
-|-------|------|------|
-| `hwrev` | int | révision matérielle (§1.2) |
-| `ota` | 0/1 | 1 si le device sait faire l'OTA (le serveur ne propose l'update que dans ce cas) |
-| `cal` | 0/1 | **état du store de calibration (D8)** : `1` = au moins une clé de calibration écrite, `0` = aucune (carte neuve, factory reset, changement de puce). **Indépendant du `device_id`** (un device provisionné mais non calibré publie `cal:0`). Le serveur re-pousse la calibration mirroir (§4.3) uniquement sur `cal:0`. |
+| Champ   | Type | Sens                                                                                                                                                                                                                                                                                                                    |
+|---------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `hwrev` | int  | révision matérielle (§1.2)                                                                                                                                                                                                                                                                                              |
+| `ota`   | 0/1  | 1 si le device sait faire l'OTA (le serveur ne propose l'update que dans ce cas)                                                                                                                                                                                                                                        |
+| `cal`   | 0/1  | **état du store de calibration (D8)** : `1` = au moins une clé de calibration écrite, `0` = aucune (carte neuve, factory reset, changement de puce). **Indépendant du `device_id`** (un device provisionné mais non calibré publie `cal:0`). Le serveur re-pousse la calibration mirroir (§4.3) uniquement sur `cal:0`. |
 
 ### 5.2 `commands` — liste des commandes + paramètres (à la demande)
 
@@ -308,12 +308,12 @@ Si la liste dépasse encore 512 o, le device la **fragmente** (`{"part":1,"of":2
 }
 ```
 
-| Champ | Rôle |
-|-------|------|
-| `value` | URL HTTP interne de l'image |
-| `md5` | intégrité — vérifiée avant bascule |
-| `ver` | version cible — **garde-fou idempotence** : refus si `ver == FIRMWARE_VERSION` |
-| `hw`, `hwrev` | **garde-fou compat** : refus si ≠ `HW_CODE`/`HW_REV` compilés |
+| Champ         | Rôle                                                                           |
+|---------------|--------------------------------------------------------------------------------|
+| `value`       | URL HTTP interne de l'image                                                    |
+| `md5`         | intégrité — vérifiée avant bascule                                             |
+| `ver`         | version cible — **garde-fou idempotence** : refus si `ver == FIRMWARE_VERSION` |
+| `hw`, `hwrev` | **garde-fou compat** : refus si ≠ `HW_CODE`/`HW_REV` compilés                  |
 
 Publiée en **QoS 1, `retain=false`** (queue pour device endormi via la session
 persistante ; le garde-fou `ver` couvre le cas d'une commande qui traînerait).
@@ -426,13 +426,13 @@ pour l'upload). Ce token est **distinct de la read-API** (`api.ApiKey`, read-onl
 pour un appelant **non-interactif — à terme uniquement la CI (TeamCity)** (D4). Toutes les
 écritures sont **idempotentes**.
 
-| # | Besoin | Requête indicative | Effet serveur |
-|---|--------|--------------------|---------------|
-| A1 | Enregistrer / mettre à jour un **code matériel** | `PUT /api/hw/codes/<hw_code>` `{platform, description, modules[]}` | upsert dans le registre matériel (DB codes) |
-| A2 | Enregistrer / mettre à jour une **révision matérielle** | `PUT /api/hw/codes/<hw_code>/revs/<hw_rev>` `{description, bat_divider_nominal?, notes?}` | upsert révision (DB révisions), rattachée au code |
-| A3 | **Publier une image firmware** | `POST /api/firmwares` multipart : `firmware.bin` + `{hw_code, hw_rev, version, md5, size, notes?}` | valide (code+rev existent, MD5 recalculé == fourni, taille), stocke le `.bin`, crée la ligne `Firmware`. Idempotent sur `(hw_code, hw_rev, version)` |
-| A4 | **Lister** les firmwares publiés | `GET /api/firmwares?hw_code=&hw_rev=` | pour éviter les doublons / voir la dernière version |
-| A5 | Récupérer la **dernière version** d'un type | `GET /api/firmwares/latest?hw_code=&hw_rev=` | aide à la décision de push (UI/CI) |
+| #  | Besoin                                                  | Requête indicative                                                                                 | Effet serveur                                                                                                                                        |
+|----|---------------------------------------------------------|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| A1 | Enregistrer / mettre à jour un **code matériel**        | `PUT /api/hw/codes/<hw_code>` `{platform, description, modules[]}`                                 | upsert dans le registre matériel (DB codes)                                                                                                          |
+| A2 | Enregistrer / mettre à jour une **révision matérielle** | `PUT /api/hw/codes/<hw_code>/revs/<hw_rev>` `{description, bat_divider_nominal?, notes?}`          | upsert révision (DB révisions), rattachée au code                                                                                                    |
+| A3 | **Publier une image firmware**                          | `POST /api/firmwares` multipart : `firmware.bin` + `{hw_code, hw_rev, version, md5, size, notes?}` | valide (code+rev existent, MD5 recalculé == fourni, taille), stocke le `.bin`, crée la ligne `Firmware`. Idempotent sur `(hw_code, hw_rev, version)` |
+| A4 | **Lister** les firmwares publiés                        | `GET /api/firmwares?hw_code=&hw_rev=`                                                              | pour éviter les doublons / voir la dernière version                                                                                                  |
+| A5 | Récupérer la **dernière version** d'un type             | `GET /api/firmwares/latest?hw_code=&hw_rev=`                                                       | aide à la décision de push (UI/CI)                                                                                                                   |
 
 Règles :
 
@@ -452,21 +452,21 @@ logique (les métadonnées viennent de `firmware.json` + `platformio.ini`).
 
 ## 9. Responsabilités serveur (`../sensor_server/`) — contrat
 
-| # | Élément | Détail |
-|---|---------|--------|
-| 1 | Modèles registre matériel | `HardwareCode` (`hw_code` PK `CHAR(8)`, `platform`, `description`, `modules`) et `HardwareRevision` (`hw_code` FK, `hw_rev`, `description`, `bat_divider_nominal`, `notes`). Alimentés par l'API A1/A2. Valider `^[A-Z0-9]{8}$` à l'entrée. |
-| 2 | Modèle `Firmware` | `hw_code`, `hw_rev`, `version`, `file`/`path`, `md5`, `size`, `uploaded_at`, `notes`. Unicité `(hw_code, hw_rev, version)`. Alimenté par A3. |
-| 3 | Champs `Device` | ajouter `hw_rev` (int), `ota_capable` (bool), `calibration` (JSON miroir), `commands`/`command_params` (JSON). **Code matériel = FK seule (D10)** : `hardware_code` (**FK** → `HardwareCode`, `null` si le code claimé est absent du registre) remplace la chaîne libre `hw_code`. La claim brute **n'est pas conservée** : code inconnu → « à update » générique. `fw_version`/`hardware_id`/`display_name` existent déjà. |
-| 4 | Ingestion `capabilities` | parser `hwrev`, `ota` (en plus de `id`/`hw`/`fw`) ; **ne plus** attendre `commands` ici. |
-| 5 | Ingestion `commands` | nouveau topic `{type}/{id}/commands` (§5.2) → maj `Device.commands`/`command_params`. Envoyer `request_commands` (QoS 1) en plus de `request_capabilities`. |
-| 6 | Ingestion `calibration` | topic `{type}/{id}/calibration` (§4.2) → maj `Device.calibration` (miroir). |
-| 7 | API de publication + hosting | endpoints A1–A5 (§8bis) : registre matériel + upload/liste firmwares. **Hosting par CETTE stack** : `.bin` sous `${DATA_DIR}/firmwares/fw/…/<version>.bin` (rémanent), servi par une **`location /fw/` nginx** (pas Daphne, pas WhiteNoise) ; `OTA_BASE_URL` (env) construit le `value` de `ota_update`. |
-| 8 | `send_ota_update(device, firmware)` | garde-fou `hw_code`+`hw_rev` == device ; payload §6.1 ; `_mqtt_publish(qos=1, retain=false)` ; `CommandLog(action="ota_update")`. |
-| 9 | Re-push calibration | après OTA/reset détecté, renvoyer `set_offset`/`set_calibration` depuis le miroir. |
-| 10 | Détection succès | `fw_version == version poussée` → `CommandLog.mark(SUCCESS)` ; timeout → `TIMEOUT`. |
-| 11 | Ack OTA | `handle_ack_message` : `start` = info, `error` → `mark(FAILED, motif)`. |
-| 12 | UI/admin | bouton « Pousser un firmware » : uniquement devices `ota_capable`, uniquement `Firmware` compatibles `(hw_code, hw_rev)`. |
-| 13 | Migrations | `HardwareCode`, `HardwareRevision`, `Firmware` + nouveaux champs `Device`. Pas de remap `device_id` (D1-b conserve les ids). |
+| #  | Élément                             | Détail                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|----|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1  | Modèles registre matériel           | `HardwareCode` (`hw_code` PK `CHAR(8)`, `platform`, `description`, `modules`) et `HardwareRevision` (`hw_code` FK, `hw_rev`, `description`, `bat_divider_nominal`, `notes`). Alimentés par l'API A1/A2. Valider `^[A-Z0-9]{8}$` à l'entrée.                                                                                                                                                                                 |
+| 2  | Modèle `Firmware`                   | `hw_code`, `hw_rev`, `version`, `file`/`path`, `md5`, `size`, `uploaded_at`, `notes`. Unicité `(hw_code, hw_rev, version)`. Alimenté par A3.                                                                                                                                                                                                                                                                                |
+| 3  | Champs `Device`                     | ajouter `hw_rev` (int), `ota_capable` (bool), `calibration` (JSON miroir), `commands`/`command_params` (JSON). **Code matériel = FK seule (D10)** : `hardware_code` (**FK** → `HardwareCode`, `null` si le code claimé est absent du registre) remplace la chaîne libre `hw_code`. La claim brute **n'est pas conservée** : code inconnu → « à update » générique. `fw_version`/`hardware_id`/`display_name` existent déjà. |
+| 4  | Ingestion `capabilities`            | parser `hwrev`, `ota` (en plus de `id`/`hw`/`fw`) ; **ne plus** attendre `commands` ici.                                                                                                                                                                                                                                                                                                                                    |
+| 5  | Ingestion `commands`                | nouveau topic `{type}/{id}/commands` (§5.2) → maj `Device.commands`/`command_params`. Envoyer `request_commands` (QoS 1) en plus de `request_capabilities`.                                                                                                                                                                                                                                                                 |
+| 6  | Ingestion `calibration`             | topic `{type}/{id}/calibration` (§4.2) → maj `Device.calibration` (miroir).                                                                                                                                                                                                                                                                                                                                                 |
+| 7  | API de publication + hosting        | endpoints A1–A5 (§8bis) : registre matériel + upload/liste firmwares. **Hosting par CETTE stack** : `.bin` sous `${DATA_DIR}/firmwares/fw/…/<version>.bin` (rémanent), servi par une **`location /fw/` nginx** (pas Daphne, pas WhiteNoise) ; `OTA_BASE_URL` (env) construit le `value` de `ota_update`.                                                                                                                    |
+| 8  | `send_ota_update(device, firmware)` | garde-fou `hw_code`+`hw_rev` == device ; payload §6.1 ; `_mqtt_publish(qos=1, retain=false)` ; `CommandLog(action="ota_update")`.                                                                                                                                                                                                                                                                                           |
+| 9  | Re-push calibration                 | après OTA/reset détecté, renvoyer `set_offset`/`set_calibration` depuis le miroir.                                                                                                                                                                                                                                                                                                                                          |
+| 10 | Détection succès                    | `fw_version == version poussée` → `CommandLog.mark(SUCCESS)` ; timeout → `TIMEOUT`.                                                                                                                                                                                                                                                                                                                                         |
+| 11 | Ack OTA                             | `handle_ack_message` : `start` = info, `error` → `mark(FAILED, motif)`.                                                                                                                                                                                                                                                                                                                                                     |
+| 12 | UI/admin                            | bouton « Pousser un firmware » : uniquement devices `ota_capable`, uniquement `Firmware` compatibles `(hw_code, hw_rev)`.                                                                                                                                                                                                                                                                                                   |
+| 13 | Migrations                          | `HardwareCode`, `HardwareRevision`, `Firmware` + nouveaux champs `Device`. Pas de remap `device_id` (D1-b conserve les ids).                                                                                                                                                                                                                                                                                                |
 
 ---
 
@@ -483,20 +483,20 @@ logique (les métadonnées viennent de `firmware.json` + `platformio.ini`).
 
 ## 11. Décisions
 
-| ID | Décision | Statut |
-|----|----------|--------|
-| **D1** | Source du `device_id` (§2) | ✅ **D1-b** : provisionné en flash (§3.1), `device_id` actuels conservés, pas de migration serveur. |
-| **D2** | Topic du rapport de calibration (§4.2) | ✅ topic dédié `{type}/{id}/calibration`. |
-| **D3** | Codes `HW_CODE` 8 car. du registre (§1.1) | ✅ figés : `E8BMEBAT`, `E8SHTBAT`, `E8SHTDSP`, `C3BMELUX`, `MKENVBAT`. Seed du registre serveur via A1. |
-| **D4** | Publication des images + auth | ✅ via **API serveur** (§8bis), appelée par `publish_firmware.py`. Auth par **token de publication dédié**, distinct de la read-API, cible **CI-only (TeamCity)**. |
-| **D5** | `HW_REV` de départ | ✅ `1` partout. |
-| **D6** | Découpage capabilities/commands (§5) | ✅ deux messages + commande `request_commands` (contrainte 512 o). |
-| **D7** | Alimentation du registre matériel (§1.1) | ✅ **strictement la CI**. Pas de stub auto-créé ; `HW_CODE` inconnu vu en MQTT ⇒ device « à update ». |
-| **D8** | Détection re-push calibration (§4.3, §5.1) | ✅ flag **`cal` (0/1)** dans `capabilities` ; re-push sur `cal:0`. Implémenté côté device, indépendant du `device_id`. |
-| **D9** | Republication même version (§8bis A3) | ✅ `409` par défaut, `?overwrite=true` explicite. |
-| **D10** | Champ code matériel du `Device` (§9-3) | ✅ **FK seule** `hardware_code` (null si code claimé absent du registre) ; claim brute non conservée, code inconnu → « à update » générique. `hw_rev` en int simple (pas de FK composite). |
-| **D11** | Backend store ESP8266 (§3) | ✅ **LittleFS** (fichier JSON, layout 4M1M). NVS sur ESP32-C3, FlashStorage sur SAMD. Interface portable `IConfigStore`. |
-| **D12** | Seed `device_id` en dev (§2) | ✅ `-DDEVICE_ID` autorisé comme **seed dev only** (env `native` / `HAS_SERIAL_DEBUG`) si store vide ; absent en production. |
-| **D13** | Migration unités déployées (§3.2) | ✅ **saisie manuelle** des valeurs dans le miroir serveur avant reflash, re-push après provisioning. |
-| **D14** | Périmètre refactor store (§3) | ✅ **toutes plateformes en une fois** (ESP + SAMD) ; l'OTA reste ESP-only. |
-| — | Défauts adoptés | `OTA_MIN_BATTERY_PCT=40` ; partition C3 `min_spiffs.csv` (à confirmer au build) ; nominal `bat_divider` = valeur actuelle du type comme défaut `HW_REV=1` ; clés `set_calibration` = `bat_divider` (extensible) ; fragmentation `commands` différée ; fusion des envs par-unité (`sensor_8266_bmp80_1/_2` → un seul env). |
+| ID      | Décision                                   | Statut                                                                                                                                                                                                                                                                                                                    |
+|---------|--------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **D1**  | Source du `device_id` (§2)                 | ✅ **D1-b** : provisionné en flash (§3.1), `device_id` actuels conservés, pas de migration serveur.                                                                                                                                                                                                                        |
+| **D2**  | Topic du rapport de calibration (§4.2)     | ✅ topic dédié `{type}/{id}/calibration`.                                                                                                                                                                                                                                                                                  |
+| **D3**  | Codes `HW_CODE` 8 car. du registre (§1.1)  | ✅ figés : `E8BMEBAT`, `E8SHTBAT`, `E8SHTDSP`, `C3BMELUX`, `MKENVBAT`. Seed du registre serveur via A1.                                                                                                                                                                                                                    |
+| **D4**  | Publication des images + auth              | ✅ via **API serveur** (§8bis), appelée par `publish_firmware.py`. Auth par **token de publication dédié**, distinct de la read-API, cible **CI-only (TeamCity)**.                                                                                                                                                         |
+| **D5**  | `HW_REV` de départ                         | ✅ `1` partout.                                                                                                                                                                                                                                                                                                            |
+| **D6**  | Découpage capabilities/commands (§5)       | ✅ deux messages + commande `request_commands` (contrainte 512 o).                                                                                                                                                                                                                                                         |
+| **D7**  | Alimentation du registre matériel (§1.1)   | ✅ **strictement la CI**. Pas de stub auto-créé ; `HW_CODE` inconnu vu en MQTT ⇒ device « à update ».                                                                                                                                                                                                                      |
+| **D8**  | Détection re-push calibration (§4.3, §5.1) | ✅ flag **`cal` (0/1)** dans `capabilities` ; re-push sur `cal:0`. Implémenté côté device, indépendant du `device_id`.                                                                                                                                                                                                     |
+| **D9**  | Republication même version (§8bis A3)      | ✅ `409` par défaut, `?overwrite=true` explicite.                                                                                                                                                                                                                                                                          |
+| **D10** | Champ code matériel du `Device` (§9-3)     | ✅ **FK seule** `hardware_code` (null si code claimé absent du registre) ; claim brute non conservée, code inconnu → « à update » générique. `hw_rev` en int simple (pas de FK composite).                                                                                                                                 |
+| **D11** | Backend store ESP8266 (§3)                 | ✅ **LittleFS** (fichier JSON, layout 4M1M). NVS sur ESP32-C3, FlashStorage sur SAMD. Interface portable `IConfigStore`.                                                                                                                                                                                                   |
+| **D12** | Seed `device_id` en dev (§2)               | ✅ `-DDEVICE_ID` autorisé comme **seed dev only** (env `native` / `HAS_SERIAL_DEBUG`) si store vide ; absent en production.                                                                                                                                                                                                |
+| **D13** | Migration unités déployées (§3.2)          | ✅ **saisie manuelle** des valeurs dans le miroir serveur avant reflash, re-push après provisioning.                                                                                                                                                                                                                       |
+| **D14** | Périmètre refactor store (§3)              | ✅ **toutes plateformes en une fois** (ESP + SAMD) ; l'OTA reste ESP-only.                                                                                                                                                                                                                                                 |
+| —       | Défauts adoptés                            | `OTA_MIN_BATTERY_PCT=40` ; partition C3 `min_spiffs.csv` (à confirmer au build) ; nominal `bat_divider` = valeur actuelle du type comme défaut `HW_REV=1` ; clés `set_calibration` = `bat_divider` (extensible) ; fragmentation `commands` différée ; fusion des envs par-unité (`sensor_8266_bmp80_1/_2` → un seul env). |

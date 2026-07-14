@@ -2,20 +2,21 @@
 
 ## Overview
 
-The deep sleep module puts the ESP8266 into its lowest power state between sensor readings. Instead of staying connected
-to WiFi and polling on a timer, the device performs a **one-shot** cycle: wake, connect, read, publish, sleep. This
-dramatically extends battery life for nodes powered by 18650 cells.
+The deep sleep module puts the ESP8266 (and ESP32-C3) into its lowest power state between sensor readings. Instead of
+staying connected to WiFi and polling on a timer, the device performs a **one-shot** cycle: wake, connect, read,
+publish, sleep. This dramatically extends battery life for nodes powered by 18650 cells.
 
 Enabled by the `-DHAS_DEEP_SLEEP` build flag. **Requires `-DHAS_BATTERY`** (battery-powered nodes only).
 
-| Parameter              | Value                                        |
-|------------------------|----------------------------------------------|
-| Build flag             | `-DHAS_DEEP_SLEEP`                           |
-| Dependency             | `HAS_BATTERY`                                |
-| Default sleep interval | 300s (5 minutes)                             |
-| Configurable range     | 1-86400s (via MQTT command)                  |
-| Deep sleep current     | ~20uA (ESP8266) + ~55uA total                |
-| Firmware files         | `src/hw/esp_sleep.h`, `src/hw/esp_sleep.cpp` |
+| Parameter              | Value                                                      |
+|------------------------|------------------------------------------------------------|
+| Build flag             | `-DHAS_DEEP_SLEEP`                                         |
+| Dependency             | `HAS_BATTERY`                                              |
+| Platforms              | ESP8266 (D1 Mini), ESP32-C3 (Super Mini)                   |
+| Default sleep interval | 300s (5 minutes)                                           |
+| Configurable range     | 1-86400s (via MQTT command)                                |
+| Deep sleep current     | ~20uA (ESP8266 RTC); board quiescent dominates (see below) |
+| Firmware files         | `lib/thermo_platform/src/esp8266/esp_sleep.{h,cpp}`        |
 
 ## Hardware Requirement: GPIO16 to RST
 
@@ -77,10 +78,12 @@ public:
 };
 ```
 
-The concrete implementation `EspSleep` (in `src/hw/esp_sleep.cpp`) uses the ESP8266 SDK functions
+The concrete implementation `EspSleep` (in `lib/thermo_platform/src/esp8266/esp_sleep.cpp`) uses the ESP8266 SDK functions
 `system_rtc_mem_read()` and `system_rtc_mem_write()`.
 
 ## Power Savings
+
+Per-cycle MCU current (ESP8266):
 
 | State              | Current Draw | Duration     | Notes                            |
 |--------------------|--------------|--------------|----------------------------------|
@@ -88,17 +91,25 @@ The concrete implementation `EspSleep` (in `src/hw/esp_sleep.cpp`) uses the ESP8
 | WiFi connect       | ~70mA        | 1-3s         | DHCP, association                |
 | MQTT + sensor read | ~80mA        | 0.5-1s       | Publish + command wait           |
 | WiFi TX peak       | ~350mA       | Milliseconds | Brief spikes during transmission |
-| **Average (300s)** | **~0.5mA**   | --           | Dominated by sleep time          |
 
-With a 2S pack of 2x 3000mAh 18650 cells and the [2S power supply module](power-2s.md), expected runtime at 300s
-intervals:
+On a real 2S battery node these MCU figures are **not** what dominates autonomy. On **HW rev 1** the board-level
+quiescent draw sets the floor: the **MC78M05BTG** 5V linear regulator (~3 mA Iq) and an **always-on** voltage divider
+(~247 µA) draw continuously, even while the MCU sleeps. That is why deep-sleep autonomy is modest despite the ~20 µA
+sleep current.
 
-```c++
-3000 mAh / 0.5 mA ~ 6000 hours ~ 250 days
-```
+### Autonomy (2S, HW rev 1)
 
-> **Note**: Actual runtime depends on cell age, temperature, self-discharge, and BMS quiescent current. Real-world
-> results will be lower than the theoretical maximum.
+- **BME280 fleet**: **~21 days theoretical**, **~19–20 days measured** (field telemetry, 2026-07) at 300 s intervals.
+- **SHT30 / ESP32-C3** configs: no unit deployed yet, so **theoretical only (~21 days)** — no field data.
+
+The full current budget and per-config breakdown live in **[2S power supply](power-2s.md)** — refer to it rather than
+duplicating the numbers here.
+
+### Planned: HW rev 2
+
+**HW rev 2** (planned, not yet built) replaces the regulator with an **HT7350** (~4 µA Iq) and **switches the voltage
+divider with a MOSFET** so it is only powered during an ADC read — eliminating the ~247 µA permanent drain. Target
+autonomy is ~76 days (~4×). The firmware gates the divider-switch pin behind `#if HW_REV >= 2`.
 
 ## MQTT Integration
 
@@ -145,31 +156,59 @@ build_flags =
 
 ### Example Environments
 
-From `platformio.ini`:
+From `platformio.ini`. Production images carry **no** `-DDEVICE_ID` — the `device_id` is provisioned once over serial
+(see [OTA module](ota.md#first-provisioning)). ESP8266 `sensor_8266_bmp80`:
 
 ```ini
-[env:thermo_1]
-platform = espressif8266
-board = d1_mini
-framework = arduino
+[env:sensor_8266_bmp80]
+extends = common_esp8266
 build_flags =
-    -Wall -Wextra
-    -DDEVICE_ID=\"thermo_1\"
-    -DMQTT_DEVICE_TYPE=\"thermo\"
+    ${common_esp8266.build_flags}
+    -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"E8BMEBAT"'
+    -DHW_REV=1
     -DHAS_BME280
     -DHAS_BATTERY
     -DHAS_DEEP_SLEEP
+    -DHAS_CALIBRATION
+    -DHAS_OTA
+```
+
+ESP32-C3 `sensor_c3_bme280_bh1750` (BME280 + BH1750 lux):
+
+```ini
+[env:sensor_c3_bme280_bh1750]
+extends = common_esp32c3
+build_flags =
+    ${common_esp32c3.build_flags}
+    -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"C3BMELUX"'
+    -DHW_REV=1
+    -DHAS_BME280
+    -DHAS_BH1750
+    -DHAS_BATTERY
+    -DHAS_DEEP_SLEEP
+    -DHAS_CALIBRATION
+    -DHAS_OTA
+```
+
+Build / upload:
+
+```bash
+pio run -e sensor_8266_bmp80              # build ESP8266 battery node
+pio run -e sensor_8266_bmp80 -t upload    # flash (disconnect the D0-RST wire first)
+pio run -e sensor_c3_bme280_bh1750        # build ESP32-C3 node
 ```
 
 ## Firmware Files
 
-| File                           | Role                                           |
-|--------------------------------|------------------------------------------------|
-| `src/hw/esp_sleep.h`           | `EspSleep` class declaration                   |
-| `src/hw/esp_sleep.cpp`         | ESP8266 deep sleep + RTC memory implementation |
-| `include/interfaces/i_sleep.h` | `ISleep` interface + `RtcData` struct          |
-| `include/config.h`             | `DEFAULT_SLEEP_INTERVAL_S`, `RTC_MAGIC`        |
-| `src/main.cpp`                 | `#ifdef HAS_DEEP_SLEEP` integration blocks     |
+| File                                          | Role                                        |
+|-----------------------------------------------|---------------------------------------------|
+| `lib/thermo_platform/src/esp8266/esp_sleep.*` | `EspSleep`: ESP8266 deep sleep + RTC memory |
+| `lib/thermo_platform/src/esp32/esp32_sleep.*` | ESP32-C3 deep sleep (`RTC_DATA_ATTR`)       |
+| `lib/thermo_core/src/interfaces/i_sleep.h`    | `ISleep` interface + `RtcData` struct       |
+| `lib/thermo_core/src/config.h`                | `DEFAULT_SLEEP_INTERVAL_S`, `RTC_MAGIC`     |
+| `src/main.cpp`                                | `#ifdef HAS_DEEP_SLEEP` integration blocks  |
 
 ## Configuration Constants
 

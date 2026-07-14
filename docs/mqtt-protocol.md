@@ -41,7 +41,7 @@ connection is set up as follows:
 
 | Setting         | Value                    | Why                                                                 |
 |-----------------|--------------------------|---------------------------------------------------------------------|
-| Client ID       | `DEVICE_ID` (stable)     | The broker ties the persistent session to this id across wakes.     |
+| Client ID       | `device_id` (stable)     | The broker ties the persistent session to this id across wakes.     |
 | Clean session   | **`false`**              | Broker keeps the subscription and **queues** commands while asleep. |
 | `command` sub   | **QoS 1**                | Only QoS ≥ 1 messages are queued for an offline session.            |
 | Last Will (LWT) | **none**                 | Online status is derived from `last_seen`, not LWT (see below).     |
@@ -64,6 +64,8 @@ QoS/retain used per message type:
 | `sensors`      | Device -> Server | 0     | no     | Device publishes at QoS 0 (server is always online). |
 | `status`       | Device -> Server | 0     | no     | Alert JSON, see §2.                                  |
 | `capabilities` | Device -> Server | 0     | no     | Sent in response to `request_capabilities`.          |
+| `commands`     | Device -> Server | 0     | no     | Sent in response to `request_commands`.              |
+| `calibration`  | Device -> Server | 0     | no     | Sent in response to `request_calibration`.           |
 | `ack`          | Device -> Server | 0     | no     | Command acknowledgement, see §4.                     |
 | `command`      | Server -> Device | **1** | no     | QoS 1 so it is queued for sleeping devices.          |
 
@@ -205,17 +207,17 @@ Commands are routed through the `ModuleRegistry`:
 
 ### Built-in commands
 
-| Action                 | Value                                      | Handler     | Behavior                                          |
-|------------------------|--------------------------------------------|-------------|---------------------------------------------------|
-| `set_interval`         | seconds (1-86400)                          | Core        | Updates publish/sleep interval                    |
-| `request_capabilities` | _(none)_                                   | Core        | Responds with capabilities (section 5)            |
-| `request_commands`     | _(none)_                                   | Core        | Responds with the command list on `commands`      |
-| `set_offset`           | `{"metric":"<name>","value":<float>}`      | Calibration | Set sensor offset (temp/humi/press)               |
-| `set_calibration`      | `{"key":"bat_divider","value":<float>}`    | Calibration | Set a generic calibration value (divider ratio)   |
-| `request_calibration`  | _(none)_                                   | Calibration | Publishes current calibration on `calibration`    |
-| `ota_update`           | see [OTA module](modules/ota.md)           | OTA         | Download + verify + flash new firmware, reboot    |
-| `relay_toggle`         | `{"value":<1\|2>}`                         | Relay       | Toggle relay on/off                               |
-| `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`            | Relay       | Activate relay, auto-revert after delay           |
+| Action                 | Value                                   | Handler     | Behavior                                        |
+|------------------------|-----------------------------------------|-------------|-------------------------------------------------|
+| `set_interval`         | seconds (1-86400)                       | Core        | Updates publish/sleep interval                  |
+| `request_capabilities` | _(none)_                                | Core        | Responds with capabilities (section 5)          |
+| `request_commands`     | _(none)_                                | Core        | Responds with the command list on `commands`    |
+| `set_offset`           | `{"metric":"<name>","value":<float>}`   | Calibration | Set sensor offset (temp/humi/press)             |
+| `set_calibration`      | `{"key":"bat_divider","value":<float>}` | Calibration | Set a generic calibration value (divider ratio) |
+| `request_calibration`  | _(none)_                                | Calibration | Publishes current calibration on `calibration`  |
+| `ota_update`           | see [OTA module](modules/ota.md)        | OTA         | Download + verify + flash new firmware, reboot  |
+| `relay_toggle`         | `{"value":<1\|2>}`                      | Relay       | Toggle relay on/off                             |
+| `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`         | Relay       | Activate relay, auto-revert after delay         |
 
 > `request_calibration` now publishes on the dedicated `calibration` topic (not `ack`), and
 > `ota_update` emits its own detailed ack (`start` / `error`+`message`). See
@@ -297,16 +299,16 @@ The message carries **identity + metrics only** — the command list moved to a 
 }
 ```
 
-| Field     | Type   | Required | Description                                                                        |
-|-----------|--------|:--------:|------------------------------------------------------------------------------------|
-| `id`      | string |   Yes    | Unique chip serial. Per unit                                                       |
-| `hw`      | string |   Yes    | Hardware code — fixed 8 chars `^[A-Z0-9]{8}$`, identical across units of a type     |
-| `hwrev`   | number |   Yes    | Hardware revision (physical/electrical), selects the compatible image with `hw`    |
-| `fw`      | string |   Yes    | Firmware version (semver). Compare against latest image for `(hw, hwrev)`           |
-| `ota`     | 0/1    |   Yes    | 1 if the device can perform OTA updates (server only offers updates then)          |
-| `cal`     | 0/1    |   Yes    | 1 if the calibration store holds any value; 0 (fresh/reset) → server re-pushes it  |
-| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                                     |
-| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit                 |
+| Field     | Type   | Required | Description                                                                       |
+|-----------|--------|:--------:|-----------------------------------------------------------------------------------|
+| `id`      | string |   Yes    | Unique chip serial. Per unit                                                      |
+| `hw`      | string |   Yes    | Hardware code — fixed 8 chars `^[A-Z0-9]{8}$`, identical across units of a type   |
+| `hwrev`   | number |   Yes    | Hardware revision (physical/electrical), selects the compatible image with `hw`   |
+| `fw`      | string |   Yes    | Firmware version (semver). Compare against latest image for `(hw, hwrev)`         |
+| `ota`     | 0/1    |   Yes    | 1 if the device can perform OTA updates (server only offers updates then)         |
+| `cal`     | 0/1    |   Yes    | 1 if the calibration store holds any value; 0 (fresh/reset) → server re-pushes it |
+| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                                    |
+| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit                |
 
 - `intrvl` reflects the current value (may have been changed by `set_interval`).
 - Publish with `retain = false`.
@@ -431,7 +433,7 @@ The examples use `mosquitto_pub`/`mosquitto_sub`; `$H` is the broker host and
 ```bash
 mosquitto_sub -h $H -p 1883 -u USER -P PASS -v -t 'thermo/thermo_1/#'
 # thermo/thermo_1/sensors      {"temp":22.5,"humi":45,"press":1013.2,"bat":85,"batv":7.92}
-# thermo/thermo_1/capabilities {"id":"ESP-00A1B2","hw":"esp8266-bme280-bat","fw":"1.0.0",...}
+# thermo/thermo_1/capabilities {"id":"ESP-00A1B2","hw":"E8BMEBAT","hwrev":1,"fw":"1.0.0",...}
 ```
 
 **Send a command — MUST be QoS 1** so a sleeping device receives it on its next

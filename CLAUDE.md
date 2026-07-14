@@ -2,9 +2,9 @@
 
 ## Aperçu
 
-Projet PlatformIO modulaire multi-plateforme pour des capteurs IoT. Supporte ESP8266 (D1 Mini) et SAMD21 (Arduino MKR
-WiFi 1010). Architecture basée sur des feature flags (`HAS_xxx`) permettant de composer des variantes hardware à partir
-d'un noyau MQTT commun.
+Projet PlatformIO modulaire multi-plateforme pour des capteurs IoT. Supporte ESP8266 (D1 Mini), ESP32-C3 (Super Mini)
+et SAMD21 (Arduino MKR WiFi 1010). Architecture basée sur des feature flags (`HAS_xxx`) permettant de composer des
+variantes hardware à partir d'un noyau MQTT commun.
 
 ## Architecture modulaire
 
@@ -13,28 +13,37 @@ Le projet s'articule autour de :
 - **Noyau MQTT** (`src/main.cpp`) : connexion, publication, commandes, capabilities — toujours présent
 - **Modules optionnels** activés par feature flags dans `platformio.ini` :
 
-| Flag               | Module                          | Metrics ajoutées                                               | Commandes ajoutées                  |
-|--------------------|---------------------------------|----------------------------------------------------------------|-------------------------------------|
-| `HAS_BME280`       | Capteur BME/BMP280              | `temperature`, `humidity`, `pressure`                          | —                                   |
-| `HAS_SHT30`        | Capteur SHT30 (shield Wemos)    | `temperature`, `humidity`                                      | —                                   |
-| `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)     | `temperature`, `humidity`, `pressure`, `light_lux`, `uv_index` | —                                   |
-| `HAS_BATTERY`      | Monitoring batterie             | `battery_pct`, `battery_v`                                     | —                                   |
-| `HAS_LIGHT`        | Capteur luminosité (analog)     | `light`                                                        | —                                   |
-| `HAS_BH1750`       | Capteur lux BH1750 (I2C)        | `lux`                                                          | —                                   |
-| `HAS_CALIBRATION`  | Offsets capteurs (cross-module) | —                                                              | `set_offset`, `request_calibration` |
-| `HAS_RELAY`        | Dual relay board (2 ch.)        | `relay1`, `relay2`                                             | `relay_toggle`, `relay_contact`     |
-| `HAS_DISPLAY`      | Afficheur 7-segments + bouton   | —                                                              | —                                   |
-| `HAS_DEEP_SLEEP`   | Deep sleep entre lectures       | —                                                              | —                                   |
-| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série    | —                                                              | —                                   |
+| Flag               | Module                                 | Metrics ajoutées (noms wire, courts) | Commandes ajoutées                                     |
+|--------------------|----------------------------------------|--------------------------------------|--------------------------------------------------------|
+| `HAS_BME280`       | Capteur BME/BMP280                     | `temp`, `humi`, `press`              | —                                                      |
+| `HAS_SHT30`        | Capteur SHT30 (shield Wemos)           | `temp`, `humi`                       | —                                                      |
+| `HAS_MKR_ENV`      | MKR ENV Shield (4 capteurs)            | `temp`, `humi`, `press`, `lux`, `uv` | —                                                      |
+| `HAS_BATTERY`      | Monitoring batterie                    | `bat`, `batv`                        | `calibrate_battery`                                    |
+| `HAS_LIGHT`        | Capteur luminosité (analog)            | `light`                              | —                                                      |
+| `HAS_BH1750`       | Capteur lux BH1750 (I2C)               | `lux`                                | —                                                      |
+| `HAS_CALIBRATION`  | Offsets capteurs (cross-module)        | —                                    | `set_offset`, `set_calibration`, `request_calibration` |
+| `HAS_RELAY`        | Dual relay board (2 ch.)               | `relay1`, `relay2`                   | `relay_toggle`, `relay_contact`                        |
+| `HAS_DISPLAY`      | Afficheur 7-segments + bouton          | —                                    | —                                                      |
+| `HAS_DEEP_SLEEP`   | Deep sleep entre lectures (ESP8266/C3) | —                                    | —                                                      |
+| `HAS_OTA`          | Mise à jour firmware WiFi (ESP only)   | —                                    | `ota_update`                                           |
+| `HAS_SERIAL_DEBUG` | Logs debug verbose sur série           | —                                    | —                                                      |
 
-> **Note** : `HAS_BME280`, `HAS_SHT30` et `HAS_MKR_ENV` sont mutuellement exclusifs.
+> **Note** : `HAS_BME280`, `HAS_SHT30` et `HAS_MKR_ENV` sont mutuellement exclusifs. Les métriques device
+> utilisent les noms **courts** (`temp`, `bat`…) ; le serveur les stocke sous leurs noms canoniques
+> (`temperature`, `bat_percent`…).
 
-- **Identité device** définie dans `platformio.ini` :
-    - `-DDEVICE_ID` / `-DMQTT_DEVICE_TYPE` : identité réseau (unique par unité)
-    - `-DHW_CODE` : code hardware, **identique pour un même hardware** (seuls `DEVICE_ID` et la
-      calibration du diviseur peuvent différer). Sert à trouver l'image firmware d'une carte.
+- **Identité device** :
+    - `device_id` : **provisionné au runtime** (série `provision <id>`, stocké dans le config store) — ce
+      n'est plus un build flag. `-DDEVICE_ID` ne subsiste que comme *seed* sur les builds dev
+      (`HAS_SERIAL_DEBUG`) et l'env `native`.
+    - `-DMQTT_DEVICE_TYPE` (`platformio.ini`) : catégorie de device, sert de préfixe aux topics.
+    - `-DHW_CODE` : code hardware **8 caractères** `^[A-Z0-9]{8}$`, **identique pour un même hardware**.
+      Une image firmware par couple `(HW_CODE, HW_REV)`.
+    - `-DHW_REV` : révision hardware (entier, `1` partout actuellement). Garde le code `#if HW_REV >= n`
+      (ex. HW rev 2 des nodes 2S = régulateur HT7350 + MOSFET dans le pont diviseur).
     - `FIRMWARE_VERSION` : version semver globale (dans `[common]`), bumpée à chaque release.
-    - `hw`, `fw` et `id` (n° série puce) sont exposés dans le message `capabilities`.
+    - Calibration (offsets, `bat_divider`) : runtime aussi (config store + miroir serveur), jamais compilée.
+    - `id` (n° série puce), `hw`, `hwrev`, `fw`, `ota`, `cal` + les metrics sont exposés dans `capabilities`.
 
 ## Environnements PlatformIO
 
@@ -60,7 +69,7 @@ pio run -e cell_tester_mkr -t upload  # Upload testeur
 
 # Tests & monitoring
 pio run -e native              # Build natif (tests)
-pio test -e native             # Exécuter les tests unitaires (104 tests)
+pio test -e native             # Exécuter les tests unitaires (149 tests)
 pio device monitor             # Moniteur série (115200 baud)
 ```
 
@@ -74,18 +83,20 @@ src/
   main.cpp              - Orchestrateur (seul fichier de "glue", #ifdef HAS_xxx)
   cell_tester.cpp       - Firmware testeur de cellules 18650 (MKR, standalone)
 include/
-  config.h              - Pins, ADC, timing, topics MQTT (DEVICE_ID/TYPE via -D flags)
-  credentials.h         - WiFi & MQTT credentials (gitignored)
-  debug.h               - Macros debug série (HAS_SERIAL_DEBUG)
+  credentials.h         - WiFi & MQTT credentials (gitignored, + credentials.h.example)
 lib/
   thermo_core/          Portable, testable, 0 dépendance Arduino
     src/
-      interfaces/            - Interfaces abstraites (ISensor, INetwork, ISleep)
-      modules/               - Modules register/contribute (voir tableau ci-dessus)
+      config.h               - Pins, ADC, timing, seuils batterie (#defines purs)
+      debug.h                - Macros debug série (HAS_SERIAL_DEBUG)
+      interfaces/            - Interfaces abstraites (ISensor, INetwork, ISleep, IConfigStore)
+      modules/               - Modules register/contribute (voir tableau ci-dessus, dont ota_module)
       module_registry.*      - Registre de modules (metrics, commands, handlers)
       payload_builder.*      - Construction JSON incrémentale
-      mqtt_payload.*         - Formatage payloads & parsing commandes
-      battery.*              - Maths ADC→tension→SoC (portable)
+      mqtt_payload.*         - Formatage payloads (capabilities/commands) & parsing commandes
+      device_topics.*        - Construction runtime des topics (device_type + device_id provisionné)
+      config_store.*         - Clés + store de config runtime (device_id, offsets, bat_divider)
+      battery.*              - Maths ADC→tension→SoC (portable, inclut config.h)
       sensor_data.h          - Struct données capteur
       display_encoding.*     - Encodage BCD 7-segments
   thermo_drivers/       Drivers capteurs cross-plateforme (Arduino, I2C/SPI)
@@ -97,10 +108,11 @@ lib/
       shift_display.*        - Afficheur 7-segments via shift registers
   thermo_platform/      Code spécifique à UNE plateforme
     src/
-      esp8266/               - WiFi (ESP8266WiFi), deep sleep, RTC memory
-      esp32/                 - WiFi (Arduino-ESP32), deep sleep, RTC_DATA_ATTR
-      samd/                  - WiFi (WiFiNINA), standby (RTCZero)
+      esp8266/               - WiFi, deep sleep + RTC memory, OTA (ESPhttpUpdate), LittleFS config store
+      esp32/                 - WiFi (Arduino-ESP32), deep sleep, OTA (HTTPUpdate), NVS config store
+      samd/                  - WiFi (WiFiNINA), standby (RTCZero), FlashStorage config store (pas d'OTA)
       battery_adc.*          - Lecture ADC batterie unifiée (#if plateforme)
+      hw_id.*                - Identifiant puce (chip serial) par plateforme
 test/test_native/       - Tests unitaires (Unity)
 docs/
   architecture.md       - Architecture logicielle
@@ -129,7 +141,7 @@ docs/
 
 ## Conventions
 
-- Code portable dans `lib/thermo_core/`, code hardware-spécifique dans `src/hw/`
+- Code portable dans `lib/thermo_core/`, drivers capteurs dans `lib/thermo_drivers/`, code par plateforme dans `lib/thermo_platform/`
 - Sélection plateforme via `#if defined(ESP8266)` / `#elif defined(ESP32)` /
   `#elif defined(ARDUINO_SAMD_MKRWIFI1010)` dans `main.cpp` et `config.h`
 - `#ifdef NATIVE` / `#ifndef NATIVE` pour le code spécifique à la compilation locale
@@ -150,10 +162,13 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
 
 | Topic                      | Direction       | Exemple                                                                                           |
 |----------------------------|-----------------|---------------------------------------------------------------------------------------------------|
-| `thermo/{id}/sensors`      | Device → Server | `{"temperature":22.5,"humidity":45.2,"pressure":1013.1}`                                          |
+| `thermo/{id}/sensors`      | Device → Server | `{"temp":22.5,"humi":45.2,"press":1013.1}`                                                        |
 | `thermo/{id}/status`       | Device → Server | `{"level":"warning","message":"low_battery"}` ou `{"level":"error","message":"critical_battery"}` |
 | `thermo/{id}/command`      | Server → Device | `{"action":"set_interval","value":30}`                                                            |
-| `thermo/{id}/capabilities` | Device → Server | construit dynamiquement depuis le ModuleRegistry                                                  |
+| `thermo/{id}/capabilities` | Device → Server | identité + metrics (`hwrev`/`ota`/`cal`), construit depuis le ModuleRegistry                      |
+| `thermo/{id}/commands`     | Device → Server | liste commandes + params (réponse à `request_commands`)                                           |
+| `thermo/{id}/calibration`  | Device → Server | rapport calibration `{"cal_temp":…,"cal_humi":…,"cal_press":…,"bat_divider":…}`                   |
+| `thermo/{id}/ack`          | Device → Server | accusé de commande, ex. OTA `{"action":"ota_update","status":"start"}`                            |
 
 ### Règles critiques
 
@@ -161,9 +176,10 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
    donnée pendant 3× `publish_interval`). Ne pas utiliser de Last Will and Testament.
 2. **Topic `command` (pas `config`)** — Le serveur envoie les commandes sur `{type}/{id}/command`.
 3. **Format commandes** — `{"action":"...","value":...}`. Exemple : `{"action":"set_interval","value":300}`.
-4. **Capabilities dynamiques** — Le message capabilities est construit automatiquement depuis le `ModuleRegistry`.
-   Chaque module enregistre ses metrics et commandes au démarrage. Le device répond à `request_capabilities` dans les 60
-   secondes.
+4. **Capabilities dynamiques** — Construit automatiquement depuis le `ModuleRegistry`. Chaque module enregistre ses
+   metrics et commandes au démarrage. Découpé en deux messages (contrainte `MQTT_MAX_PACKET_SIZE=512`) : `capabilities`
+   (identité + metrics + `hwrev`/`ota`/`cal`) et `commands` (liste + params), ce dernier en réponse à `request_commands`.
+   Le device répond à `request_capabilities` dans les 60 secondes.
 5. **Status = alertes JSON** — Format : `{"level":"...","message":"..."}`. Pas de online/offline.
 6. **Auto-découverte** — Le serveur crée le device au premier message `sensors`. Données ignorées tant qu'un admin n'
    approuve pas.
@@ -172,7 +188,12 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
 
 ### Commandes supportées
 
-| Action                 | Payload                                       | Effet                                         |
-|------------------------|-----------------------------------------------|-----------------------------------------------|
-| `set_interval`         | `{"action":"set_interval","value":<seconds>}` | Change l'intervalle de publication (1-86400s) |
-| `request_capabilities` | `{"action":"request_capabilities"}`           | Le device doit répondre avec ses capabilities |
+| Action                 | Payload                                       | Effet                                                     |
+|------------------------|-----------------------------------------------|-----------------------------------------------------------|
+| `set_interval`         | `{"action":"set_interval","value":<seconds>}` | Change l'intervalle de publication (1-86400s)             |
+| `request_capabilities` | `{"action":"request_capabilities"}`           | Le device répond avec ses capabilities                    |
+| `request_commands`     | `{"action":"request_commands"}`               | Le device répond avec la liste des commandes (`commands`) |
+
+Commandes ajoutées par les modules (voir tableau des modules et `docs/mqtt-protocol.md`) : `calibrate_battery`
+(`HAS_BATTERY`), `set_offset` / `set_calibration` / `request_calibration` (`HAS_CALIBRATION`), `relay_toggle` /
+`relay_contact` (`HAS_RELAY`), `ota_update` (`HAS_OTA`).

@@ -6,8 +6,9 @@
 ## Overview
 
 The display module drives a 3-digit 7-segment display via two daisy-chained SN74HC595N shift registers. A push button
-allows the user to cycle through display modes showing temperature, humidity, or pressure readings from the BME280
-sensor. The entire 16-bit display state is shifted out over 3 GPIOs using a standard SER/SRCLK/RCLK protocol.
+allows the user to cycle through display modes showing temperature, humidity, or pressure readings from the active
+sensor module (BME280 or SHT30). The entire 16-bit display state is shifted out over 3 GPIOs using a standard
+SER/SRCLK/RCLK protocol.
 
 ### Display Modes
 
@@ -19,6 +20,9 @@ sensor. The entire 16-bit display state is shifted out over 3 GPIOs using a stan
 
 Pressing the button cycles: Temperature -> Humidity -> Pressure -> Temperature -> ...
 
+> The shipped display config (`sensor_8266_display_sht30`) pairs the display with an **SHT30**, which has no pressure
+> sensor — the pressure mode is only meaningful when the sensor is a BME280.
+
 ## Component List
 
 | Component      | Part Number | Quantity | Description                         |
@@ -28,7 +32,7 @@ Pressing the button cycles: Temperature -> Humidity -> Pressure -> Temperature -
 | Hex inverter   | SN54LS04J   | 2        | Hex inverter, 4 gates used each, 5V |
 | 7-seg display  | 5082-7651   | 2        | Common-cathode, digits 0 and 1      |
 | 7-seg display  | 5082-7653   | 1        | Common-anode, digit 2               |
-| Voltage reg.   | H78M05BT    | 1        | 5V linear regulator (7-12V input)   |
+| Voltage reg.   | MC78M05BTG  | 1        | 5V linear regulator (7-12V input)   |
 | Resistor       | —           | 3        | 120 ohm, common pin current limit   |
 | Capacitor      | —           | 1        | 100nF ceramic, button debounce      |
 | Push button    | —           | 1        | Momentary, normally open            |
@@ -64,7 +68,7 @@ the LS247 active-low outputs to active-high for these CC displays. Digit 2 uses 
 ### Power domains
 
 - **3.3V rail** (from D1 Mini regulator): HC595 shift registers only
-- **5V rail** (from H78M05BT, 7-12V DC input): LS247 decoders, LS04 inverters, 7-segment displays
+- **5V rail** (from MC78M05BTG, 7-12V DC input): LS247 decoders, LS04 inverters, 7-segment displays
 - The HC595 3.3V outputs are TTL-compatible with the 5V LS-series inputs (3.3V > V_IH = 2.0V for LS-TTL)
 
 ## Data Format
@@ -96,17 +100,40 @@ The firmware shifts 16 bits MSB-first. The first 8 bits go to HC595 #2, the seco
 
 | File                                       | Role                                                                          |
 |--------------------------------------------|-------------------------------------------------------------------------------|
-| `src/hw/shift_display.h`                   | `ShiftDisplay` class declaration (implements `IDisplay`)                      |
-| `src/hw/shift_display.cpp`                 | GPIO init and 16-bit shift-out implementation                                 |
+| `lib/thermo_drivers/src/shift_display.h`   | `ShiftDisplay` class declaration (implements `IDisplay`)                      |
+| `lib/thermo_drivers/src/shift_display.cpp` | GPIO init and 16-bit shift-out implementation                                 |
 | `lib/thermo_core/src/display_encoding.h`   | Encoding function declarations                                                |
 | `lib/thermo_core/src/display_encoding.cpp` | BCD encoding for temperature, humidity, pressure                              |
-| `include/config.h`                         | Pin definitions (`PIN_SR_DATA`, `PIN_SR_CLOCK`, `PIN_SR_LATCH`, `PIN_BUTTON`) |
+| `lib/thermo_core/src/config.h`             | Pin definitions (`PIN_SR_DATA`, `PIN_SR_CLOCK`, `PIN_SR_LATCH`, `PIN_BUTTON`) |
 
 ## PlatformIO Environment
 
-The display module is used in the `thermo_display` environment:
+The display module ships in the `sensor_8266_display_sht30` environment — ESP8266 D1 Mini with SHT30 + 7-segment
+display, mains/USB powered (`E8SHTDSP`, `HW_REV=1`). It is a **dev build** (`HAS_SERIAL_DEBUG`), so `-DDEVICE_ID` is
+kept only as a store *seed*; production images provision the `device_id` over serial instead.
 
-- `thermo_display` -- ESP8266 D1 Mini with BME280 + 7-segment display + USB power
+```ini
+[env:sensor_8266_display_sht30]
+extends = common_esp8266
+build_flags =
+    ${common_esp8266.build_flags}
+    -DDEVICE_ID='"thermo_display_sht30"'   ; dev seed only (HAS_SERIAL_DEBUG build)
+    -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"E8SHTDSP"'
+    -DHW_REV=1
+    -DHAS_SHT30
+    -DHAS_DISPLAY
+    -DHAS_SERIAL_DEBUG
+    -DHAS_CALIBRATION
+    -DHAS_OTA
+```
+
+Build / upload:
+
+```bash
+pio run -e sensor_8266_display_sht30
+pio run -e sensor_8266_display_sht30 -t upload
+```
 
 ## See Also
 

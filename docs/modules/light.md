@@ -76,25 +76,38 @@ build_flags = -DHAS_LIGHT
 
 ### Example Environment
 
+> **Note:** No shipping environment currently enables `-DHAS_LIGHT` — this analog module is not part
+> of any deployed configuration. The BH1750 (`HAS_BH1750`, I2C) is the calibrated-lux alternative used
+> on the ESP32-C3 nodes. The block below is illustrative only.
+
+A Stage-B-correct env would look like this — one image per `(HW_CODE, HW_REV)`, **no** `-DDEVICE_ID`
+(identity is provisioned at runtime, see below):
+
 ```ini
-[env:sensor_esp32_light]
-extends = common_esp32
+[env:sensor_c3_light]
+extends = common_esp32c3
 build_flags =
-    ${common_esp32.build_flags}
-    -DDEVICE_ID='"sensor_light_1"'
+    ${common_esp32c3.build_flags}
     -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"C3LIGHT0"'
+    -DHW_REV=1
     -DHAS_LIGHT
-    -DHAS_SERIAL_DEBUG
+    -DHAS_OTA
 ```
+
+> **Identity (Stage B):** production images carry no compiled `device_id`. On first boot the device
+> enters serial provisioning — assign its identity once with `provision <id>` (see
+> [OTA](ota.md#first-provisioning)). `-DDEVICE_ID` survives only on dev builds (`-DHAS_SERIAL_DEBUG`)
+> as a store seed.
 
 ## Firmware Files
 
-| File                                           | Role                                  |
-|------------------------------------------------|---------------------------------------|
-| `lib/thermo_core/src/modules/light_module.h`   | Module interface + ADC conversion     |
-| `lib/thermo_core/src/modules/light_module.cpp` | Module logic (register, contribute)   |
-| `src/hw/light_adc.h` _(to create)_             | Hardware driver header (platform ADC) |
-| `src/hw/light_adc.cpp` _(to create)_           | Hardware driver (analogRead + max)    |
+| File                                                  | Role                                  |
+|-------------------------------------------------------|---------------------------------------|
+| `lib/thermo_core/src/modules/light_module.h`          | Module interface + ADC conversion     |
+| `lib/thermo_core/src/modules/light_module.cpp`        | Module logic (register, contribute)   |
+| `lib/thermo_platform/src/light_adc.h` _(to create)_   | Hardware driver header (platform ADC) |
+| `lib/thermo_platform/src/light_adc.cpp` _(to create)_ | Hardware driver (analogRead + max)    |
 
 ### Module API
 
@@ -109,7 +122,7 @@ uint8_t adc_to_light_pct(uint16_t raw, uint16_t adc_max);
 When active alongside other modules, the device publishes on `thermo/{device_id}/sensors`:
 
 ```json
-{"temperature":22.5,"humidity":48.3,"light":65}
+{"temp":22.5,"humi":48.3,"light":65}
 ```
 
 ## Troubleshooting

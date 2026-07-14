@@ -182,7 +182,7 @@ monitoring. No WiFi or MQTT — serial console only.
 ### Build and upload
 
 ```bash
-pio run -e cell_tester -t upload
+pio run -e cell_tester_mkr -t upload
 pio device monitor
 ```
 
@@ -200,7 +200,7 @@ pio device monitor
 ### Typical workflow
 
 ```text
-1. Flash firmware:     pio run -e cell_tester -t upload
+1. Flash firmware:     pio run -e cell_tester_mkr -t upload
 2. Open serial:        pio device monitor
 3. Insert cell into JST connector
 4. Firmware reads OCV and classifies:

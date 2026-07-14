@@ -7,10 +7,10 @@ stacked directly on a Wemos D1 Mini (ESP8266). Communication uses I2C.
 
 This module is **mutually exclusive** with `HAS_BME280` — only one temperature/humidity source can be active at a time.
 
-| Metric        | Unit | Accuracy |
-|---------------|------|----------|
-| `temperature` | °C   | ±0.2°C   |
-| `humidity`    | % RH | ±2%      |
+| Metric | Unit | Accuracy |
+|--------|------|----------|
+| `temp` | °C   | ±0.2°C   |
+| `humi` | % RH | ±2%      |
 
 **Datasheet**: [Sensirion SHT3x-DIS](../datasheets/sht30-dis-datasheet.pdf)
 
@@ -80,23 +80,38 @@ build_flags = -DHAS_SHT30
 ### Example Environment
 
 ```ini
-[env:thermo_sht30]
+[env:sensor_8266_sht30]
 extends = common_esp8266
 build_flags =
     ${common_esp8266.build_flags}
-    -DDEVICE_ID='"thermo_sht30"'
     -DMQTT_DEVICE_TYPE='"thermo"'
+    -DHW_CODE='"E8SHTBAT"'
+    -DHW_REV=1
     -DHAS_SHT30
     -DHAS_BATTERY
     -DHAS_DEEP_SLEEP
+    -DHAS_CALIBRATION
+    -DHAS_OTA
 ```
+
+Build and upload with the real env name:
+
+```bash
+pio run -e sensor_8266_sht30            # build
+pio run -e sensor_8266_sht30 -t upload  # upload
+```
+
+> **Identity (Stage B):** this production image carries no compiled `device_id`. A single binary per
+> `(HW_CODE, HW_REV)` serves every unit; on first boot assign identity over serial with
+> `provision <id>` (see [OTA](ota.md#first-provisioning)). `-DDEVICE_ID` survives only on dev builds
+> (`-DHAS_SERIAL_DEBUG`) as a store seed. Calibration is runtime too (config store + server mirror).
 
 ## Firmware Files
 
 | File                                           | Role                                    |
 |------------------------------------------------|-----------------------------------------|
-| `src/hw/sht30_sensor.h`                        | Hardware driver header                  |
-| `src/hw/sht30_sensor.cpp`                      | Hardware driver (I2C, CRC-8 verified)   |
+| `lib/thermo_drivers/src/sht30_sensor.h`        | Hardware driver header                  |
+| `lib/thermo_drivers/src/sht30_sensor.cpp`      | Hardware driver (I2C, CRC-8 verified)   |
 | `lib/thermo_core/src/modules/sht30_module.h`   | Module interface (register, contribute) |
 | `lib/thermo_core/src/modules/sht30_module.cpp` | Module logic (metrics registration)     |
 
@@ -112,30 +127,19 @@ void sht30_module_contribute(PayloadBuilder& pb, const SensorData& data);
 When active with battery monitoring, the device publishes on `thermo/{device_id}/sensors`:
 
 ```json
-{"temperature":22.5,"humidity":48.3,"battery_pct":85,"battery_v":7.92,"wifi_rssi":-42}
+{"temp":22.5,"humi":48.3,"bat":85,"batv":7.92,"rssi":-42}
 ```
 
-No `pressure` field — the SHT30 does not measure pressure.
+No `press` field — the SHT30 does not measure pressure.
 
 ## Autonomy Estimates (with 2S 18650 + deep sleep)
 
-Combined with [battery](battery.md), [power-2s](power-2s.md), and [deep-sleep](deep-sleep.md) modules:
+The SHT30 draws negligibly compared to the ESP8266 radio, so its autonomy matches the generic 2S
+ESP8266 node. On **HW rev 1** (MC78M05BTG 5V LDO + always-on voltage divider) that is **~21 days
+theoretical**. No SHT30 unit is deployed in the field yet, so there is no measured figure.
 
-| Subsystem       | Active | Deep sleep |
-|-----------------|--------|------------|
-| ESP8266         | 80mA   | 20µA       |
-| SHT30           | 0.6mA  | 0.2µA      |
-| Voltage divider | 247µA  | 247µA      |
-| MP1584 quiesc.  | ~0.5mA | ~0.5mA     |
-| **Total**       | ~82mA  | ~0.77mA    |
-
-With 2× 3000mAh 18650 (usable ~4000mAh at 5V after buck efficiency):
-
-| Interval | Avg current | Autonomy   |
-|----------|-------------|------------|
-| 5 min    | 1.4 mA      | 119 days   |
-| 10 min   | 0.7 mA      | 238 days   |
-| 30 min   | 0.25 mA     | ~1.8 years |
+See [power-2s](power-2s.md) for the full current budget and the HW rev 2 target — the numbers are not
+duplicated here. This config uses [battery](battery.md) and [deep-sleep](deep-sleep.md).
 
 ## Troubleshooting
 

@@ -138,7 +138,7 @@ ESP8266 WiFi operation and clean ADC readings on A0 (battery voltage divider).
 ## Battery Selection
 
 Use matched 18650 cells -- same brand, capacity, and internal resistance. The cell tester firmware
-(`pio run -e cell_tester`) measures capacity and grades cells. Pair cells from the same grade for balanced operation.
+(`pio run -e cell_tester_mkr`) measures capacity and grades cells. Pair cells from the same grade for balanced operation.
 
 | Criteria         | Requirement             |
 |------------------|-------------------------|
@@ -191,18 +191,26 @@ footprint, no PCB change.
 | Vin range        | 7-35V               | 5.1-12V (OK for 2S)     |
 | Cost             | ~0.5 EUR            | ~0.5 EUR                |
 
-**Autonomy comparison** (2S 2200 mAh, 5 min deep sleep cycle, 4.5s active):
+**Autonomy comparison** (2S 2200 mAh, 5 min deep sleep cycle, 4.5s active). The columns map
+to hardware revisions: **HW rev 1** is the current fleet (MC78M05BTG, always-on divider);
+**HW rev 2** (planned) swaps in the HT7350 regulator *and* adds the MOSFET-switched divider.
 
-|                         | MC78M05BTG   | MC78M05BTG + MOSFET switch | HT7350 + MOSFET switch |
-|-------------------------|--------------|----------------------------|------------------------|
-| Sleep: regulator Iq     | 3000 µA      | 3000 µA                    | **4 µA**               |
-| Sleep: divider drain    | 247 µA       | **0 µA**                   | **0 µA**               |
-| Sleep: ESP8266          | 20 µA        | 20 µA                      | 20 µA                  |
-| **Total sleep current** | **3267 µA**  | **3020 µA**                | **24 µA**              |
-| Sleep charge (295.5s)   | 965 mA·s     | 893 mA·s                   | **7 mA·s**             |
-| Active charge (4.5s)    | 356 mA·s     | 356 mA·s                   | 356 mA·s               |
-| **Average current**     | **4.40 mA**  | **4.16 mA**                | **1.21 mA**            |
-| **Autonomy (2200 mAh)** | **21 jours** | **22 jours**               | **76 jours**           |
+| Metric                      | HW rev 1 (MC78M05BTG) | rev 1 + MOSFET switch | HW rev 2 (HT7350 + MOSFET) |
+|-----------------------------|-----------------------|-----------------------|----------------------------|
+| Sleep: regulator Iq         | 3000 µA               | 3000 µA               | **4 µA**                   |
+| Sleep: divider drain        | 247 µA                | **0 µA**              | **0 µA**                   |
+| Sleep: ESP8266              | 20 µA                 | 20 µA                 | 20 µA                      |
+| **Total sleep current**     | **3267 µA**           | **3020 µA**           | **24 µA**                  |
+| Sleep charge (295.5s)       | 965 mA·s              | 893 mA·s              | **7 mA·s**                 |
+| Active charge (4.5s)        | 356 mA·s              | 356 mA·s              | 356 mA·s                   |
+| **Average current**         | **4.40 mA**           | **4.16 mA**           | **1.21 mA**                |
+| **Autonomy (2200 mAh)**     | **21 days**           | **22 days**           | **76 days**                |
+| **Measured (field, rev 1)** | **~19–20 days**       | —                     | —                          |
+
+> **Field validation:** `thermo_1` and `thermo_2` (both HW rev 1) measure ~19–20 days per
+> full charge over ~100 days of `bat_percent` telemetry — within ~5–10 % of the 21-day
+> theoretical figure, confirming the model. HW rev 2 (HT7350 + MOSFET divider) is expected
+> to roughly quadruple this to ~76 days.
 
 > The MC78M05BTG also has a 2V dropout, meaning the pack must stay above ~7V for regulation.
 > This wastes the bottom ~15% of 2S capacity (6.0-7.0V range). The HT7350 works down to 5.1V

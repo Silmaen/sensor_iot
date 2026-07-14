@@ -44,7 +44,7 @@ Sent by the server on `thermo/{id}/command` (QoS 1, so it is queued for a sleepi
 }
 ```
 
-| Field   | Meaning                                                            |
+| Field   | Meaning                                                           |
 |---------|-------------------------------------------------------------------|
 | `value` | HTTP URL of the image on the internal server                      |
 | `md5`   | expected MD5 of the image (integrity check)                       |
@@ -56,12 +56,12 @@ Sent by the server on `thermo/{id}/command` (QoS 1, so it is queued for a sleepi
 
 Before flashing, the device rejects the update — publishing an error ack — in these cases:
 
-| Reason         | Condition                                                       |
-|----------------|-----------------------------------------------------------------|
+| Reason         | Condition                                                         |
+|----------------|-------------------------------------------------------------------|
 | `hw_mismatch`  | `hw`/`hwrev` differ from the device's compiled `HW_CODE`/`HW_REV` |
-| `same_version` | `ver` equals the running `FIRMWARE_VERSION` (idempotence)       |
-| `low_battery`  | battery below `OTA_MIN_BATTERY_PCT` (only if `HAS_BATTERY`)     |
-| `bad_request`  | a required field is missing/malformed                           |
+| `same_version` | `ver` equals the running `FIRMWARE_VERSION` (idempotence)         |
+| `low_battery`  | battery below `OTA_MIN_BATTERY_PCT` (only if `HAS_BATTERY`)       |
+| `bad_request`  | a required field is missing/malformed                             |
 
 ## Acknowledgements
 
