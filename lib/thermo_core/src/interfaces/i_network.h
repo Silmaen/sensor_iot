@@ -5,6 +5,7 @@
 struct NetworkConfig {
     const char* wifi_ssid;
     const char* wifi_password;
+    uint8_t     wifi_channel;   // 0 = auto (scan all); set to AP channel for a hidden SSID
     const char* mqtt_server;
     uint16_t    mqtt_port;
     const char* mqtt_user;      // nullptr = no auth

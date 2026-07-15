@@ -1,6 +1,13 @@
 #include "config.h"
 #include "credentials.h"
 #include "debug.h"
+
+// WIFI_CHANNEL is optional in credentials.h: 0 = auto (scan all channels). Set it
+// to the AP's channel to join a HIDDEN SSID — the ESP32 scan can't find an AP that
+// doesn't broadcast its name, so it needs the channel to associate directly.
+#ifndef WIFI_CHANNEL
+#define WIFI_CHANNEL 0
+#endif
 #include "hw_id.h"
 #include "module_registry.h"
 #include "mqtt_payload.h"
@@ -358,8 +365,12 @@ static void publish_sensor_data() {
 #ifdef HAS_BH1750
     {
         float lux = light_sensor.read_lux();
-        if (lux >= 0.0f)
+        if (lux >= 0.0f) {
+            DEBUG_PRINTF("[SENSOR] BH1750 lux=%.1f\n", lux);
             bh1750_module_contribute(pb, lux);
+        } else {
+            DEBUG_PRINTLN("[SENSOR] BH1750 read failed");
+        }
     }
 #endif
 #ifdef HAS_BATTERY
@@ -692,7 +703,7 @@ void setup() {
 #endif
 
     network.configure({
-        WIFI_SSID, WIFI_PASSWORD,
+        WIFI_SSID, WIFI_PASSWORD, WIFI_CHANNEL,
         MQTT_SERVER, MQTT_PORT,
 #if defined(MQTT_USER) && defined(MQTT_PASSWORD)
         MQTT_USER, MQTT_PASSWORD,

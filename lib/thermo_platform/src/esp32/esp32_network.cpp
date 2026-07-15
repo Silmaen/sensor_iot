@@ -31,8 +31,17 @@ void Esp32Network::configure(const NetworkConfig& cfg) {
 
 bool Esp32Network::connect_wifi() {
     WiFi.mode(WIFI_STA);
-    DEBUG_PRINTF("[WIFI] connecting to SSID \"%s\"...\n", cfg_.wifi_ssid);
-    WiFi.begin(cfg_.wifi_ssid, cfg_.wifi_password);
+    // The default ESP32 minimum auth mode is WPA2-PSK, which silently filters out
+    // WPA-PSK (WPA1) APs during association and reports them as "no AP found". Our
+    // IoT network is WPA_PSK, so lower the bar (the ESP8266 core has no such gate,
+    // which is why those nodes connect but the ESP32 did not).
+    WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
+    DEBUG_PRINTF("[WIFI] connecting to SSID \"%s\" (channel %u)...\n",
+                 cfg_.wifi_ssid, cfg_.wifi_channel);
+    // Passing a non-zero channel lets the ESP32 associate directly on that channel
+    // instead of scanning for the SSID first — required for HIDDEN SSIDs, which do
+    // not appear in a scan. channel 0 keeps the default scan-based behaviour.
+    WiFi.begin(cfg_.wifi_ssid, cfg_.wifi_password, cfg_.wifi_channel);
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
