@@ -27,6 +27,7 @@ runtime** (config store, not a build flag) and topics are built from it at boot.
 | `commands`     | Device -> Server | `thermo/thermo_1/commands`     |
 | `calibration`  | Device -> Server | `thermo/thermo_1/calibration`  |
 | `ack`          | Device -> Server | `thermo/thermo_1/ack`          |
+| `diag`         | Device -> Server | `thermo/thermo_1/diag`         |
 
 > **OTA, calibration & hardware versioning** are specified in full in
 > [ota-calibration-protocol.md](ota-calibration-protocol.md). This document covers the base
@@ -212,6 +213,8 @@ Commands are routed through the `ModuleRegistry`:
 | `set_interval`         | seconds (1-86400)                       | Core        | Updates publish/sleep interval                  |
 | `request_capabilities` | _(none)_                                | Core        | Responds with capabilities (section 5)          |
 | `request_commands`     | _(none)_                                | Core        | Responds with the command list on `commands`    |
+| `get_status`           | _(none)_                                | Core        | Responds with a health summary on `status`      |
+| `get_diag`             | _(none)_                                | Core        | Responds with a technical snapshot on `diag`    |
 | `set_offset`           | `{"metric":"<name>","value":<float>}`   | Calibration | Set sensor offset (temp/humi/press)             |
 | `set_calibration`      | `{"key":"bat_divider","value":<float>}` | Calibration | Set a generic calibration value (divider ratio) |
 | `request_calibration`  | _(none)_                                | Calibration | Publishes current calibration on `calibration`  |
@@ -332,6 +335,47 @@ In response to `request_commands`, the device publishes the actionable command l
   the commands that declare them (compact keys `n`/`t` to fit 512 B). Params: `t` ∈
   `number | string | boolean`.
 - `request_capabilities` / `request_commands` are implicit and not listed.
+
+## 5c. Diagnostics — health (`status`) & technical snapshot (`diag`)
+
+A device health layer (see [diagnostics.md](diagnostics.md)) lets the server observe *why* a
+node misbehaves without serial access. Two facets:
+
+**Health summary** — a `{level, message}` payload (same schema as alerts, §2) on the **`status`**
+topic. `level` ∈ `ok | info | warning | error`; `message` is the dominant cause
+(`ok`, `booted`, `fair_signal`, `low_battery`, `weak_signal`, `missed_wakes`, `low_memory`,
+`critical_battery`, `reset_brownout`, `reset_panic`, `reset_wdt`). Sent in response to
+`get_status` (always, even when `ok`).
+
+**Technical snapshot** — a richer JSON on the **`diag`** topic, e.g.:
+
+```json
+{"level":"warning","message":"missed_wakes","rst":4,"boot":97,"miss":2,"wake_ms":3600,
+ "seq":842,"pubfail":0,"rssi":-71,"heap":210344,"bat":88,"fw":"1.0.0","hw":"C3BMELUX",
+ "hwrev":1,"id":"C3-D4DB1C"}
+```
+
+| Field     | Meaning                                                                        |
+|-----------|--------------------------------------------------------------------------------|
+| `rst`     | reset cause: 1=power-on 2=ext 3=sw 4=deep-sleep 5=brownout 6=panic 7=wdt        |
+| `boot`    | boots since cold start                                                         |
+| `miss`    | consecutive **connect** failures since last publish                            |
+| `wake_ms` | wake → publish duration (slow-connect detector)                                |
+| `seq`     | monotonic publish counter — a gap between two `diag` reports hints at losses    |
+| `pubfail` | `publish()` calls that returned false since last publish                       |
+| `rssi`    | dBm at connect                                                                 |
+| `heap`    | free heap bytes (0 = n/a, e.g. SAMD)                                            |
+| `bat`     | battery SoC % (omitted if no battery)                                          |
+| `fw`/`hw`/`hwrev`/`id` | identity (firmware version / hardware code / revision / chip id)  |
+
+**When published:** automatically at the end of a wake **only if health ≥ `warning`** (nominal
+wakes publish nothing extra — saves battery/bandwidth), **and** on demand in response to
+`get_diag`. `get_status` / `get_diag` are QoS-1 commands (queued for deep-sleep devices); expect
+the reply on the device's next wake.
+
+**Server-side wiring:** subscribe `{type}/{id}/diag`; store as a per-device time series; alert on
+`rst=5` (brownout → hardware/power) and `rst∈{6,7}` (firmware crash); surface `miss`/`rssi`/`heap`
+on a device health page.
 
 ## 6. Timeout handling
 

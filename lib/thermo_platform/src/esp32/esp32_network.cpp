@@ -29,32 +29,49 @@ void Esp32Network::configure(const NetworkConfig& cfg) {
     mqtt_client_.setServer(cfg.mqtt_server, cfg.mqtt_port);
 }
 
-bool Esp32Network::connect_wifi() {
-    WiFi.mode(WIFI_STA);
-    // The default ESP32 minimum auth mode is WPA2-PSK, which silently filters out
-    // WPA-PSK (WPA1) APs during association and reports them as "no AP found". Our
-    // IoT network is WPA_PSK, so lower the bar (the ESP8266 core has no such gate,
-    // which is why those nodes connect but the ESP32 did not).
-    WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
-    DEBUG_PRINTF("[WIFI] connecting to SSID \"%s\" (channel %u)...\n",
-                 cfg_.wifi_ssid, cfg_.wifi_channel);
-    // Passing a non-zero channel lets the ESP32 associate directly on that channel
-    // instead of scanning for the SSID first — required for HIDDEN SSIDs, which do
-    // not appear in a scan. channel 0 keeps the default scan-based behaviour.
-    WiFi.begin(cfg_.wifi_ssid, cfg_.wifi_password, cfg_.wifi_channel);
+static volatile int s_last_wifi_reason = 0;   // raw esp-idf disconnect reason (diagnostic)
 
+static bool wait_wl_connected() {
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
         delay(250);
         attempts++;
     }
-    if (WiFi.status() == WL_CONNECTED) {
-        DEBUG_PRINTF("[WIFI] connected, IP=%s RSSI=%ddBm\n",
-                     WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    return WiFi.status() == WL_CONNECTED;
+}
+
+bool Esp32Network::connect_wifi() {
+    WiFi.mode(WIFI_STA);
+    // Disable WiFi modem-sleep. By default the ESP32 dozes between beacons, which
+    // delays/drops our brief QoS-0 publish right before deep sleep -> the server saw
+    // publishes lost in bursts (seq gaps) despite a strong RSSI and a clean connect.
+    // Negligible battery cost here: the radio is only up for the ~4 s active window
+    // (busy TX/RX anyway), then deep sleep turns it fully off. (ESP8266/MKR unaffected.)
+    WiFi.setSleep(false);
+    // Lower the minimum auth mode: the network is WPA_PSK (WPA1), which the ESP32
+    // default (WPA2) filters out as "no AP found". The ESP8266 core has no such gate,
+    // which is why those nodes connect out of the box but the C3 did not.
+    WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
+    WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t info) {
+        s_last_wifi_reason = info.wifi_sta_disconnected.reason;
+    }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+
+    // Fresh scan every wake, connect to the STRONGEST matching AP — no BSSID cache /
+    // pinning. The RTC BSSID cache was removed: pinning stuck the node to one AP whose
+    // backhaul intermittently dropped our QoS-0 publishes despite a strong RSSI (server
+    // saw ~1 publish in 2-5 wakes, unique to this node). See docs/diagnostics.md. The
+    // channel also lets the scan find the HIDDEN SSID (no SSID in its beacons).
+    WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+    WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+    DEBUG_PRINTF("[WIFI] connecting to SSID \"%s\" (channel %u)...\n",
+                 cfg_.wifi_ssid, cfg_.wifi_channel);
+    WiFi.begin(cfg_.wifi_ssid, cfg_.wifi_password, cfg_.wifi_channel);
+    if (wait_wl_connected()) {
+        DEBUG_PRINTF("[WIFI] connected, IP=%s RSSI=%ddBm ch %u\n",
+                     WiFi.localIP().toString().c_str(), WiFi.RSSI(), WiFi.channel());
         return true;
     }
-    DEBUG_PRINTF("[WIFI] failed after %d attempts, status=%d\n",
-                 attempts, WiFi.status());
+    DEBUG_PRINTF("[WIFI] failed, status=%d reason=%d\n", WiFi.status(), s_last_wifi_reason);
     return false;
 }
 
@@ -75,6 +92,9 @@ bool Esp32Network::connect_mqtt() {
         }
         if (connected) {
             DEBUG_PRINTLN("[MQTT] connected");
+            // Disable Nagle: our single small QoS-0 publish must go out immediately,
+            // not sit coalescing in the TCP buffer until the connection is torn down.
+            wifi_client_.setNoDelay(true);
         } else {
             DEBUG_PRINTF("[MQTT] failed, state=%s (%d)\n",
                          mqtt_state_str(mqtt_client_.state()), mqtt_client_.state());
@@ -155,7 +175,14 @@ void Esp32Network::loop() {
 }
 
 void Esp32Network::disconnect() {
+    // Deep-sleep teardown race: WiFi.disconnect(true) powers the radio off at once,
+    // which can cut the just-published QoS-0 packet mid-flight (the server saw ~1/3 of
+    // this node's publishes lost in transit). Drain TX and give lwip time to send it
+    // out, then tear down gracefully.
+    wifi_client_.flush();
+    delay(40);
     mqtt_client_.disconnect();
+    delay(60);
     WiFi.disconnect(true);
     was_mqtt_connected_ = false;
 }

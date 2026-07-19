@@ -97,7 +97,7 @@
 #endif
 #define BUTTON_DEBOUNCE_MS         50   // Button debounce time
 #define DEFAULT_SLEEP_INTERVAL_S   300  // Default deep sleep interval (seconds)
-#define MQTT_COMMAND_WAIT_MS       2000 // Wait window for server command flush after publish
+#define MQTT_COMMAND_WAIT_MS       3000 // Wait window for server command flush after publish (also lets the QoS-0 publish drain before deep-sleep teardown)
 #define RECONNECT_INTERVAL_MS      5000 // Non-blocking reconnect retry interval
 
 // --- Battery alerts ---

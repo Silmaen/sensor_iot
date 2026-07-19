@@ -11,6 +11,7 @@ void DeviceTopics::build(const char* device_type, const char* device_id) {
     snprintf(ack,          TOPIC_LEN, "%s/%s/ack",          device_type, device_id);
     snprintf(commands,     TOPIC_LEN, "%s/%s/commands",     device_type, device_id);
     snprintf(calibration,  TOPIC_LEN, "%s/%s/calibration",  device_type, device_id);
+    snprintf(diag,         TOPIC_LEN, "%s/%s/diag",         device_type, device_id);
 }
 
 bool device_id_valid(const char* device_id) {

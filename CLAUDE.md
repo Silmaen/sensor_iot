@@ -169,6 +169,7 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
 | `thermo/{id}/commands`     | Device → Server | liste commandes + params (réponse à `request_commands`)                                           |
 | `thermo/{id}/calibration`  | Device → Server | rapport calibration `{"cal_temp":…,"cal_humi":…,"cal_press":…,"bat_divider":…}`                   |
 | `thermo/{id}/ack`          | Device → Server | accusé de commande, ex. OTA `{"action":"ota_update","status":"start"}`                            |
+| `thermo/{id}/diag`         | Device → Server | snapshot santé/technique `{"level":"warning","message":"missed_wakes","rst":4,"seq":842,…}`       |
 
 ### Règles critiques
 
@@ -185,6 +186,9 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
    approuve pas.
 7. **Validation serveur** — Payload max 10 KB, noms de métriques `^[a-zA-Z0-9_\-]+$` (max 64 chars), valeurs numériques
    uniquement.
+8. **Diagnostics (toujours actif, sans flag)** — Le device évalue sa santé (`ok`/`info`/`warning`/`error`) à chaque
+   réveil. Publie automatiquement sur `diag` uniquement si santé ≥ `warning` (les réveils nominaux ne publient rien de
+   plus). `get_status` force un résumé sur `status`, `get_diag` force le snapshot sur `diag`. Voir `docs/diagnostics.md`.
 
 ### Commandes supportées
 
@@ -193,6 +197,8 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
 | `set_interval`         | `{"action":"set_interval","value":<seconds>}` | Change l'intervalle de publication (1-86400s)             |
 | `request_capabilities` | `{"action":"request_capabilities"}`           | Le device répond avec ses capabilities                    |
 | `request_commands`     | `{"action":"request_commands"}`               | Le device répond avec la liste des commandes (`commands`) |
+| `get_status`           | `{"action":"get_status"}`                     | Le device répond avec un résumé santé sur `status`        |
+| `get_diag`             | `{"action":"get_diag"}`                       | Le device répond avec le snapshot technique sur `diag`    |
 
 Commandes ajoutées par les modules (voir tableau des modules et `docs/mqtt-protocol.md`) : `calibrate_battery`
 (`HAS_BATTERY`), `set_offset` / `set_calibration` / `request_calibration` (`HAS_CALIBRATION`), `relay_toggle` /

@@ -81,6 +81,19 @@ public:
 The concrete implementation `EspSleep` (in `lib/thermo_platform/src/esp8266/esp_sleep.cpp`) uses the ESP8266 SDK functions
 `system_rtc_mem_read()` and `system_rtc_mem_write()`.
 
+### ESP32-C3 additions
+
+On the ESP32-C3 the same RTC region (`RTC_DATA_ATTR` variables — survive deep sleep, not power loss) persists three
+things across wake cycles, each guarded by its own magic value:
+
+- the **publish interval** (as above);
+- the **battery calibration ratio** (`bat_divider`), so a calibrated node keeps its ratio without re-commissioning;
+- the **WiFi BSSID + channel cache**. After a full, signal-sorted scan picks the strongest access point, its BSSID is
+  cached so the next wake-ups reconnect **directly** (~0.2 s) instead of re-scanning (~2.5 s) — the scan's extra radio-on
+  time would otherwise cost ~35 % of autonomy. A full rescan runs on cold boot, every 12th connect, or whenever a cached
+  connect fails, so roaming is still re-evaluated. Implemented in `esp32_network.cpp::connect_wifi()`; see
+  [ESP32-C3 config → WiFi & Connectivity](../configs/esp32c3-bme280-bh1750.md#wifi--connectivity).
+
 ## Power Savings
 
 Per-cycle MCU current (ESP8266):

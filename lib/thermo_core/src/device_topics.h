@@ -16,6 +16,7 @@ struct DeviceTopics {
     char ack[TOPIC_LEN];
     char commands[TOPIC_LEN];
     char calibration[TOPIC_LEN];
+    char diag[TOPIC_LEN];
 
     // Build all topics from the device type and the runtime device_id.
     void build(const char* device_type, const char* device_id);

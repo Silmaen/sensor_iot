@@ -12,6 +12,7 @@ void test_device_topics_build(void) {
     TEST_ASSERT_EQUAL_STRING("thermo/thermo_1/ack", t.ack);
     TEST_ASSERT_EQUAL_STRING("thermo/thermo_1/commands", t.commands);
     TEST_ASSERT_EQUAL_STRING("thermo/thermo_1/calibration", t.calibration);
+    TEST_ASSERT_EQUAL_STRING("thermo/thermo_1/diag", t.diag);
 }
 
 void test_device_id_valid_accepts(void) {

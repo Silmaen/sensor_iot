@@ -12,6 +12,8 @@
 #include "module_registry.h"
 #include "mqtt_payload.h"
 #include "payload_builder.h"
+#include "diagnostics.h"
+#include "platform_diag.h"
 
 #ifdef HAS_BME280
 #include "modules/bme280_module.h"
@@ -39,6 +41,41 @@
 
 #ifndef NATIVE
 #include <Arduino.h>
+
+// --- Device diagnostics counters (RTC-persisted across deep sleep) ---
+// Feed the `diag` topic (see diagnostics.h / docs/diagnostics.md), no longer the
+// sensors payload. Helpers are no-ops off ESP32 so call sites stay unguarded; on
+// ESP8266/MKR the diag still reports reset cause, RSSI, heap and battery health —
+// only these RTC counters read 0 (ESP8266 RTC uses a different API, future work).
+//   miss    = consecutive connect failures since last publish
+//   seq     = monotonic publish counter (server-side lost-publish detection)
+//   pubfail = publish() calls that returned false since last publish
+//   boot    = boots since cold start (unexpected-reset detector)
+#if defined(ESP32)
+static RTC_DATA_ATTR uint32_t g_rtc_miss_count = 0;
+static RTC_DATA_ATTR uint32_t g_rtc_seq        = 0;
+static RTC_DATA_ATTR uint32_t g_rtc_pubfail    = 0;
+static RTC_DATA_ATTR uint32_t g_rtc_boot       = 0;
+static inline void     note_missed_wake()    { g_rtc_miss_count++; }
+static inline uint32_t missed_wakes()        { return g_rtc_miss_count; }
+static inline void     clear_missed_wakes()  { g_rtc_miss_count = 0; }
+static inline uint32_t next_publish_seq()    { return ++g_rtc_seq; }
+static inline uint32_t publish_seq()         { return g_rtc_seq; }
+static inline uint32_t pubfail_count()       { return g_rtc_pubfail; }
+static inline void     note_publish(bool ok) { if (ok) g_rtc_pubfail = 0; else g_rtc_pubfail++; }
+static inline void     note_boot()           { g_rtc_boot++; }
+static inline uint32_t boot_count()          { return g_rtc_boot; }
+#else
+static inline void     note_missed_wake()    {}
+static inline uint32_t missed_wakes()        { return 0; }
+static inline void     clear_missed_wakes()  {}
+static inline uint32_t next_publish_seq()    { return 0; }
+static inline uint32_t publish_seq()         { return 0; }
+static inline uint32_t pubfail_count()       { return 0; }
+static inline void     note_publish(bool)    {}
+static inline void     note_boot()           {}
+static inline uint32_t boot_count()          { return 0; }
+#endif
 
 // --- Platform: network ---
 #if defined(ARDUINO_SAMD_MKRWIFI1010)
@@ -385,7 +422,10 @@ static void publish_sensor_data() {
     pb.add_int("rssi", network.wifi_rssi());
     pb.end();
     DEBUG_PRINTF("[MQTT] publish %s: %s\n", topics.sensors, buf);
-    network.publish(topics.sensors, buf);
+    const bool pub_ok = network.publish(topics.sensors, buf);
+    next_publish_seq();   // advance publish sequence (reported via the diag topic)
+    note_publish(pub_ok); // track send failures for the diag topic
+    DEBUG_PRINTF("[MQTT] publish -> %s\n", pub_ok ? "ok" : "FAILED");
 
 #ifdef HAS_BATTERY
     if (soc <= BATTERY_CRITICAL_THRESHOLD) {
@@ -400,6 +440,56 @@ static void publish_sensor_data() {
         network.publish(topics.status, status_buf);
     }
 #endif
+}
+
+// --- Diagnostics: health summary (status topic) + technical snapshot (diag topic) ---
+static void build_diag_data(DiagData& d) {
+    d.reset_cause = platform_reset_cause();
+    d.boot    = boot_count();
+    d.miss    = missed_wakes();
+    d.wake_ms = millis();
+    d.seq     = publish_seq();
+    d.pubfail = pubfail_count();
+    d.rssi    = network.wifi_connected() ? network.wifi_rssi() : 0;
+    d.heap    = platform_free_heap();
+#ifdef HAS_BATTERY
+    const uint8_t soc = voltage_to_soc(adc_to_voltage(read_battery_adc()));
+    d.has_battery  = true;
+    d.bat_soc      = soc;
+    d.bat_critical = soc <= BATTERY_CRITICAL_THRESHOLD;
+    d.bat_low      = soc <= BATTERY_WARN_THRESHOLD;
+#endif
+}
+
+// Full technical snapshot on the diag topic (get_diag response, or auto on warning+).
+static void publish_diag(const DiagData& d) {
+    char hw_id[20];
+    get_hw_id(hw_id, sizeof(hw_id));
+    char buf[256];
+    format_diag_payload(d, hw_id, HW_CODE, HW_REV, FIRMWARE_VERSION, buf, sizeof(buf));
+    DEBUG_PRINTF("[MQTT] publish %s: %s\n", topics.diag, buf);
+    network.publish(topics.diag, buf);
+}
+
+// Health summary {level,message} on the status topic (get_status response).
+static void publish_health_status(const DiagData& d) {
+    const char* msg = "ok";
+    const HealthLevel level = diag_evaluate(d, &msg);
+    char buf[96];
+    format_status_payload(health_level_str(level), msg, buf, sizeof(buf));
+    DEBUG_PRINTF("[MQTT] publish %s: %s\n", topics.status, buf);
+    network.publish(topics.status, buf);
+}
+
+// Called each wake after the sensor publish: publish diag only if health >= warning.
+static void maybe_publish_diag() {
+    DiagData d;
+    build_diag_data(d);
+    const char* msg = "ok";
+    if (diag_evaluate(d, &msg) >= HEALTH_WARNING) {
+        DEBUG_PRINTF("[DIAG] health warning (%s) -> diag\n", msg);
+        publish_diag(d);
+    }
 }
 
 // --- Publish capabilities from registry ---
@@ -490,6 +580,19 @@ static void process_pending_commands() {
             continue;
         }
 
+        // get_status: quick health summary on the status topic. get_diag: full
+        // technical snapshot on the diag topic. (Both built-in, see docs/diagnostics.md.)
+        if (strcmp(action, "get_status") == 0) {
+            DiagData d; build_diag_data(d);
+            publish_health_status(d);
+            continue;
+        }
+        if (strcmp(action, "get_diag") == 0) {
+            DiagData d; build_diag_data(d);
+            publish_diag(d);
+            continue;
+        }
+
         // Remote factory reset: wipe the store (device_id + calibration) and
         // reboot into serial provisioning. Ack first (the reboot cuts the link),
         // since after this the device is unprovisioned and needs `provision`.
@@ -567,6 +670,7 @@ static void handle_button() {
 
 void setup() {
     register_modules();
+    note_boot();  // count this boot (diag)
 
 #ifndef NATIVE
     Serial.begin(115200);
@@ -722,6 +826,7 @@ void setup() {
     if (!network.connect_wifi()) {
         Serial.println("WiFi connection failed!");
 #ifdef HAS_DEEP_SLEEP
+        note_missed_wake();
         sleeper.deep_sleep(publish_interval_s);
         return;
 #else
@@ -733,6 +838,7 @@ void setup() {
         if (!network.connect_mqtt()) {
             Serial.println("MQTT connection failed!");
 #ifdef HAS_DEEP_SLEEP
+            note_missed_wake();
             sleeper.deep_sleep(publish_interval_s);
             return;
 #else
@@ -759,6 +865,12 @@ void setup() {
 #else
     publish_sensor_data();
 #endif
+
+    // Report a technical snapshot on the diag topic only if something is wrong
+    // (brownout, missed wakes, weak signal, low battery/heap); then reset the miss
+    // counter now that it has been reported.
+    maybe_publish_diag();
+    clear_missed_wakes();
 
     // Wait for server to flush pending commands (may be multiple).
     // If request_capabilities arrives, it is handled in on_mqtt_message.

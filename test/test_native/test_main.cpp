@@ -169,6 +169,16 @@ void test_ota_no_battery_provider_skips_guard(void);
 void test_ota_performer_failure_acked(void);
 void test_ota_bad_request(void);
 
+// Diagnostics tests
+void test_diag_health_ok(void);
+void test_diag_health_brownout_error(void);
+void test_diag_health_critical_battery(void);
+void test_diag_health_missed_wakes_warning(void);
+void test_diag_health_weak_signal_warning(void);
+void test_diag_health_booted_info(void);
+void test_diag_error_beats_warning(void);
+void test_format_diag_payload(void);
+
 void setUp(void) {}
 void tearDown(void) {}
 
@@ -354,6 +364,16 @@ int main(int argc, char** argv) {
     RUN_TEST(test_ota_no_battery_provider_skips_guard);
     RUN_TEST(test_ota_performer_failure_acked);
     RUN_TEST(test_ota_bad_request);
+
+    // Diagnostics
+    RUN_TEST(test_diag_health_ok);
+    RUN_TEST(test_diag_health_brownout_error);
+    RUN_TEST(test_diag_health_critical_battery);
+    RUN_TEST(test_diag_health_missed_wakes_warning);
+    RUN_TEST(test_diag_health_weak_signal_warning);
+    RUN_TEST(test_diag_health_booted_info);
+    RUN_TEST(test_diag_error_beats_warning);
+    RUN_TEST(test_format_diag_payload);
 
     return UNITY_END();
 }
