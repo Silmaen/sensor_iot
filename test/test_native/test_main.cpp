@@ -178,6 +178,8 @@ void test_diag_health_weak_signal_warning(void);
 void test_diag_health_booted_info(void);
 void test_diag_error_beats_warning(void);
 void test_format_diag_payload(void);
+void test_format_diag_payload_uplink_confirm(void);
+void test_format_diag_payload_wake_instrumentation(void);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -374,6 +376,8 @@ int main(int argc, char** argv) {
     RUN_TEST(test_diag_health_booted_info);
     RUN_TEST(test_diag_error_beats_warning);
     RUN_TEST(test_format_diag_payload);
+    RUN_TEST(test_format_diag_payload_uplink_confirm);
+    RUN_TEST(test_format_diag_payload_wake_instrumentation);
 
     return UNITY_END();
 }

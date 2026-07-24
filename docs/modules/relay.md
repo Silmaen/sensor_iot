@@ -15,8 +15,8 @@ the `-DHAS_RELAY` build flag in `platformio.ini`.
 
 **Commands** (on `thermo/{id}/command`):
 
-| Action          | Payload                                                  | Effect                                                  |
-|-----------------|----------------------------------------------------------|---------------------------------------------------------|
+| Action          | Payload                                                 | Effect                                                  |
+|-----------------|---------------------------------------------------------|---------------------------------------------------------|
 | `relay_toggle`  | `{"action":"relay_toggle","value":<1\|2>}`               | Toggle relay on/off. Cancels any pending contact timer. |
 | `relay_contact` | `{"action":"relay_contact","relay":<1\|2>,"value":<ms>}` | Activate relay, auto-revert after delay (1–300000 ms).  |
 

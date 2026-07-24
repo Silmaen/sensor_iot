@@ -52,6 +52,21 @@ int format_diag_payload(const DiagData& d, const char* hw_id, const char* hw_cod
     pb.add_uint("wake_ms", d.wake_ms);
     pb.add_uint("seq", d.seq);
     pb.add_uint("pubfail", d.pubfail);
+    // Uplink-confirmation counters: only present while the (opt-in) confirm mode
+    // is active, so nominal diag payloads are unchanged. Server derives the
+    // confirmed-delivery rate as tx_ok / tx_sent. See docs/diagnostics.md.
+    if (d.tx_sent > 0) {
+        pb.add_uint("txsent", d.tx_sent);
+        pb.add_uint("txok", d.tx_ok);
+    }
+    // Wake-path instrumentation (cumulative). Emitted only when non-zero, so a
+    // healthy node's payload is unchanged; short keys keep it within budget.
+    // wf=WiFi-connect fails, mf=MQTT-connect fails, sf=invalid-sensor skips,
+    // bx=non-deep-sleep boots (>1 => spurious double-boot). See docs/diagnostics.md.
+    if (d.wifi_fail > 0)   pb.add_uint("wf", d.wifi_fail);
+    if (d.mqtt_fail > 0)   pb.add_uint("mf", d.mqtt_fail);
+    if (d.sensor_fail > 0) pb.add_uint("sf", d.sensor_fail);
+    if (d.boot_nds > 0)    pb.add_uint("bx", d.boot_nds);
     pb.add_int("rssi", d.rssi);
     pb.add_uint("heap", d.heap);
     if (d.has_battery) pb.add_uint("bat", d.bat_soc);

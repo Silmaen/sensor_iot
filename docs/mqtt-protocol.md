@@ -208,27 +208,39 @@ Commands are routed through the `ModuleRegistry`:
 
 ### Built-in commands
 
-| Action                 | Value                                   | Handler     | Behavior                                        |
-|------------------------|-----------------------------------------|-------------|-------------------------------------------------|
-| `set_interval`         | seconds (1-86400)                       | Core        | Updates publish/sleep interval                  |
-| `request_capabilities` | _(none)_                                | Core        | Responds with capabilities (section 5)          |
-| `request_commands`     | _(none)_                                | Core        | Responds with the command list on `commands`    |
-| `get_status`           | _(none)_                                | Core        | Responds with a health summary on `status`      |
-| `get_diag`             | _(none)_                                | Core        | Responds with a technical snapshot on `diag`    |
-| `set_offset`           | `{"metric":"<name>","value":<float>}`   | Calibration | Set sensor offset (temp/humi/press)             |
-| `set_calibration`      | `{"key":"bat_divider","value":<float>}` | Calibration | Set a generic calibration value (divider ratio) |
-| `request_calibration`  | _(none)_                                | Calibration | Publishes current calibration on `calibration`  |
-| `ota_update`           | see [OTA module](modules/ota.md)        | OTA         | Download + verify + flash new firmware, reboot  |
-| `relay_toggle`         | `{"value":<1\|2>}`                      | Relay       | Toggle relay on/off                             |
-| `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`         | Relay       | Activate relay, auto-revert after delay         |
+| Action                 | Value                                   | Handler     | Behavior                                           |
+|------------------------|-----------------------------------------|-------------|----------------------------------------------------|
+| `set_interval`         | seconds (1-86400)                       | Core        | Updates publish/sleep interval                     |
+| `request_capabilities` | _(none)_                                | Core        | Responds with capabilities (section 5)             |
+| `request_commands`     | _(none)_                                | Core        | Responds with the command list on `commands`       |
+| `get_status`           | _(none)_                                | Core        | Responds with a health summary on `status`         |
+| `get_diag`             | _(none)_                                | Core        | Responds with a technical snapshot on `diag`       |
+| `set_confirm_uplink`   | `{"value":<0\|1>}`                       | Core        | Toggle uplink-delivery diagnostic (diagnostics.md) |
+| `set_offset`           | `{"metric":"<name>","value":<float>}`   | Calibration | Set sensor offset (temp/humi/press)                |
+| `set_calibration`      | `{"key":"bat_divider","value":<float>}` | Calibration | Set a generic calibration value (divider ratio)    |
+| `request_calibration`  | _(none)_                                | Calibration | Publishes current calibration on `calibration`     |
+| `ota_update`           | see [OTA module](modules/ota.md)        | OTA         | Download + verify + flash new firmware, reboot     |
+| `relay_toggle`         | `{"value":<1\|2>}`                       | Relay       | Toggle relay on/off                                |
+| `relay_contact`        | `{"relay":<1\|2>,"value":<ms>}`          | Relay       | Activate relay, auto-revert after delay            |
 
 > `request_calibration` now publishes on the dedicated `calibration` topic (not `ack`), and
 > `ota_update` emits its own detailed ack (`start` / `error`+`message`). See
 > [ota-calibration-protocol.md](ota-calibration-protocol.md) §4, §6.
 
-Modules can register additional commands via `reg.add_command()`. These
-commands automatically appear in the capabilities message and are routed
-by the dispatcher.
+**Advertisement (which commands appear in the `commands` message).** To keep the `commands`
+payload within `MQTT_MAX_PACKET_SIZE` and `MAX_COMMANDS`, the always-present core/OTA commands
+are **not** listed there — the server infers them from capability flags instead:
+
+| Command(s)                                              | Inferred from flag | In `commands` list? |
+|---------------------------------------------------------|--------------------|---------------------|
+| `get_status`, `get_diag`, `set_confirm_uplink`          | `"diag":1`         | no                  |
+| `ota_update`                                            | `"ota":1`          | no                  |
+| `set_interval`, module commands (calibration, relay, …) | —                  | yes                 |
+
+`request_capabilities` / `request_commands` are the discovery handshake itself and are always
+accepted. Core/OTA commands are dispatched directly (by name) in `process_pending_commands()`;
+module commands are registered via `reg.add_command()` and routed by `registry.dispatch()`, and
+those are the only ones that appear in the `commands` message.
 
 ### Implementation notes
 
@@ -297,21 +309,23 @@ The message carries **identity + metrics only** — the command list moved to a 
   "fw": "1.0.0",
   "ota": 1,
   "cal": 1,
+  "diag": 1,
   "intrvl": 300,
   "metrics": {"rssi": "dBm", "temp": "°C", "humi": "%", "press": "hPa", "bat": "%", "batv": "V"}
 }
 ```
 
-| Field     | Type   | Required | Description                                                                       |
-|-----------|--------|:--------:|-----------------------------------------------------------------------------------|
-| `id`      | string |   Yes    | Unique chip serial. Per unit                                                      |
-| `hw`      | string |   Yes    | Hardware code — fixed 8 chars `^[A-Z0-9]{8}$`, identical across units of a type   |
-| `hwrev`   | number |   Yes    | Hardware revision (physical/electrical), selects the compatible image with `hw`   |
-| `fw`      | string |   Yes    | Firmware version (semver). Compare against latest image for `(hw, hwrev)`         |
-| `ota`     | 0/1    |   Yes    | 1 if the device can perform OTA updates (server only offers updates then)         |
-| `cal`     | 0/1    |   Yes    | 1 if the calibration store holds any value; 0 (fresh/reset) → server re-pushes it |
-| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                                    |
-| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit                |
+| Field     | Type   | Required | Description                                                                             |
+|-----------|--------|:--------:|-----------------------------------------------------------------------------------------|
+| `id`      | string |   Yes    | Unique chip serial. Per unit                                                            |
+| `hw`      | string |   Yes    | Hardware code — fixed 8 chars `^[A-Z0-9]{8}$`, identical across units of a type         |
+| `hwrev`   | number |   Yes    | Hardware revision (physical/electrical), selects the compatible image with `hw`         |
+| `fw`      | string |   Yes    | Firmware version (semver). Compare against latest image for `(hw, hwrev)`               |
+| `ota`     | 0/1    |   Yes    | 1 if the device can perform OTA updates → implies the `ota_update` command              |
+| `cal`     | 0/1    |   Yes    | 1 if the calibration store holds any value; 0 (fresh/reset) → server re-pushes it       |
+| `diag`    | 0/1    |   Yes    | Always 1 (diagnostics always-on) → implies `get_status`/`get_diag`/`set_confirm_uplink` |
+| `intrvl`  | number |   Yes    | Current publish frequency in seconds (1-86400)                                          |
+| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit                      |
 
 - `intrvl` reflects the current value (may have been changed by `set_interval`).
 - Publish with `retain = false`.
@@ -355,27 +369,33 @@ topic. `level` ∈ `ok | info | warning | error`; `message` is the dominant caus
  "hwrev":1,"id":"C3-D4DB1C"}
 ```
 
-| Field     | Meaning                                                                        |
-|-----------|--------------------------------------------------------------------------------|
-| `rst`     | reset cause: 1=power-on 2=ext 3=sw 4=deep-sleep 5=brownout 6=panic 7=wdt        |
-| `boot`    | boots since cold start                                                         |
-| `miss`    | consecutive **connect** failures since last publish                            |
-| `wake_ms` | wake → publish duration (slow-connect detector)                                |
-| `seq`     | monotonic publish counter — a gap between two `diag` reports hints at losses    |
-| `pubfail` | `publish()` calls that returned false since last publish                       |
-| `rssi`    | dBm at connect                                                                 |
-| `heap`    | free heap bytes (0 = n/a, e.g. SAMD)                                            |
-| `bat`     | battery SoC % (omitted if no battery)                                          |
-| `fw`/`hw`/`hwrev`/`id` | identity (firmware version / hardware code / revision / chip id)  |
+| Field                  | Meaning                                                                      |
+|------------------------|------------------------------------------------------------------------------|
+| `rst`                  | reset cause: 1=power-on 2=ext 3=sw 4=deep-sleep 5=brownout 6=panic 7=wdt     |
+| `boot`                 | boots since cold start                                                       |
+| `miss`                 | consecutive **connect** failures since last publish                          |
+| `wake_ms`              | wake → publish duration (slow-connect detector)                              |
+| `seq`                  | monotonic publish counter — a gap between two `diag` reports hints at losses |
+| `pubfail`              | `publish()` calls that returned false since last publish                     |
+| `txsent`               | publishes attempted while uplink-confirm mode is on (absent otherwise)       |
+| `txok`                 | of those, confirmed delivered via broker loopback; rate = `txok/txsent`      |
+| `rssi`                 | dBm at connect                                                               |
+| `heap`                 | free heap bytes (0 = n/a, e.g. SAMD)                                         |
+| `bat`                  | battery SoC % (omitted if no battery)                                        |
+| `fw`/`hw`/`hwrev`/`id` | identity (firmware version / hardware code / revision / chip id)             |
 
 **When published:** automatically at the end of a wake **only if health ≥ `warning`** (nominal
 wakes publish nothing extra — saves battery/bandwidth), **and** on demand in response to
-`get_diag`. `get_status` / `get_diag` are QoS-1 commands (queued for deep-sleep devices); expect
-the reply on the device's next wake.
+`get_diag`. While uplink-confirm mode is on (`set_confirm_uplink`), `diag` is published on
+**every** wake so `txsent`/`txok` are observed even on nominal wakes — see
+[diagnostics.md](diagnostics.md). `get_status` / `get_diag` are QoS-1 commands (queued for
+deep-sleep devices); expect the reply on the device's next wake.
 
 **Server-side wiring:** subscribe `{type}/{id}/diag`; store as a per-device time series; alert on
 `rst=5` (brownout → hardware/power) and `rst∈{6,7}` (firmware crash); surface `miss`/`rssi`/`heap`
-on a device health page.
+on a device health page. To surface the uplink-confirm metric, store the optional `txsent`/`txok`
+fields (nullable; absent on normal diags) and show the confirmed-delivery rate `txok/txsent` — see
+[diagnostics.md](diagnostics.md) *Server-side wiring*.
 
 ## 6. Timeout handling
 

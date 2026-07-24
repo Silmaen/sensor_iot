@@ -54,9 +54,12 @@ int format_capabilities_payload(const char* hardware_id,
     // each message fits MQTT_MAX_PACKET_SIZE). Keys: id (chip serial),
     // hw (8-char code), hwrev, fw, ota (0/1), cal (0/1), intrvl,
     // metrics (name→unit).
+    // "diag":1 is hardcoded: the diagnostics layer is always-on on every device
+    // (no build flag). The server derives the diag commands (get_status, get_diag,
+    // set_confirm_uplink) from this flag, so they are NOT listed in `commands`.
     int pos = snprintf(buf, buf_size,
         "{\"id\":\"%s\",\"hw\":\"%s\",\"hwrev\":%u,\"fw\":\"%s\","
-        "\"ota\":%d,\"cal\":%d,\"intrvl\":%lu,\"metrics\":{",
+        "\"ota\":%d,\"cal\":%d,\"diag\":1,\"intrvl\":%lu,\"metrics\":{",
         hardware_id, hw_code, (unsigned)hw_rev, fw_version,
         ota_capable ? 1 : 0, calibration_present ? 1 : 0,
         (unsigned long)publish_interval);

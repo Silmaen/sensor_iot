@@ -71,6 +71,8 @@ void test_format_capabilities_payload(void) {
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"fw\":\"1.2.3\""));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"ota\":1"));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"cal\":1"));
+    // diagnostics is always-on -> always advertised (server infers diag commands)
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"diag\":1"));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"intrvl\":60"));
     // metrics merged with units
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"humi\":\"%\""));

@@ -42,40 +42,70 @@
 #ifndef NATIVE
 #include <Arduino.h>
 
-// --- Device diagnostics counters (RTC-persisted across deep sleep) ---
+// --- Device diagnostics counters (persisted across a sleep cycle) ---
 // Feed the `diag` topic (see diagnostics.h / docs/diagnostics.md), no longer the
-// sensors payload. Helpers are no-ops off ESP32 so call sites stay unguarded; on
-// ESP8266/MKR the diag still reports reset cause, RSSI, heap and battery health —
-// only these RTC counters read 0 (ESP8266 RTC uses a different API, future work).
-//   miss    = consecutive connect failures since last publish
-//   seq     = monotonic publish counter (server-side lost-publish detection)
-//   pubfail = publish() calls that returned false since last publish
-//   boot    = boots since cold start (unexpected-reset detector)
+// sensors payload. Now portable across ALL platforms via the DiagCounters struct
+// (field meanings in diagnostics.h): ESP32 keeps it in RTC_DATA_ATTR, ESP8266 in
+// RTC user memory (explicit save/restore), SAMD/native in plain RAM (SAMD standby
+// resumes execution, so RAM survives). txsent/txok are only populated while the
+// opt-in uplink-confirm mode is on (set_confirm_uplink; see docs/diagnostics.md).
+// Storage persists across a sleep cycle, per platform:
+//   ESP32    -> RTC_DATA_ATTR (retained through deep sleep automatically)
+//   ESP8266  -> plain RAM, explicitly saved/restored to RTC user memory around
+//               deep sleep (diag_counters_restore/persist, defined below)
+//   SAMD     -> plain RAM (standby resumes execution — no reset, RAM survives)
+//   native   -> plain RAM (single run)
 #if defined(ESP32)
-static RTC_DATA_ATTR uint32_t g_rtc_miss_count = 0;
-static RTC_DATA_ATTR uint32_t g_rtc_seq        = 0;
-static RTC_DATA_ATTR uint32_t g_rtc_pubfail    = 0;
-static RTC_DATA_ATTR uint32_t g_rtc_boot       = 0;
-static inline void     note_missed_wake()    { g_rtc_miss_count++; }
-static inline uint32_t missed_wakes()        { return g_rtc_miss_count; }
-static inline void     clear_missed_wakes()  { g_rtc_miss_count = 0; }
-static inline uint32_t next_publish_seq()    { return ++g_rtc_seq; }
-static inline uint32_t publish_seq()         { return g_rtc_seq; }
-static inline uint32_t pubfail_count()       { return g_rtc_pubfail; }
-static inline void     note_publish(bool ok) { if (ok) g_rtc_pubfail = 0; else g_rtc_pubfail++; }
-static inline void     note_boot()           { g_rtc_boot++; }
-static inline uint32_t boot_count()          { return g_rtc_boot; }
+static RTC_DATA_ATTR DiagCounters g_dc = {};
 #else
-static inline void     note_missed_wake()    {}
-static inline uint32_t missed_wakes()        { return 0; }
-static inline void     clear_missed_wakes()  {}
-static inline uint32_t next_publish_seq()    { return 0; }
-static inline uint32_t publish_seq()         { return 0; }
-static inline uint32_t pubfail_count()       { return 0; }
-static inline void     note_publish(bool)    {}
-static inline void     note_boot()           {}
-static inline uint32_t boot_count()          { return 0; }
+static DiagCounters g_dc = {};
 #endif
+static inline void     note_missed_wake()    { g_dc.miss++; }
+static inline uint32_t missed_wakes()        { return g_dc.miss; }
+static inline void     clear_missed_wakes()  { g_dc.miss = 0; }
+static inline uint32_t next_publish_seq()    { return ++g_dc.seq; }
+static inline uint32_t publish_seq()         { return g_dc.seq; }
+static inline uint32_t pubfail_count()       { return g_dc.pubfail; }
+static inline void     note_publish(bool ok) { if (ok) g_dc.pubfail = 0; else g_dc.pubfail++; }
+static inline void     note_boot()           { g_dc.boot++; }
+static inline uint32_t boot_count()          { return g_dc.boot; }
+static inline bool     confirm_uplink_on()   { return g_dc.confirm != 0; }
+static inline void     set_confirm_uplink(bool on) { g_dc.confirm = on ? 1 : 0; }
+static inline void     note_tx_sent()        { g_dc.tx_sent++; }
+static inline void     note_tx_confirmed()   { g_dc.tx_ok++; }
+static inline uint32_t tx_sent_count()       { return g_dc.tx_sent; }
+static inline uint32_t tx_ok_count()         { return g_dc.tx_ok; }
+// Wake-path instrumentation: cumulative, never reset (see diagnostics.h). They
+// pinpoint where a wake dies before it can publish — the gap between boot and
+// delivered publishes on the C3.
+static inline void     note_wifi_fail()      { g_dc.wifi_fail++; }
+static inline void     note_mqtt_fail()      { g_dc.mqtt_fail++; }
+static inline void     note_sensor_fail()    { g_dc.sensor_fail++; }
+static inline void     note_boot_nds()       { g_dc.boot_nds++; }
+static inline uint32_t wifi_fail_count()     { return g_dc.wifi_fail; }
+static inline uint32_t mqtt_fail_count()     { return g_dc.mqtt_fail; }
+static inline uint32_t sensor_fail_count()   { return g_dc.sensor_fail; }
+static inline uint32_t boot_nds_count()      { return g_dc.boot_nds; }
+
+// Set by on_mqtt_message() when a message arrives on our own sensors topic
+// (broker loopback), i.e. the just-published sensors payload made it to the
+// broker. Reset before each publish; read after the command-wait window.
+static volatile bool g_uplink_confirmed = false;
+
+// --- Sync-before-sleep (confirmed delivery) ---
+// SYNC_BEFORE_SLEEP (build flag) forces the confirmed-publish path ON: the device
+// subscribes to its own sensors topic and, before deep sleep, waits for the broker
+// to loop the publish back (= delivery proof) and re-publishes if it doesn't,
+// closing the QoS-0 "publish lost in the deep-sleep teardown" hole. Also toggleable
+// at runtime via set_confirm_uplink. See docs/diagnostics.md.
+#ifdef SYNC_BEFORE_SLEEP
+static constexpr bool kSyncBeforeSleep = true;
+#else
+static constexpr bool kSyncBeforeSleep = false;
+#endif
+static inline bool sync_publish_on() { return kSyncBeforeSleep || confirm_uplink_on(); }
+static constexpr uint32_t SYNC_CONFIRM_TIMEOUT_MS = 900; // wait per attempt for the loopback
+static constexpr int      SYNC_MAX_RESENDS        = 4;   // re-publishes if unconfirmed
 
 // --- Platform: network ---
 #if defined(ARDUINO_SAMD_MKRWIFI1010)
@@ -140,6 +170,23 @@ static Esp32Sleep sleeper;
 #include "esp8266/esp_sleep.h"
 static EspSleep sleeper;
 #endif
+
+// Diag-counter persistence around deep sleep. ESP32 keeps g_dc in RTC_DATA_ATTR
+// (nothing to do). ESP8266 must copy g_dc to/from RTC user memory explicitly.
+#if defined(ESP8266) && !defined(NATIVE)
+static inline void diag_counters_restore() { sleeper.read_diag_counters(g_dc); }
+static inline void diag_counters_persist() { sleeper.write_diag_counters(g_dc); }
+#else
+static inline void diag_counters_restore() {}
+static inline void diag_counters_persist() {}
+#endif
+
+// Persist the diag counters, then deep sleep. Use everywhere instead of calling
+// sleeper.deep_sleep() directly, so no counter update is lost across a wake.
+static inline void enter_deep_sleep(uint32_t seconds) {
+    diag_counters_persist();
+    sleeper.deep_sleep(seconds);
+}
 #endif
 
 #if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
@@ -203,6 +250,20 @@ static bool handle_set_interval(const char* payload) {
 #if defined(HAS_DEEP_SLEEP) && !defined(NATIVE)
     sleeper.write_rtc_interval(value);
 #endif
+    return true;
+}
+
+// --- Command handler: set_confirm_uplink ---
+// Opt-in uplink-delivery diagnostic. When on (value!=0), the device subscribes to
+// its own sensors topic; a broker loopback of the just-published payload confirms
+// the publish reached the broker (txok/txsent, reported every wake via diag).
+// Off by default; RTC-backed so it survives deep sleep. See docs/diagnostics.md.
+static bool handle_set_confirm_uplink(const char* payload) {
+    uint32_t value = 0;
+    if (!parse_command_value(payload, value))
+        return false;
+    DEBUG_PRINTF("[CMD] set_confirm_uplink: %lu\n", (unsigned long)value);
+    set_confirm_uplink(value != 0);
     return true;
 }
 
@@ -296,6 +357,11 @@ static void register_modules() {
     registry.init();
     registry.add_command("set_interval", handle_set_interval,
                          set_interval_params, 1);
+    // Note: get_status/get_diag/set_confirm_uplink are NOT registered here — they
+    // are core diagnostics commands, inferred server-side from the "diag":1
+    // capability flag and dispatched by strcmp in process_pending_commands().
+    // Likewise ota_update is inferred from "ota":1. Keeps the `commands` message
+    // small (MQTT_MAX_PACKET_SIZE) and MAX_COMMANDS headroom for real modules.
     registry.add_metric("rssi", "dBm");
 #ifdef HAS_BME280
     bme280_module_register(registry);
@@ -422,9 +488,11 @@ static void publish_sensor_data() {
     pb.add_int("rssi", network.wifi_rssi());
     pb.end();
     DEBUG_PRINTF("[MQTT] publish %s: %s\n", topics.sensors, buf);
+    g_uplink_confirmed = false; // reset before send; set by the loopback callback
     const bool pub_ok = network.publish(topics.sensors, buf);
     next_publish_seq();   // advance publish sequence (reported via the diag topic)
     note_publish(pub_ok); // track send failures for the diag topic
+    if (sync_publish_on()) note_tx_sent(); // count attempts under sync/confirm mode
     DEBUG_PRINTF("[MQTT] publish -> %s\n", pub_ok ? "ok" : "FAILED");
 
 #ifdef HAS_BATTERY
@@ -450,6 +518,12 @@ static void build_diag_data(DiagData& d) {
     d.wake_ms = millis();
     d.seq     = publish_seq();
     d.pubfail = pubfail_count();
+    d.tx_sent = tx_sent_count();
+    d.tx_ok   = tx_ok_count();
+    d.wifi_fail   = wifi_fail_count();
+    d.mqtt_fail   = mqtt_fail_count();
+    d.sensor_fail = sensor_fail_count();
+    d.boot_nds    = boot_nds_count();
     d.rssi    = network.wifi_connected() ? network.wifi_rssi() : 0;
     d.heap    = platform_free_heap();
 #ifdef HAS_BATTERY
@@ -465,7 +539,7 @@ static void build_diag_data(DiagData& d) {
 static void publish_diag(const DiagData& d) {
     char hw_id[20];
     get_hw_id(hw_id, sizeof(hw_id));
-    char buf[256];
+    char buf[320];  // headroom for the wake-path instrumentation fields (wf/mf/sf/bx)
     format_diag_payload(d, hw_id, HW_CODE, HW_REV, FIRMWARE_VERSION, buf, sizeof(buf));
     DEBUG_PRINTF("[MQTT] publish %s: %s\n", topics.diag, buf);
     network.publish(topics.diag, buf);
@@ -481,13 +555,15 @@ static void publish_health_status(const DiagData& d) {
     network.publish(topics.status, buf);
 }
 
-// Called each wake after the sensor publish: publish diag only if health >= warning.
+// Called each wake after the sensor publish: publish diag when health >= warning,
+// or on every wake while the uplink-confirm diagnostic is on (so the txok/txsent
+// counters are observed even on nominal wakes — see docs/diagnostics.md).
 static void maybe_publish_diag() {
     DiagData d;
     build_diag_data(d);
     const char* msg = "ok";
-    if (diag_evaluate(d, &msg) >= HEALTH_WARNING) {
-        DEBUG_PRINTF("[DIAG] health warning (%s) -> diag\n", msg);
+    if (confirm_uplink_on() || diag_evaluate(d, &msg) >= HEALTH_WARNING) {
+        DEBUG_PRINTF("[DIAG] %s -> diag\n", confirm_uplink_on() ? "confirm-mode" : msg);
         publish_diag(d);
     }
 }
@@ -540,7 +616,14 @@ static uint8_t cmd_queue_count = 0;
 
 // --- MQTT message callback (enqueue only — never publishes) ---
 static void on_mqtt_message(char* topic, uint8_t* payload, unsigned int length) {
-    (void)topic;
+    // Uplink confirmation: a message on our own sensors topic is the broker
+    // looping back the payload we just published — proof it reached the broker
+    // (TCP is ordered, so the loopback implies the PUBLISH was received). Not a
+    // command; consume it here without enqueuing.
+    if (topic != nullptr && strcmp(topic, topics.sensors) == 0) {
+        g_uplink_confirmed = true;
+        return;
+    }
     if (cmd_queue_count >= CMD_QUEUE_SIZE) {
         DEBUG_PRINTLN("[MQTT] << queue full, dropping command");
         return;
@@ -593,6 +676,26 @@ static void process_pending_commands() {
             continue;
         }
 
+        // set_confirm_uplink: toggle the uplink-delivery diagnostic. Core command,
+        // inferred server-side from the "diag":1 flag (not in the command list).
+        if (strcmp(action, "set_confirm_uplink") == 0) {
+            bool const ok = handle_set_confirm_uplink(buf);
+            char ack_buf[96];
+            format_ack_payload(action, ok ? "ok" : "error", ack_buf, sizeof(ack_buf));
+            DEBUG_PRINTF("[MQTT] publish %s: %s\n", topics.ack, ack_buf);
+            network.publish(topics.ack, ack_buf);
+            continue;
+        }
+
+#ifdef HAS_OTA
+        // ota_update: inferred server-side from the "ota":1 flag (not in the
+        // command list). The OTA module emits its own detailed ack.
+        if (strcmp(action, "ota_update") == 0) {
+            ota_module_handle(buf);
+            continue;
+        }
+#endif
+
         // Remote factory reset: wipe the store (device_id + calibration) and
         // reboot into serial provisioning. Ack first (the reboot cuts the link),
         // since after this the device is unprovisioned and needs `provision`.
@@ -608,11 +711,6 @@ static void process_pending_commands() {
         if (!ok) {
             DEBUG_PRINTF("[MQTT] unknown command: %s\n", action);
         }
-
-        // ota_update emits its own detailed ack (start / error+message) via the
-        // OTA module's ack callback, so the generic ack is skipped for it.
-        if (strcmp(action, "ota_update") == 0)
-            continue;
 
         // Acknowledge the command
         char ack_buf[96];
@@ -670,7 +768,16 @@ static void handle_button() {
 
 void setup() {
     register_modules();
+#ifdef HAS_DEEP_SLEEP
+    diag_counters_restore();  // ESP8266: load counters from RTC user memory (no-op on ESP32)
+#endif
     note_boot();  // count this boot (diag)
+#ifndef NATIVE
+    // Instrumentation: a deep-sleep timer wake has reset cause 4. Any other cause
+    // here is the cold start, a brownout, or a spurious double-boot — counting it
+    // exposes whether the boot>>publish gap comes from extra (non-wake) boots.
+    if (platform_reset_cause() != 4 /* deep-sleep timer */) note_boot_nds();
+#endif
 
 #ifndef NATIVE
     Serial.begin(115200);
@@ -696,6 +803,15 @@ void setup() {
     }
 #endif
 
+#if defined(FORCE_DEVICE_ID) && defined(DEVICE_ID)
+    // Recovery build: use the compile-time DEVICE_ID directly, bypassing the config
+    // store entirely. For units whose NVS store is unusable (e.g. after a full
+    // esptool erase_flash left it unwritable) so seed + serial provisioning both
+    // fail — this guarantees a valid device_id and reaches MQTT regardless of NVS.
+    strncpy(g_device_id, DEVICE_ID, sizeof(g_device_id) - 1);
+    g_device_id[sizeof(g_device_id) - 1] = '\0';
+    DEBUG_PRINTF("[INIT] FORCED device_id=%s (store bypassed)\n", g_device_id);
+#else
     // Resolve the runtime device_id. Without a valid one, enter serial
     // provisioning and never reach MQTT (topics can't be built).
     if (!config_store.get_str(config_keys::device_id, g_device_id, sizeof(g_device_id)) ||
@@ -703,8 +819,9 @@ void setup() {
         run_provisioning(); // blocks; reboots once provisioned
         return;             // unreachable
     }
-    topics.build(MQTT_DEVICE_TYPE, g_device_id);
     DEBUG_PRINTF("[INIT] device_id=%s\n", g_device_id);
+#endif
+    topics.build(MQTT_DEVICE_TYPE, g_device_id);
 
 #if defined(ARDUINO_SAMD_MKRWIFI1010) && !defined(HAS_DISPLAY)
     samd_sleeper.begin();
@@ -769,7 +886,7 @@ void setup() {
     if (!sensor.begin()) {
         Serial.println("BME280 init failed!");
 #ifdef HAS_DEEP_SLEEP
-        sleeper.deep_sleep(publish_interval_s);
+        enter_deep_sleep(publish_interval_s);
         return;
 #endif
     }
@@ -779,7 +896,7 @@ void setup() {
     if (!sensor.begin()) {
         Serial.println("SHT30 init failed!");
 #ifdef HAS_DEEP_SLEEP
-        sleeper.deep_sleep(publish_interval_s);
+        enter_deep_sleep(publish_interval_s);
         return;
 #endif
     }
@@ -789,7 +906,7 @@ void setup() {
     if (!sensor.begin()) {
         Serial.println("MKR ENV init failed!");
 #ifdef HAS_DEEP_SLEEP
-        sleeper.deep_sleep(publish_interval_s);
+        enter_deep_sleep(publish_interval_s);
         return;
 #endif
     }
@@ -825,9 +942,10 @@ void setup() {
     DEBUG_PRINTLN("[NET] connecting WiFi...");
     if (!network.connect_wifi()) {
         Serial.println("WiFi connection failed!");
+        note_wifi_fail();  // instrumentation: wake died at WiFi connect
 #ifdef HAS_DEEP_SLEEP
         note_missed_wake();
-        sleeper.deep_sleep(publish_interval_s);
+        enter_deep_sleep(publish_interval_s);
         return;
 #else
         DEBUG_PRINTLN("[NET] will retry in loop");
@@ -837,9 +955,10 @@ void setup() {
         DEBUG_PRINTLN("[NET] connecting MQTT...");
         if (!network.connect_mqtt()) {
             Serial.println("MQTT connection failed!");
+            note_mqtt_fail();  // instrumentation: WiFi up but MQTT connect failed
 #ifdef HAS_DEEP_SLEEP
             note_missed_wake();
-            sleeper.deep_sleep(publish_interval_s);
+            enter_deep_sleep(publish_interval_s);
             return;
 #else
             DEBUG_PRINTLN("[NET] will retry in loop");
@@ -848,6 +967,10 @@ void setup() {
             DEBUG_PRINTLN("[NET] MQTT connected");
             network.subscribe(topics.command);
             DEBUG_PRINTF("[MQTT] subscribed to %s\n", topics.command);
+            if (sync_publish_on()) {
+                network.subscribe(topics.sensors); // broker loopback = delivery proof
+                DEBUG_PRINTF("[MQTT] subscribed to %s (sync/confirm)\n", topics.sensors);
+            }
         }
     }
 #endif
@@ -861,6 +984,8 @@ void setup() {
     last_data = sensor.read();
     if (last_data.valid) {
         publish_sensor_data();
+    } else {
+        note_sensor_fail();  // instrumentation: wake reached network but sensor read invalid
     }
 #else
     publish_sensor_data();
@@ -874,6 +999,7 @@ void setup() {
 
     // Wait for server to flush pending commands (may be multiple).
     // If request_capabilities arrives, it is handled in on_mqtt_message.
+    // The sensors-topic loopback (uplink confirm) also arrives in this window.
     unsigned long start = millis();
     while (millis() - start < MQTT_COMMAND_WAIT_MS) {
         network.loop();
@@ -881,8 +1007,32 @@ void setup() {
         delay(10);
     }
 
+    // Sync before sleep: don't deep-sleep on an undelivered QoS-0 frame. The
+    // command-wait loop above already gave the first publish up to
+    // MQTT_COMMAND_WAIT_MS for the broker loopback to confirm delivery. If still
+    // unconfirmed, re-publish and wait, up to SYNC_MAX_RESENDS — closing the
+    // "publish lost in the deep-sleep teardown" hole. (Loopback received => the
+    // broker got our publish, since TCP is ordered.)
+    if (sync_publish_on()) {
+        int resends = 0;
+        while (!g_uplink_confirmed && resends < SYNC_MAX_RESENDS) {
+            resends++;
+            DEBUG_PRINTF("[SYNC] unconfirmed, resend %d/%d\n", resends, SYNC_MAX_RESENDS);
+            publish_sensor_data();  // resets g_uplink_confirmed, re-sends, advances seq
+            unsigned long t0 = millis();
+            while (!g_uplink_confirmed && millis() - t0 < SYNC_CONFIRM_TIMEOUT_MS) {
+                network.loop();
+                delay(5);
+            }
+        }
+        if (g_uplink_confirmed) note_tx_confirmed();
+        DEBUG_PRINTF("[SYNC] %s (%d resend%s)\n",
+                     g_uplink_confirmed ? "confirmed" : "GAVE UP",
+                     resends, resends == 1 ? "" : "s");
+    }
+
     network.disconnect();
-    sleeper.deep_sleep(publish_interval_s);
+    enter_deep_sleep(publish_interval_s);
 #endif // HAS_DEEP_SLEEP
 
 #endif // NATIVE
@@ -926,26 +1076,41 @@ static void duty_cycle_publish() {
     DEBUG_PRINTLN("[NET] connecting WiFi...");
     if (!network.connect_wifi()) {
         DEBUG_PRINTLN("[NET] WiFi failed, skipping cycle");
+        note_wifi_fail();    // instrumentation: wake died at WiFi connect
+        note_missed_wake();  // connect failure (diag)
         return;
     }
     if (!network.connect_mqtt()) {
         DEBUG_PRINTLN("[NET] MQTT failed, skipping cycle");
+        note_mqtt_fail();    // instrumentation: WiFi up but MQTT connect failed
+        note_missed_wake();  // connect failure (diag)
         network.power_down();
         return;
     }
     network.subscribe(topics.command);
+    if (confirm_uplink_on()) {
+        network.subscribe(topics.sensors); // broker loopback = uplink proof
+        DEBUG_PRINTF("[MQTT] subscribed to %s (uplink confirm)\n", topics.sensors);
+    }
 
     // Publish sensors first — triggers server-side command flush
     publish_sensor_data();
 
-    // Wait for server to flush pending commands (may be multiple).
-    // If request_capabilities arrives, it is handled in on_mqtt_message.
+    // Report a diag snapshot when health >= warning (or every cycle in confirm mode),
+    // then reset the miss counter now that it has been reported.
+    maybe_publish_diag();
+    clear_missed_wakes();
+
+    // Wait for server to flush pending commands (may be multiple). The sensors-topic
+    // loopback (uplink confirm) also arrives in this window.
     unsigned long cmd_start = millis();
     while (millis() - cmd_start < MQTT_COMMAND_WAIT_MS) {
         network.loop();
         process_pending_commands(); // handle/ack outside the MQTT callback
         delay(10);
     }
+
+    if (confirm_uplink_on() && g_uplink_confirmed) note_tx_confirmed();
 
     network.power_down();
     DEBUG_PRINTLN("[NET] radio powered down");
@@ -967,6 +1132,7 @@ void loop() {
 
 #if defined(HAS_BME280) || defined(HAS_SHT30) || defined(HAS_MKR_ENV)
     if (!read_sensors()) {
+        note_sensor_fail();  // instrumentation: cycle skipped on invalid sensor read
         samd_sleeper.standby(publish_interval_s);
         return;
     }

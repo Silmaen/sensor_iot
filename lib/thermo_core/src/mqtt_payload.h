@@ -29,7 +29,9 @@ struct ModuleRegistry;
 //   fw_version:           firmware version (semver)
 //   ota_capable:          true if the device can perform OTA updates (-> "ota":1)
 //   calibration_present:  true if the calibration store holds any value (-> "cal":1)
-// Output: {"id","hw","hwrev","fw","ota","cal","intrvl","metrics":{name:unit,...}}
+// Always emits "diag":1 — diagnostics is always-on; the server infers the diag
+// commands (get_status/get_diag/set_confirm_uplink) from this flag, not `commands`.
+// Output: {"id","hw","hwrev","fw","ota","cal","diag","intrvl","metrics":{name:unit,...}}
 int format_capabilities_payload(const char* hardware_id,
                                 const char* hw_code,
                                 uint16_t hw_rev,

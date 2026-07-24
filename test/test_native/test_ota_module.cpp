@@ -58,8 +58,10 @@ void test_ota_module_register(void) {
     ModuleRegistry reg;
     reg.init();
     ota_module_register(reg);
-    TEST_ASSERT_EQUAL_UINT(1, reg.num_commands);
-    TEST_ASSERT_EQUAL_STRING("ota_update", reg.commands[0]);
+    // ota_update is inferred server-side from the "ota":1 capability flag, so the
+    // module registers no command (kept out of the size-limited `commands` list).
+    // Handling still goes through ota_module_handle() (see the other OTA tests).
+    TEST_ASSERT_EQUAL_UINT(0, reg.num_commands);
 }
 
 void test_ota_happy_path(void) {

@@ -179,26 +179,34 @@ Tous les topics suivent le pattern `{device_type}/{device_id}/{message_type}` :
 3. **Format commandes** — `{"action":"...","value":...}`. Exemple : `{"action":"set_interval","value":300}`.
 4. **Capabilities dynamiques** — Construit automatiquement depuis le `ModuleRegistry`. Chaque module enregistre ses
    metrics et commandes au démarrage. Découpé en deux messages (contrainte `MQTT_MAX_PACKET_SIZE=512`) : `capabilities`
-   (identité + metrics + `hwrev`/`ota`/`cal`) et `commands` (liste + params), ce dernier en réponse à `request_commands`.
-   Le device répond à `request_capabilities` dans les 60 secondes.
+   (identité + metrics + `hwrev`/`ota`/`cal`/`diag`) et `commands` (liste + params), ce dernier en réponse à
+   `request_commands`. Le device répond à `request_capabilities` dans les 60 secondes. Les commandes cœur/OTA
+   **toujours présentes** ne sont **pas** dans la liste `commands` (contrainte de taille) : le serveur les déduit des
+   flags — `diag:1` → `get_status`/`get_diag`/`set_confirm_uplink`, `ota:1` → `ota_update`.
 5. **Status = alertes JSON** — Format : `{"level":"...","message":"..."}`. Pas de online/offline.
 6. **Auto-découverte** — Le serveur crée le device au premier message `sensors`. Données ignorées tant qu'un admin n'
    approuve pas.
 7. **Validation serveur** — Payload max 10 KB, noms de métriques `^[a-zA-Z0-9_\-]+$` (max 64 chars), valeurs numériques
    uniquement.
-8. **Diagnostics (toujours actif, sans flag)** — Le device évalue sa santé (`ok`/`info`/`warning`/`error`) à chaque
-   réveil. Publie automatiquement sur `diag` uniquement si santé ≥ `warning` (les réveils nominaux ne publient rien de
-   plus). `get_status` force un résumé sur `status`, `get_diag` force le snapshot sur `diag`. Voir `docs/diagnostics.md`.
+8. **Diagnostics (toujours actif, sans flag, toutes plateformes)** — Le device évalue sa santé
+   (`ok`/`info`/`warning`/`error`) à chaque réveil. Publie automatiquement sur `diag` uniquement si santé ≥ `warning`
+   (les réveils nominaux ne publient rien de plus). `get_status` force un résumé sur `status`, `get_diag` force le
+   snapshot sur `diag`. Annoncé via le flag `diag:1` des capabilities. Compteurs (`boot`/`seq`/`miss`/`pubfail`/`tx*`, + instrumentation
+   chemin de réveil `wf`/`mf`/`sf`/`bx` émise si non-nulle) portables via la struct `DiagCounters` : ESP32
+   RTC_DATA_ATTR, ESP8266 RTC user memory, SAMD/native RAM (standby).
+   `set_confirm_uplink` (mesure de livraison uplink par bouclage broker, opt-in) marche sur toutes les plateformes.
+   Voir `docs/diagnostics.md`.
 
 ### Commandes supportées
 
-| Action                 | Payload                                       | Effet                                                     |
-|------------------------|-----------------------------------------------|-----------------------------------------------------------|
-| `set_interval`         | `{"action":"set_interval","value":<seconds>}` | Change l'intervalle de publication (1-86400s)             |
-| `request_capabilities` | `{"action":"request_capabilities"}`           | Le device répond avec ses capabilities                    |
-| `request_commands`     | `{"action":"request_commands"}`               | Le device répond avec la liste des commandes (`commands`) |
-| `get_status`           | `{"action":"get_status"}`                     | Le device répond avec un résumé santé sur `status`        |
-| `get_diag`             | `{"action":"get_diag"}`                       | Le device répond avec le snapshot technique sur `diag`    |
+| Action                 | Payload                                       | Effet                                                               |
+|------------------------|-----------------------------------------------|---------------------------------------------------------------------|
+| `set_interval`         | `{"action":"set_interval","value":<seconds>}` | Change l'intervalle de publication (1-86400s)                       |
+| `request_capabilities` | `{"action":"request_capabilities"}`           | Le device répond avec ses capabilities                              |
+| `request_commands`     | `{"action":"request_commands"}`               | Le device répond avec la liste des commandes (`commands`)           |
+| `get_status`           | `{"action":"get_status"}`                     | Le device répond avec un résumé santé sur `status`                  |
+| `get_diag`             | `{"action":"get_diag"}`                       | Le device répond avec le snapshot technique sur `diag`              |
+| `set_confirm_uplink`   | `{"action":"set_confirm_uplink","value":0/1}` | Active/désactive le diag de livraison uplink (`txok/txsent`, ESP32) |
 
 Commandes ajoutées par les modules (voir tableau des modules et `docs/mqtt-protocol.md`) : `calibrate_battery`
 (`HAS_BATTERY`), `set_offset` / `set_calibration` / `request_calibration` (`HAS_CALIBRATION`), `relay_toggle` /

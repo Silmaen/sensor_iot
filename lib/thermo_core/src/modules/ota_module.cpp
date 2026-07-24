@@ -80,12 +80,11 @@ bool ota_module_handle(const char* payload) {
     return true;
 }
 
-static bool handle_ota_update(const char* payload) {
-    return ota_module_handle(payload);
-}
-
 void ota_module_register(ModuleRegistry& reg) {
-    reg.add_command("ota_update", handle_ota_update);
+    // ota_update is NOT added to the command registry: it is inferred by the
+    // server from the "ota":1 capability flag (keeps it out of the size-limited
+    // `commands` message). main.cpp dispatches it via ota_module_handle().
+    (void)reg;
 }
 
 void ota_module_set_identity(const char* hw_code, uint16_t hw_rev,
